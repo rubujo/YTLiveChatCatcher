@@ -66,6 +66,10 @@ public partial class FMain : Form
             {
                 tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
             }
+            else if (tempValue.Contains($"@"))
+            {
+                tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
+            }
 
             TBChannelID.Text = tempValue;
         });
