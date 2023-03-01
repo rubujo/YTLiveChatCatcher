@@ -6,9 +6,9 @@ using YTLiveChatCatcher.Models;
 namespace YTLiveChatCatcher.Common.YTLiveChat;
 
 /// <summary>
-///  YouTube 聊天室 JSON 解析器
-///  <para>參考 1：https://takikomiprogramming.hateblo.jp/entry/2020/07/21/114851</para>
-///  <para>參考 2：https://yasulab-pg.com/%E3%80%90python%E3%80%91youtube-live%E3%81%AE%E3%82%A2%E3%83%BC%E3%82%AB%E3%82%A4%E3%83%96%E3%81%8B%E3%82%89%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B/</para>
+/// YouTube 聊天室 JSON 解析器
+/// <para>參考 1：https://takikomiprogramming.hateblo.jp/entry/2020/07/21/114851</para>
+/// <para>參考 2：https://yasulab-pg.com/%E3%80%90python%E3%80%91youtube-live%E3%81%AE%E3%82%A2%E3%83%BC%E3%82%AB%E3%82%A4%E3%83%96%E3%81%8B%E3%82%89%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B/</para>
 /// </summary>
 public class JsonParser
 {

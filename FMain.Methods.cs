@@ -726,7 +726,7 @@ public partial class FMain
 
                             #region 會員徽章
 
-                            if (SharedBadges.Any(n => n.Label.Contains(StringSet.Member)))
+                            if (SharedBadges.Any(n => n.Label != null && n.Label.Contains(StringSet.Member)))
                             {
                                 string sheetName = StringSet.SheetName5;
 
@@ -777,7 +777,7 @@ public partial class FMain
 
                                 int startIdx3 = 2;
 
-                                foreach (BadgeData badgeData in SharedBadges.Where(n => n.Label.Contains(StringSet.Member)))
+                                foreach (BadgeData badgeData in SharedBadges.Where(n => n.Label != null && n.Label.Contains(StringSet.Member)))
                                 {
                                     ExcelRange range9 = worksheet4.Cells[startIdx3, 1];
 
@@ -1675,7 +1675,7 @@ public partial class FMain
                             {
                                 string imgKey = authorName;
 
-                                if (LVLiveChatList.SmallImageList != null && 
+                                if (LVLiveChatList.SmallImageList != null &&
                                     !LVLiveChatList.SmallImageList.Images.ContainsKey(imgKey))
                                 {
                                     // 以 imgKey 為鍵值，將 Image 暫存 10 分鐘。
@@ -2244,28 +2244,17 @@ public partial class FMain
 
                 CBBrowser.InvokeIfRequired(() =>
                 {
-                    List<ChromeManager.Cookie> cookies = new();
-
-                    if (CBBrowser.SelectedItem.ToString() == "Google Chrome")
+                    List<ChromeManager.Cookie> cookies = CBBrowser.SelectedItem.ToString() switch
                     {
-                        cookies = ChromeManager
-                            .GetCookies(
-                                ChromeManager.Browser.GoogleChrome,
-                                profileFolderName,
-                                ".youtube.com");
-                    }
-                    else if (CBBrowser.SelectedItem.ToString() == "Microsoft Edge")
-                    {
-                        cookies = ChromeManager
-                           .GetCookies(
-                                ChromeManager.Browser.MicrosoftEdge,
-                                profileFolderName,
-                                ".youtube.com");
-                    }
-                    else
-                    {
-                        // 不進行任何操作。
-                    }
+                        "Brave" => ChromeManager.GetCookies(ChromeManager.Browser.Brave, profileFolderName, ".youtube.com"),
+                        "Google Chrome" => ChromeManager.GetCookies(ChromeManager.Browser.GoogleChrome, profileFolderName, ".youtube.com"),
+                        "Chromium" => ChromeManager.GetCookies(ChromeManager.Browser.Chromium, profileFolderName, ".youtube.com"),
+                        "Microsoft Edge" => ChromeManager.GetCookies(ChromeManager.Browser.MicrosoftEdge, profileFolderName, ".youtube.com"),
+                        "Opera" => ChromeManager.GetCookies(ChromeManager.Browser.Opera, profileFolderName, ".youtube.com"),
+                        "Opera GX" => ChromeManager.GetCookies(ChromeManager.Browser.OperaGX, profileFolderName, ".youtube.com"),
+                        "Vivaldi" => ChromeManager.GetCookies(ChromeManager.Browser.Vivaldi, profileFolderName, ".youtube.com"),
+                        _ => ChromeManager.GetCookies(ChromeManager.Browser.GoogleChrome, profileFolderName, ".youtube.com")
+                    };
 
                     cookiesStr = string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
                 });

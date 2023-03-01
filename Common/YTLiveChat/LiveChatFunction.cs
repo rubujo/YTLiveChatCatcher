@@ -15,9 +15,52 @@ namespace YTLiveChatCatcher.Common.YTLiveChat;
 /// <summary>
 /// YouTube 聊天室函式
 /// </summary>
-public class LiveChatFunction
+public partial class LiveChatFunction
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    #region GeneratedRegex
+
+    [GeneratedRegex("v=(.+)")]
+    private static partial Regex RegexVideoID();
+
+    [GeneratedRegex("INNERTUBE_API_KEY\":\"(.+?)\",")]
+    private static partial Regex RegexInnertubeApiKey();
+
+    [GeneratedRegex("continuation\":\"(.+?)\",")]
+    private static partial Regex RegexContinuation();
+
+    [GeneratedRegex("visitorData\":\"(.+?)\",")]
+    private static partial Regex RegexVisitorData();
+
+    [GeneratedRegex("clientName\":\"(.+?)\",")]
+    private static partial Regex RegexClientName();
+
+    [GeneratedRegex("clientVersion\":\"(.+?)\",")]
+    private static partial Regex RegexClientVersion();
+
+    [GeneratedRegex("ID_TOKEN\"(.+?)\",")]
+    private static partial Regex RegexIDToken();
+
+    [GeneratedRegex("SESSION_INDEX\":\"(.*?)\"")]
+    private static partial Regex RegexSessionIndex();
+
+    [GeneratedRegex("INNERTUBE_CONTEXT_CLIENT_NAME\":(.*?),")]
+    private static partial Regex RegexInnertubeContextClientName();
+
+    [GeneratedRegex("INNERTUBE_CONTEXT_CLIENT_VERSION\":\"(.*?)\"")]
+    private static partial Regex RegexInnertubeContextClientVersion();
+
+    [GeneratedRegex("INNERTUBE_CLIENT_VERSION\":\"(.*?)\"")]
+    private static partial Regex RegexInnertubeClientVersion();
+
+    [GeneratedRegex("DATASYNC_ID\":\"(.*?)\"")]
+    private static partial Regex RegexDatasyncID();
+
+    [GeneratedRegex("DELEGATED_SESSION_ID\":\"(.*?)\"")]
+    private static partial Regex RegexDelegatedSessionID();
+
+    #endregion
 
     /// <summary>
     /// 透過頻道的 ID 取得該頻道最新的直播影片的影片 ID
@@ -60,7 +103,7 @@ public class LiveChatFunction
                 {
                     string hrefStr = element.GetAttribute("href")!;
 
-                    MatchCollection matches = Regex.Matches(hrefStr, "v=(.+)");
+                    MatchCollection matches = RegexVideoID().Matches(hrefStr);
 
                     foreach (Match match in matches.Cast<Match>())
                     {
@@ -177,7 +220,7 @@ public class LiveChatFunction
 
         if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
         {
-            MatchCollection collection1 = Regex.Matches(htmlContent, "INNERTUBE_API_KEY\":\"(.+?)\",");
+            MatchCollection collection1 = RegexInnertubeApiKey().Matches(htmlContent);
 
             foreach (Match match in collection1.Cast<Match>())
             {
@@ -187,7 +230,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection2 = Regex.Matches(htmlContent, "continuation\":\"(.+?)\",");
+            MatchCollection collection2 = RegexContinuation().Matches(htmlContent);
 
             foreach (Match match in collection2.Cast<Match>())
             {
@@ -199,7 +242,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection3 = Regex.Matches(htmlContent, "visitorData\":\"(.+?)\",");
+            MatchCollection collection3 = RegexVisitorData().Matches(htmlContent);
 
             foreach (Match match in collection3.Cast<Match>())
             {
@@ -211,7 +254,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection4 = Regex.Matches(htmlContent, "clientName\":\"(.+?)\",");
+            MatchCollection collection4 = RegexClientName().Matches(htmlContent);
 
             foreach (Match match in collection4.Cast<Match>())
             {
@@ -228,7 +271,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection5 = Regex.Matches(htmlContent, "clientVersion\":\"(.+?)\",");
+            MatchCollection collection5 = RegexClientVersion().Matches(htmlContent);
 
             foreach (Match match in collection5.Cast<Match>())
             {
@@ -240,7 +283,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection6 = Regex.Matches(htmlContent, "ID_TOKEN\"(.+?)\",");
+            MatchCollection collection6 = RegexIDToken().Matches(htmlContent);
 
             foreach (Match match in collection6.Cast<Match>())
             {
@@ -252,7 +295,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection7 = Regex.Matches(htmlContent, "SESSION_INDEX\":\"(.*?)\"");
+            MatchCollection collection7 = RegexSessionIndex().Matches(htmlContent);
 
             foreach (Match match in collection7.Cast<Match>())
             {
@@ -264,7 +307,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection8 = Regex.Matches(htmlContent, "INNERTUBE_CONTEXT_CLIENT_NAME\":(.*?),");
+            MatchCollection collection8 = RegexInnertubeContextClientName().Matches(htmlContent);
 
             foreach (Match match in collection8.Cast<Match>())
             {
@@ -276,7 +319,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection9 = Regex.Matches(htmlContent, "INNERTUBE_CONTEXT_CLIENT_VERSION\":\"(.*?)\"");
+            MatchCollection collection9 = RegexInnertubeContextClientVersion().Matches(htmlContent);
 
             foreach (Match match in collection9.Cast<Match>())
             {
@@ -288,7 +331,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection10 = Regex.Matches(htmlContent, "INNERTUBE_CLIENT_VERSION\":\"(.*?)\"");
+            MatchCollection collection10 = RegexInnertubeClientVersion().Matches(htmlContent);
 
             foreach (Match match in collection10.Cast<Match>())
             {
@@ -300,7 +343,7 @@ public class LiveChatFunction
                 }
             }
 
-            MatchCollection collection11 = Regex.Matches(htmlContent, "DATASYNC_ID\":\"(.*?)\"");
+            MatchCollection collection11 = RegexDatasyncID().Matches(htmlContent);
 
             foreach (Match match in collection11.Cast<Match>())
             {
@@ -323,7 +366,7 @@ public class LiveChatFunction
 
             // TODO: 2022-05-19 尚未確認到是否有此參數。
             // 參考：https://github.com/xenova/chat-downloader/blob/ff9ddb1f840fa06d0cc3976badf75c1fffebd003/chat_downloader/sites/youtube.py#L1537
-            MatchCollection collection12 = Regex.Matches(htmlContent, "DELEGATED_SESSION_ID\":\"(.*?)\"");
+            MatchCollection collection12 = RegexDelegatedSessionID().Matches(htmlContent);
 
             foreach (Match match in collection12.Cast<Match>())
             {
@@ -594,9 +637,7 @@ public class LiveChatFunction
     /// <returns>字串</returns>
     private static string GetSHA1Hash(string value)
     {
-        using SHA1 sha1 = SHA1.Create();
-
-        byte[] bytes = sha1.ComputeHash(Encoding.UTF8.GetBytes(value));
+        byte[] bytes = SHA1.HashData(Encoding.UTF8.GetBytes(value));
 
         StringBuilder builder = new();
 

@@ -6,7 +6,6 @@ using Org.BouncyCastle.Crypto.Parameters;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Windows.Forms;
 
 namespace YTLiveChatCatcher.Common;
 
@@ -24,13 +23,33 @@ public class ChromeManager
     public enum Browser
     {
         /// <summary>
+        /// Brave
+        /// </summary>
+        Brave = 1,
+        /// <summary>
         /// Google Chrome
         /// </summary>
-        GoogleChrome = 1,
+        GoogleChrome = 2,
+        /// <summary>
+        /// Chromium
+        /// </summary>
+        Chromium = 3,
         /// <summary>
         /// Microsoft Edge
         /// </summary>
-        MicrosoftEdge = 2
+        MicrosoftEdge = 4,
+        /// <summary>
+        /// Opera
+        /// </summary>
+        Opera = 5,
+        /// <summary>
+        /// Opera GX
+        /// </summary>
+        OperaGX = 6,
+        /// <summary>
+        /// Vivaldi
+        /// </summary>
+        Vivaldi = 7
     };
 
     /// <summary>
@@ -119,8 +138,13 @@ public class ChromeManager
     {
         return browser switch
         {
+            Browser.Brave => @"BraveSoftware\Brave-Browser",
             Browser.GoogleChrome => @"Google\Chrome",
+            Browser.Chromium => @"Chromium",
             Browser.MicrosoftEdge => @"Microsoft\Edge",
+            Browser.Opera => @"Opera Software\Opera Stable",
+            Browser.OperaGX => @"Opera Software\Opera GX Stable",
+            Browser.Vivaldi => "Vivaldi",
             _ => @"Google\Chrome"
         };
     }
