@@ -12,7 +12,7 @@ internal static class Program
     private static IServiceProvider? ServiceProvider { get; set; }
 
     /// <summary>
-    ///  The main entry point for the application.
+    /// The main entry point for the application.
     /// </summary>
     [STAThread]
     internal static void Main()
@@ -21,12 +21,16 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
+        UpdateConfig();
         ConfigureServices();
 
         Application.Run((FMain)ServiceProvider?.GetService(typeof(FMain))!);
     }
 
-    // 參考：https://docs.microsoft.com/zh-tw/archive/msdn-magazine/2019/may/net-core-3-0-create-a-centralized-pull-request-hub-with-winforms-in-net-core-3-0
+    /// <summary>
+    /// 設定服務
+    /// <para>參考：https://docs.microsoft.com/zh-tw/archive/msdn-magazine/2019/may/net-core-3-0-create-a-centralized-pull-request-hub-with-winforms-in-net-core-3-0 </para>
+    /// </summary>
     private static void ConfigureServices()
     {
         ServiceCollection services = new();
@@ -64,5 +68,19 @@ internal static class Program
             .AddSingleton<FMain>();
 
         ServiceProvider = services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// 更新設定
+    /// <para>來源：https://stackoverflow.com/a/23924277 </para>
+    /// </summary>
+    private static void UpdateConfig()
+    {
+        if (Properties.Settings.Default.UpdateSettings)
+        {
+            Properties.Settings.Default.Upgrade();
+            Properties.Settings.Default.UpdateSettings = false;
+            Properties.Settings.Default.Save();
+        }
     }
 }

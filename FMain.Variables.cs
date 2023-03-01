@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using YTLiveChatCatcher.Models;
 
 namespace YTLiveChatCatcher;
@@ -23,4 +24,7 @@ public partial class FMain
     private readonly ToolTip SharedTooltip = new();
     private readonly List<EmojiData> SharedCustomEmojis = new();
     private readonly List<BadgeData> SharedBadges = new();
+
+    [GeneratedRegex("(?:(http|https):\\/\\/(?:www\\.)?youtu\\.?be(?:\\.com)?\\/(?:embed\\/|watch\\?v=|\\?v=|v\\/|e\\/|[^\\[]+\\/|watch.*v=)?)")]
+    private static partial Regex RegexYouTubeUrl();
 }

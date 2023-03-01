@@ -66,7 +66,7 @@ public partial class FMain : Form
             {
                 tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
             }
-            else if (tempValue.Contains($"@"))
+            else if (tempValue.Contains('@'))
             {
                 tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
             }
@@ -82,7 +82,7 @@ public partial class FMain : Form
             string tempValue = TBVideoID.Text.Trim();
 
             // 參考：https://stackoverflow.com/a/15219045
-            Regex regex = new(@"(?:(http|https):\/\/(?:www\.)?youtu\.?be(?:\.com)?\/(?:embed\/|watch\?v=|\?v=|v\/|e\/|[^\[]+\/|watch.*v=)?)");
+            Regex regex = RegexYouTubeUrl();
 
             tempValue = regex.Replace(tempValue, string.Empty);
 
@@ -224,7 +224,7 @@ public partial class FMain : Form
                 }
                 else
                 {
-                    WriteLog($"透過頻道 ID 取得影片 ID 失敗。");
+                    WriteLog("透過頻道 ID 取得影片 ID 失敗。");
                 }
             }
 
@@ -407,10 +407,7 @@ public partial class FMain : Form
 
             UpdateSummaryInfo();
 
-            TBLog.InvokeIfRequired(() =>
-            {
-                TBLog.Clear();
-            });
+            TBLog.InvokeIfRequired(TBLog.Clear);
 
             // 清除 SharedCustomEmojis。
             SharedCustomEmojis.Clear();
@@ -499,7 +496,10 @@ public partial class FMain : Form
         try
         {
             // 藉由 Google 搜尋預設的網頁瀏覽器的使用者代理資訊。
-            CustomFunction.OpenBrowser("https://www.google.com/search?q=My+User+Agent");
+            //CustomFunction.OpenBrowser("https://www.google.com/search?q=My+User+Agent");
+
+            // 2023-03-01 改為使用 WhatIsMyBrowser.com 網站查詢。
+            CustomFunction.OpenBrowser("https://www.whatismybrowser.com/detect/what-is-my-user-agent/");
         }
         catch (Exception ex)
         {

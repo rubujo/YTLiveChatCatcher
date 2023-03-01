@@ -81,7 +81,8 @@ public partial class FSearch : Form
                 {
                     ListViewItem?[] dataSet = _LVLiveChatList.GetListViewItems()
                         .Where(n => n.SubItems[0].Text.Contains(keyword) ||
-                            n.SubItems[2].Text.Contains(keyword))
+                            n.SubItems[2].Text.Contains(keyword) ||
+                            n.SubItems[5].Text.Contains(keyword))
                         .Select(n => n.Clone() as ListViewItem)
                         .Reverse()
                         .ToArray();
