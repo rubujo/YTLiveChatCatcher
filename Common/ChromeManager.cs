@@ -10,10 +10,10 @@ using System.Text.Json;
 namespace YTLiveChatCatcher.Common;
 
 /// <summary>
-/// ChromeManager
+/// BrowserManager
 /// <para>參考：https://stackoverflow.com/a/68703365 </para>
 /// </summary>
-public class ChromeManager
+public class BrowserManager
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -49,7 +49,11 @@ public class ChromeManager
         /// <summary>
         /// Vivaldi
         /// </summary>
-        Vivaldi = 7
+        Vivaldi = 7,
+        /// <summary>
+        /// Mozilla Firefox
+        /// </summary>
+        MozillaFirefox = 8
     };
 
     /// <summary>
@@ -64,69 +68,73 @@ public class ChromeManager
         string profileName,
         string hostKey)
     {
-        if (string.IsNullOrEmpty(profileName))
+        bool isCustomProfilePath = false;
+
+        // 判斷是否為自定義設定檔路徑。
+        if (Path.IsPathRooted(profileName))
         {
-            profileName = "Default";
+            isCustomProfilePath = true;
         }
 
-        // 2022-05-17 Cookies 已經移至 Network 資料夾內。
-        string ChromeCookiePath = @"C:\Users\" + Environment.UserName +
-            @$"\AppData\Local\{GetPartialPath(browser)}\User Data\{profileName}\Network\Cookies";
+        List<Cookie> outputData = new();
 
-        List<Cookie> data = new();
+        string cookieFilePath = string.Empty;
 
-        if (File.Exists(ChromeCookiePath))
+        if (browser == Browser.MozillaFirefox)
         {
-            try
+            cookieFilePath = isCustomProfilePath ?
+                profileName :
+                Path.Combine(
+                    $@"C:\Users\{Environment.UserName}\AppData\Roaming\",
+                    GetPartialPath(browser));
+
+            DirectoryInfo directoryInfo = new(cookieFilePath);
+
+            if (directoryInfo.Exists)
             {
-                using SqliteConnection sqliteConnection = new($"Data Source={ChromeCookiePath}");
-                using SqliteCommand sqliteCommand = sqliteConnection.CreateCommand();
+                string portableProfilePath = Path.Combine(cookieFilePath, "cookies.sqlite");
 
-                string sql = "SELECT [name], [encrypted_value], [host_key] FROM [cookies]";
-
-                if (!string.IsNullOrEmpty(hostKey))
+                if (File.Exists(portableProfilePath))
                 {
-                    sql += $" WHERE [host_key] = '{hostKey}'";
-                    //sql += $" WHERE [host_key] LIKE '%{hostKey}%'";
+                    cookieFilePath = portableProfilePath;
                 }
-
-                sqliteCommand.CommandText = sql;
-
-                byte[] key = AesGcm256.GetKey(browser);
-
-                sqliteConnection.Open();
-
-                using (SqliteDataReader sqliteDataReader = sqliteCommand.ExecuteReader())
+                else
                 {
-                    while (sqliteDataReader.Read())
-                    {
-                        if (!data.Any(a => a.Name == sqliteDataReader.GetString(0)))
-                        {
-                            byte[] encryptedData = GetBytes(sqliteDataReader, 1);
+                    DirectoryInfo[] diDirectories = directoryInfo.GetDirectories();
+                    DirectoryInfo? diTargetDirectory = diDirectories.FirstOrDefault(n => n.Name == profileName);
 
-                            AesGcm256.Prepare(encryptedData, out byte[] nonce, out byte[] ciphertextTag);
+                    // 當 diTargetDirectory 為 null 時，則取 diTargetDirectory 第一個資料夾。
+                    diTargetDirectory ??= diDirectories.FirstOrDefault();
 
-                            string value = AesGcm256.Decrypt(ciphertextTag, key, nonce);
-
-                            data.Add(new Cookie()
-                            {
-                                HostKey = sqliteDataReader.GetString(2),
-                                Name = sqliteDataReader.GetString(0),
-                                Value = value
-                            });
-                        }
-                    }
+                    // 理論上 diTargetDirectory 不應該為 null。
+                    cookieFilePath = Path.Combine(
+                        cookieFilePath,
+                        $@"{diTargetDirectory?.Name}\cookies.sqlite");
                 }
-
-                sqliteConnection.Close();
-            }
-            catch (Exception ex)
-            {
-                _logger.Debug(ex.ToString());
             }
         }
+        else
+        {
+            if (string.IsNullOrEmpty(profileName))
+            {
+                profileName = "Default";
+            }
 
-        return data;
+            cookieFilePath = isCustomProfilePath ?
+                Path.Combine(profileName, @"Network\Cookies") :
+                Path.Combine(
+                    $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browser)}\User Data",
+                    $@"{profileName}\Network\Cookies");
+        }
+
+        _logger.Debug($"Cookie 檔案的路徑：{cookieFilePath}");
+
+        if (File.Exists(cookieFilePath))
+        {
+            outputData = QuerySQLiteDB(browser, cookieFilePath, hostKey);
+        }
+
+        return outputData;
     }
 
     /// <summary>
@@ -145,8 +153,101 @@ public class ChromeManager
             Browser.Opera => @"Opera Software\Opera Stable",
             Browser.OperaGX => @"Opera Software\Opera GX Stable",
             Browser.Vivaldi => "Vivaldi",
+            Browser.MozillaFirefox => @"Mozilla\Firefox\Profiles",
             _ => @"Google\Chrome"
         };
+    }
+
+    /// <summary>
+    /// 查詢 SQLite 資料庫
+    /// </summary>
+    /// <param name="browser">Browser</param>
+    /// <param name="cookieFilePath">字串，Cookie 檔案的位置</param>
+    /// <param name="hostKey">字串，主機鍵值</param>
+    /// <returns>List&lt;Cookie&gt;</returns>
+    private static List<Cookie> QuerySQLiteDB(
+        Browser browser,
+        string cookieFilePath,
+        string hostKey)
+    {
+        List<Cookie> outputData = new();
+
+        try
+        {
+            using SqliteConnection sqliteConnection = new($"Data Source={cookieFilePath}");
+            using SqliteCommand sqliteCommand = sqliteConnection.CreateCommand();
+
+            string rawTSQL = browser switch
+            {
+                Browser.MozillaFirefox => "SELECT [name], [value], [host] FROM [moz_cookies]",
+                _ => "SELECT [name], [encrypted_value], [host_key] FROM [cookies]"
+            };
+            string rawWhereClauseTSQL = browser switch
+            {
+                Browser.MozillaFirefox => $" WHERE [host] = '{hostKey}'",
+                //Browser.MozillaFirefox =>  $" WHERE [host] = LIKE '%{hostKey}%'",
+                _ => $" WHERE [host_key] = '{hostKey}'"
+                //_ => $" WHERE [host_key] LIKE '%{hostKey}%'"
+            };
+
+            if (!string.IsNullOrEmpty(hostKey))
+            {
+                rawTSQL += rawWhereClauseTSQL;
+            }
+
+            sqliteCommand.CommandText = rawTSQL;
+
+            sqliteConnection.Open();
+
+            using (SqliteDataReader sqliteDataReader = sqliteCommand.ExecuteReader())
+            {
+                byte[] key = browser switch
+                {
+                    Browser.MozillaFirefox => Array.Empty<byte>(),
+                    _ => AesGcm256.GetKey(browser)
+                };
+
+                while (sqliteDataReader.Read())
+                {
+                    if (!outputData.Any(a => a.Name == sqliteDataReader.GetString(0)))
+                    {
+                        string value = string.Empty;
+
+                        switch (browser)
+                        {
+                            case Browser.MozillaFirefox:
+                                value = sqliteDataReader.GetString(1);
+
+                                break;
+                            default:
+                                byte[] encryptedData = GetBytes(sqliteDataReader, 1);
+                                byte[] nonce, ciphertextTag;
+
+                                AesGcm256.Prepare(encryptedData, out nonce, out ciphertextTag);
+
+                                value = AesGcm256.Decrypt(ciphertextTag, key, nonce);
+
+                                break;
+                        }
+
+                        outputData.Add(new Cookie()
+                        {
+                            HostKey = sqliteDataReader.GetString(2),
+                            Name = sqliteDataReader.GetString(0),
+                            Value = value
+                        });
+                    }
+                }
+            }
+
+            sqliteConnection.Close();
+        }
+        catch (Exception ex)
+        {
+            _logger.Debug(ex.ToString());
+        }
+
+        return outputData;
     }
 
     /// <summary>
@@ -181,10 +282,19 @@ public class ChromeManager
     /// </summary>
     public class Cookie
     {
+        /// <summary>
+        /// 名稱
+        /// </summary>
         public string? Name { get; set; }
 
+        /// <summary>
+        /// 主機鍵值
+        /// </summary>
         public string? HostKey { get; set; }
 
+        /// <summary>
+        /// 值
+        /// </summary>
         public string? Value { get; set; }
     }
 
@@ -203,9 +313,7 @@ public class ChromeManager
             //string sR = string.Empty;
             //string appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
-            string path = @"C:\Users\" + Environment.UserName +
-                @$"\AppData\Local\{GetPartialPath(browser)}\User Data\Local State";
-
+            string path = $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browser)}\User Data\Local State";
             string v = File.ReadAllText(path);
 
             JsonElement json = JsonSerializer.Deserialize<JsonElement>(v);
