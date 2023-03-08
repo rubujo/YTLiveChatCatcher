@@ -406,7 +406,7 @@ namespace YTLiveChatCatcher
             CBBrowser.DropDownStyle = ComboBoxStyle.DropDownList;
             CBBrowser.FormattingEnabled = true;
             CBBrowser.ItemHeight = 15;
-            CBBrowser.Items.AddRange(new object[] { "Brave", "Google Chrome", "Chromium", "Microsoft Edge", "Opera", "Opera GX", "Vivaldi" });
+            CBBrowser.Items.AddRange(new object[] { "Brave", "Google Chrome", "Chromium", "Microsoft Edge", "Opera", "Opera GX", "Vivaldi", "Mozilla Firefox" });
             CBBrowser.Location = new Point(792, 33);
             CBBrowser.Name = "CBBrowser";
             CBBrowser.Size = new Size(156, 23);
