@@ -6,7 +6,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="UserAgent" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.57</Value>
+      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36</Value>
     </Setting>
     <Setting Name="BrowserItemIndex" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
@@ -28,6 +28,27 @@
     </Setting>
     <Setting Name="UpdateSettings" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SecChUa" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">"Google Chrome";v="111", "Not A(Brand";v="8", "Chromium";v="111"</Value>
+    </Setting>
+    <Setting Name="SecChUaMobile" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">?0</Value>
+    </Setting>
+    <Setting Name="SecChUaPlatform" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Windows</Value>
+    </Setting>
+    <Setting Name="SecFetchDest" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">empty</Value>
+    </Setting>
+    <Setting Name="SecFetchMode" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">same-origin</Value>
+    </Setting>
+    <Setting Name="SecFetchSite" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">same-origin</Value>
+    </Setting>
+    <Setting Name="SecFetchUser" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">?1</Value>
     </Setting>
   </Settings>
 </SettingsFile>

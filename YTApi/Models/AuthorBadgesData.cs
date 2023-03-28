@@ -1,4 +1,4 @@
-﻿namespace YTLiveChatCatcher.Models;
+﻿namespace YTApi.Models;
 
 /// <summary>
 /// 作者徽章資料

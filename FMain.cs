@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using NLog;
 using System.Text.RegularExpressions;
+using YTApi;
 using YTLiveChatCatcher.Common;
-using YTLiveChatCatcher.Common.YTLiveChat;
+using YTLiveChatCatcher.Common.Sets;
+using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
@@ -64,11 +66,11 @@ public partial class FMain : Form
             }
             else if (tempValue.Contains($"{StringSet.Origin}/c/"))
             {
-                tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
+                tempValue = await LiveChatFunction.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
             }
             else if (tempValue.Contains('@'))
             {
-                tempValue = await CustomFunction.GetYtChannelIdByYtChannelCustomUrl(tempValue) ?? string.Empty;
+                tempValue = await LiveChatFunction.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
             }
 
             TBChannelID.Text = tempValue;
@@ -204,7 +206,7 @@ public partial class FMain : Form
                     });
 
                     // 取得 HttpClient。
-                    using HttpClient httpClient = CustomFunction.GetHttpClient(
+                    using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                         _httpClientFactory,
                         _logger,
                         userAgent);
@@ -255,7 +257,7 @@ public partial class FMain : Form
                                 isIntervalSet = false;
 
                                 MessageBox.Show(
-                                    "目前的間隔秒數太低，請調高。",
+                                    "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
                                     Text,
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Warning);
@@ -286,7 +288,7 @@ public partial class FMain : Form
                         });
 
                         // 取得 HttpClient。
-                        using HttpClient httpClient = CustomFunction.GetHttpClient(
+                        using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                             _httpClientFactory,
                             _logger,
                             userAgent);
@@ -461,10 +463,10 @@ public partial class FMain : Form
             });
 
             // 取得 HttpClient。
-            using HttpClient httpClient = CustomFunction
+            using HttpClient httpClient = HttpClientUtil
                 .GetHttpClient(_httpClientFactory, _logger, userAgent);
 
-            if (CustomFunction.CheckUserAgent(httpClient, TBUserAgent.Text))
+            if (HttpClientUtil.CheckUserAgent(httpClient, TBUserAgent.Text))
             {
                 if (TBUserAgent.Text != Properties.Settings.Default.UserAgent)
                 {

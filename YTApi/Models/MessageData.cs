@@ -1,4 +1,4 @@
-﻿namespace YTLiveChatCatcher.Models;
+﻿namespace YTApi.Models;
 
 /// <summary>
 /// message 的資料

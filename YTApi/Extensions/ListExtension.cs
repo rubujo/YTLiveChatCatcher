@@ -1,7 +1,7 @@
-﻿using YTLiveChatCatcher.Common;
-using YTLiveChatCatcher.Models;
+﻿using YTApi.Models;
+using YTLiveChatCatcher.Common.Sets;
 
-namespace YTLiveChatCatcher.Extensions;
+namespace YTApi.Extensions;
 
 /// <summary>
 /// List 的擴充方法

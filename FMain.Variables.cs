@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using YTLiveChatCatcher.Models;
+using YTApi.Models;
 
 namespace YTLiveChatCatcher;
 

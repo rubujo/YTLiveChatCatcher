@@ -1,9 +1,11 @@
 ﻿using NLog;
 using System.Text.Json;
-using YTLiveChatCatcher.Extensions;
-using YTLiveChatCatcher.Models;
+using YTApi.Extensions;
+using YTApi.Models;
+using YTLiveChatCatcher.Common.Sets;
+using YTLiveChatCatcher.Properties;
 
-namespace YTLiveChatCatcher.Common.YTLiveChat;
+namespace YTApi;
 
 /// <summary>
 /// YouTube 聊天室 JSON 解析器
@@ -115,7 +117,7 @@ public class JsonParser
                     {
                         // 略過不進行任何的處理。
 
-                        if (Properties.Settings.Default.EnableDebug)
+                        if (Settings.Default.EnableDebug)
                         {
                             _logger.Debug("方法：GetContinuation() -> playerSeekContinuationData -> 略過不處理的內容：{Message}",
                                 $"{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
@@ -124,7 +126,7 @@ public class JsonParser
 
                     #endregion
 
-                    if (Properties.Settings.Default.EnableDebug)
+                    if (Settings.Default.EnableDebug)
                     {
                         // 尚未支援的內容。
                         _logger.Debug($"方法：GetContinuation() -> 尚未支援的內容：" +
@@ -276,7 +278,7 @@ public class JsonParser
         // 參考：https://github.com/xenova/chat-downloader/blob/657e56eeec4ebe5af28de66b4d3653dbb796c8c1/chat_downloader/sites/youtube.py#L926
         if (element.TryGetProperty("liveChatTextMessageRenderer", out JsonElement liveChatTextMessageRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatTextMessageRenderer");
                 _logger.Debug(liveChatTextMessageRenderer);
@@ -313,7 +315,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatPaidMessageRenderer", out JsonElement liveChatPaidMessageRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatPaidMessageRenderer");
                 _logger.Debug(liveChatPaidMessageRenderer);
@@ -350,7 +352,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatPaidStickerRenderer", out JsonElement liveChatPaidStickerRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatPaidStickerRenderer");
                 _logger.Debug(liveChatPaidStickerRenderer);
@@ -387,7 +389,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatMembershipItemRenderer", out JsonElement liveChatMembershipItemRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatMembershipItemRenderer");
                 _logger.Debug(liveChatMembershipItemRenderer);
@@ -439,7 +441,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatViewerEngagementMessageRenderer", out JsonElement liveChatViewerEngagementMessageRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatViewerEngagementMessageRenderer");
                 _logger.Debug(liveChatViewerEngagementMessageRenderer);
@@ -476,7 +478,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatModeChangeMessageRenderer", out JsonElement liveChatModeChangeMessageRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatModeChangeMessageRenderer");
                 _logger.Debug(liveChatModeChangeMessageRenderer);
@@ -513,7 +515,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer", out JsonElement liveChatSponsorshipsGiftPurchaseAnnouncementRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatSponsorshipsGiftPurchaseAnnouncementRenderer");
                 _logger.Debug(liveChatSponsorshipsGiftPurchaseAnnouncementRenderer);
@@ -566,7 +568,7 @@ public class JsonParser
         }
         else if (element.TryGetProperty("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer", out JsonElement liveChatSponsorshipsGiftRedemptionAnnouncementRenderer))
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("liveChatSponsorshipsGiftRedemptionAnnouncementRenderer");
                 _logger.Debug(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer);
@@ -614,7 +616,7 @@ public class JsonParser
             // 參考：https://taiyakisun.hatenablog.com/entry/2020/10/13/223443
             // 略過進不行任何處理。
 
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("方法：GetRenderer() -> 略過不處理的內容：{Message}",
                     $"{Environment.NewLine}{element.GetRawText()}{Environment.NewLine}");
@@ -622,7 +624,7 @@ public class JsonParser
         }
         else
         {
-            if (Properties.Settings.Default.EnableDebug)
+            if (Settings.Default.EnableDebug)
             {
                 _logger.Debug("方法：GetRenderer() -> 尚未支援的內容：{Message}",
                     $"{Environment.NewLine}{element.GetRawText()}{Environment.NewLine}");
@@ -1028,7 +1030,7 @@ public class JsonParser
             }
         }
 
-        if (Properties.Settings.Default.EnableDebug)
+        if (Settings.Default.EnableDebug)
         {
             _logger.Debug($"方法：GetMessage() -> 除錯用的內容：" +
                 $"{Environment.NewLine}{element.GetRawText()}{Environment.NewLine}");
@@ -1143,7 +1145,7 @@ public class JsonParser
 
                         emojiData.IsCustomEmoji = isCustomEmoji.HasValue && isCustomEmoji.Value.GetBoolean();
 
-                        if (Properties.Settings.Default.EnableDebug)
+                        if (Settings.Default.EnableDebug)
                         {
                             _logger.Debug($"方法：GetRuns() -> emoji -> 除錯用的內容：" +
                                 $"{Environment.NewLine}{emoji.Value.GetRawText()}{Environment.NewLine}");
@@ -1153,7 +1155,7 @@ public class JsonParser
                     }
                 }
 
-                if (Properties.Settings.Default.EnableDebug)
+                if (Settings.Default.EnableDebug)
                 {
                     _logger.Debug($"方法：GetRuns() -> 除錯用的內容：" +
                         $"{Environment.NewLine}{singleRun.GetRawText()}{Environment.NewLine}");

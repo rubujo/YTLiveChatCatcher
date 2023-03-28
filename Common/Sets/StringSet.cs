@@ -1,4 +1,4 @@
-﻿namespace YTLiveChatCatcher.Common;
+﻿namespace YTLiveChatCatcher.Common.Sets;
 
 /// <summary>
 /// 字串組

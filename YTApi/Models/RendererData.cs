@@ -1,4 +1,4 @@
-﻿namespace YTLiveChatCatcher.Models;
+﻿namespace YTApi.Models;
 
 /// <summary>
 /// *Renderer 的資料
@@ -23,7 +23,7 @@ public class RendererData
     /// <summary>
     /// 使用者相片影像檔網址
     /// </summary>
-    public string? AuthorPhotoUrl  { get; set; }
+    public string? AuthorPhotoUrl { get; set; }
 
     /// <summary>
     /// 使用者徽章（文字）

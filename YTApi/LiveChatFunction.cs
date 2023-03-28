@@ -1,4 +1,5 @@
-﻿using AngleSharp.Dom;
+﻿using AngleSharp;
+using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using NLog;
@@ -7,10 +8,11 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using YTApi.Models;
+using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Extensions;
-using YTLiveChatCatcher.Models;
 
-namespace YTLiveChatCatcher.Common.YTLiveChat;
+namespace YTApi;
 
 /// <summary>
 /// YouTube 聊天室函式
@@ -61,6 +63,35 @@ public partial class LiveChatFunction
     private static partial Regex RegexDelegatedSessionID();
 
     #endregion
+
+    /// <summary>
+    /// 從 YouTube 頻道自定義網址取得頻道 ID
+    /// </summary>
+    /// <param name="url">字串，YouTube 頻道自定義網址</param>
+    /// <returns>字串</returns>
+    public static async Task<string?> GetYtChIdByYtChCustomUrl(string url)
+    {
+        string? ytChId = string.Empty;
+
+        IConfiguration configuration = Configuration.Default.WithDefaultLoader();
+        IBrowsingContext browsingContext = BrowsingContext.New(configuration);
+        IDocument document = await browsingContext.OpenAsync(url);
+        IElement? element = document?.Body?.Children
+            .FirstOrDefault(n => n.LocalName == "meta" &&
+                n.GetAttribute("property") == "og:url");
+
+        if (element != null)
+        {
+            ytChId = element.GetAttribute("content");
+        }
+
+        if (!string.IsNullOrEmpty(ytChId))
+        {
+            ytChId = ytChId.Replace("https://www.youtube.com/channel/", string.Empty);
+        }
+
+        return ytChId;
+    }
 
     /// <summary>
     /// 透過頻道的 ID 取得該頻道最新的直播影片的影片 ID
@@ -343,6 +374,8 @@ public partial class LiveChatFunction
                 }
             }
 
+            bool useDelegatedSessionID = false;
+
             MatchCollection collection11 = RegexDatasyncID().Matches(htmlContent);
 
             foreach (Match match in collection11.Cast<Match>())
@@ -355,17 +388,20 @@ public partial class LiveChatFunction
                         .Split("||".ToCharArray(),
                         StringSplitOptions.RemoveEmptyEntries);
 
-                    if (tempArray.Length > 0)
+                    if (tempArray.Length >= 2 && !string.IsNullOrEmpty(tempArray[1]))
                     {
                         ytConfig.DATASYNC_ID = tempArray[0];
+                    }
+                    else
+                    {
+                        useDelegatedSessionID = true;
                     }
 
                     break;
                 }
             }
 
-            // TODO: 2022-05-19 尚未確認到是否有此參數。
-            // 參考：https://github.com/xenova/chat-downloader/blob/ff9ddb1f840fa06d0cc3976badf75c1fffebd003/chat_downloader/sites/youtube.py#L1537
+            // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
             MatchCollection collection12 = RegexDelegatedSessionID().Matches(htmlContent);
 
             foreach (Match match in collection12.Cast<Match>())
@@ -373,6 +409,11 @@ public partial class LiveChatFunction
                 if (match.Success && match.Groups.Count >= 2)
                 {
                     ytConfig.DELEGATED_SESSION_ID = match.Groups[1].Captures[0].Value;
+
+                    if (useDelegatedSessionID)
+                    {
+                        ytConfig.DATASYNC_ID = ytConfig.DELEGATED_SESSION_ID;
+                    }
 
                     break;
                 }
@@ -465,7 +506,7 @@ public partial class LiveChatFunction
 
             string receivedJsonContent = httpResponseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
-            if (Properties.Settings.Default.EnableDebug)
+            if (YTLiveChatCatcher.Properties.Settings.Default.EnableDebug)
             {
                 _logger.Debug(httpRequestMessage);
                 _logger.Debug(inputJsonContent);
