@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using Microsoft.Extensions.Logging;
+using System.Data;
 using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
@@ -37,6 +38,8 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
+            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -56,6 +59,8 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
+            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -124,6 +129,8 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
+            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -153,6 +160,8 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
+            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -314,6 +323,8 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
+            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,

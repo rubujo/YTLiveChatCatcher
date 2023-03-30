@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using NLog;
 using System.Text;
 
 namespace YTLiveChatCatcher.Common.Utils;
@@ -8,16 +8,16 @@ namespace YTLiveChatCatcher.Common.Utils;
 /// </summary>
 public class HttpClientUtil
 {
+    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
     /// <summary>
     /// 取得 HttpClient
     /// </summary>
     /// <param name="httpClientFactory">IHttpClientFactory</param>
-    /// <param name="logger">Microsoft.Extensions.Logging.ILogger</param>
-    /// <param name="userAgent">字串，使用者代理字串</param>
+    /// <param name="userAgent">字串，使用者代理字串，預設值為空白</param>
     /// <returns>HttpClient</returns>
     public static HttpClient GetHttpClient(
         IHttpClientFactory httpClientFactory,
-        ILogger logger,
         string userAgent = "")
     {
         HttpClient outputHttpClient = httpClientFactory.CreateClient();
@@ -41,10 +41,7 @@ public class HttpClientUtil
                     stringBuilder.AppendLine($"{requestHeader.Key}：{value}");
                 }
 
-                logger.LogInformation(
-                    "本次連線使用的請求標頭：{NewLine}{RequestHeader}",
-                    Environment.NewLine,
-                    stringBuilder.ToString());
+                _logger.Info($"本次連線使用的請求標頭：{Environment.NewLine}{stringBuilder}");
             }
         }
 

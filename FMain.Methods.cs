@@ -20,6 +20,9 @@ namespace YTLiveChatCatcher;
 // 阻擋設計工具。
 partial class DesignerBlocker { };
 
+/// <summary>
+/// FMain 方法
+/// </summary>
 public partial class FMain
 {
     /// <summary>
@@ -192,7 +195,6 @@ public partial class FMain
             // 取得 HttpClient。
             using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                 _httpClientFactory,
-                _logger,
                 userAgent);
 
             string videoID = string.Empty;
@@ -1159,7 +1161,6 @@ public partial class FMain
                         // 取得 HttpClient。
                         using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                             _httpClientFactory,
-                            _logger,
                             userAgent);
 
                         SharedJsonElement = LiveChatFunction.GetJsonElement(
@@ -1216,7 +1217,7 @@ public partial class FMain
                                                     {
                                                         // 取得 HttpClient。
                                                         using HttpClient httpClient = HttpClientUtil
-                                                            .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                            .GetHttpClient(_httpClientFactory, userAgent);
 
                                                         byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
 
@@ -1269,7 +1270,7 @@ public partial class FMain
                                                     {
                                                         // 取得 HttpClient。
                                                         using HttpClient httpClient = HttpClientUtil
-                                                            .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                            .GetHttpClient(_httpClientFactory, userAgent);
 
                                                         byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
 
@@ -1445,7 +1446,7 @@ public partial class FMain
                                                 {
                                                     // 取得 HttpClient。
                                                     using HttpClient httpClient = HttpClientUtil
-                                                        .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                        .GetHttpClient(_httpClientFactory, userAgent);
 
                                                     byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
 
@@ -1687,7 +1688,7 @@ public partial class FMain
                                         {
                                             // 取得 HttpClient。
                                             using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
 
@@ -1796,7 +1797,7 @@ public partial class FMain
                                         {
                                             // 取得 HttpClient。
                                             using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
 
@@ -1878,7 +1879,7 @@ public partial class FMain
                                         {
                                             // 取得 HttpClient。
                                             using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
 
@@ -2289,8 +2290,7 @@ public partial class FMain
     {
         // 取得 HttpClient。
         using HttpClient httpClient = HttpClientUtil.GetHttpClient(
-            _httpClientFactory,
-            _logger);
+            _httpClientFactory);
 
         UpdateNotifier.CheckResult checkResult = await UpdateNotifier.CheckVersion(httpClient);
 

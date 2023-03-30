@@ -30,6 +30,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -46,6 +48,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -125,6 +129,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -208,7 +214,6 @@ public partial class FMain : Form
                     // 取得 HttpClient。
                     using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                         _httpClientFactory,
-                        _logger,
                         userAgent);
 
                     TBVideoID.Text = LiveChatFunction.GetLatestStreamingVideoID(
@@ -290,7 +295,6 @@ public partial class FMain : Form
                         // 取得 HttpClient。
                         using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                             _httpClientFactory,
-                            _logger,
                             userAgent);
 
                         SharedYTConfig = LiveChatFunction.GetYTConfig(
@@ -321,6 +325,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             BtnStop_Click(null, new EventArgs());
 
             MessageBox.Show(
@@ -358,6 +364,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -390,6 +398,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -419,6 +429,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -464,7 +476,7 @@ public partial class FMain : Form
 
             // 取得 HttpClient。
             using HttpClient httpClient = HttpClientUtil
-                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                .GetHttpClient(_httpClientFactory, userAgent);
 
             if (HttpClientUtil.CheckUserAgent(httpClient, TBUserAgent.Text))
             {
@@ -505,6 +517,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -689,6 +703,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
@@ -712,6 +728,8 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
+            _logger.LogError("{ErrorMessage}", ex.ToString());
+
             MessageBox.Show(
                 $"發生錯誤：{ex}",
                 Text,
