@@ -8,16 +8,21 @@ using OfficeOpenXml.Style.XmlAccess;
 using System.Drawing.Imaging;
 using System.Reflection;
 using System.Runtime.Versioning;
+using YTApi;
+using YTApi.Models;
 using YTLiveChatCatcher.Common;
-using YTLiveChatCatcher.Common.YTLiveChat;
+using YTLiveChatCatcher.Common.Sets;
+using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
-using YTLiveChatCatcher.Models;
 
 namespace YTLiveChatCatcher;
 
 // 阻擋設計工具。
 partial class DesignerBlocker { };
 
+/// <summary>
+/// FMain 方法
+/// </summary>
 public partial class FMain
 {
     /// <summary>
@@ -188,9 +193,8 @@ public partial class FMain
             });
 
             // 取得 HttpClient。
-            using HttpClient httpClient = CustomFunction.GetHttpClient(
+            using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                 _httpClientFactory,
-                _logger,
                 userAgent);
 
             string videoID = string.Empty;
@@ -1155,9 +1159,8 @@ public partial class FMain
                         });
 
                         // 取得 HttpClient。
-                        using HttpClient httpClient = CustomFunction.GetHttpClient(
+                        using HttpClient httpClient = HttpClientUtil.GetHttpClient(
                             _httpClientFactory,
-                            _logger,
                             userAgent);
 
                         SharedJsonElement = LiveChatFunction.GetJsonElement(
@@ -1213,8 +1216,8 @@ public partial class FMain
                                                     try
                                                     {
                                                         // 取得 HttpClient。
-                                                        using HttpClient httpClient = CustomFunction
-                                                            .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                        using HttpClient httpClient = HttpClientUtil
+                                                            .GetHttpClient(_httpClientFactory, userAgent);
 
                                                         byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
 
@@ -1266,8 +1269,8 @@ public partial class FMain
                                                     try
                                                     {
                                                         // 取得 HttpClient。
-                                                        using HttpClient httpClient = CustomFunction
-                                                            .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                        using HttpClient httpClient = HttpClientUtil
+                                                            .GetHttpClient(_httpClientFactory, userAgent);
 
                                                         byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
 
@@ -1442,8 +1445,8 @@ public partial class FMain
                                                 try
                                                 {
                                                     // 取得 HttpClient。
-                                                    using HttpClient httpClient = CustomFunction
-                                                        .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                                    using HttpClient httpClient = HttpClientUtil
+                                                        .GetHttpClient(_httpClientFactory, userAgent);
 
                                                     byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
 
@@ -1684,8 +1687,8 @@ public partial class FMain
                                         try
                                         {
                                             // 取得 HttpClient。
-                                            using HttpClient httpClient = CustomFunction
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                            using HttpClient httpClient = HttpClientUtil
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
 
@@ -1793,8 +1796,8 @@ public partial class FMain
                                         try
                                         {
                                             // 取得 HttpClient。
-                                            using HttpClient httpClient = CustomFunction
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                            using HttpClient httpClient = HttpClientUtil
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
 
@@ -1875,8 +1878,8 @@ public partial class FMain
                                         try
                                         {
                                             // 取得 HttpClient。
-                                            using HttpClient httpClient = CustomFunction
-                                                .GetHttpClient(_httpClientFactory, _logger, userAgent);
+                                            using HttpClient httpClient = HttpClientUtil
+                                                .GetHttpClient(_httpClientFactory, userAgent);
 
                                             byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
 
@@ -2286,9 +2289,8 @@ public partial class FMain
     private async void CheckAppVersion()
     {
         // 取得 HttpClient。
-        using HttpClient httpClient = CustomFunction.GetHttpClient(
-            _httpClientFactory,
-            _logger);
+        using HttpClient httpClient = HttpClientUtil.GetHttpClient(
+            _httpClientFactory);
 
         UpdateNotifier.CheckResult checkResult = await UpdateNotifier.CheckVersion(httpClient);
 

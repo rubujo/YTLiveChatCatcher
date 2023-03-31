@@ -1,4 +1,4 @@
-﻿namespace YTLiveChatCatcher.Models;
+﻿namespace YTApi.Models;
 
 /// <summary>
 /// runs 的資料

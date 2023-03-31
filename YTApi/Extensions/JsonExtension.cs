@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace YTLiveChatCatcher.Extensions;
+namespace YTApi.Extensions;
 
 /// <summary>
 /// JsonElement 的擴充方法

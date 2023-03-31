@@ -43,15 +43,18 @@ internal static class Program
                 // Targets where to log to: File and Console.
                 FileTarget logFile = new("logFile")
                 {
-                    FileName = Path.Combine(AppContext.BaseDirectory, @$"Logs\log.txt"),
+                    FileName = Path.Combine(AppContext.BaseDirectory, @"Logs\log.txt"),
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
                     ArchiveAboveSize = 8 * 1024 * 1024,
                     MaxArchiveFiles = 10,
                     MaxArchiveDays = 7,
                     LineEnding = LineEndingMode.CRLF,
                     Encoding = Encoding.UTF8,
+                    WriteBom = false,
                     CreateDirs = true,
-                    AutoFlush = true
+                    AutoFlush = true,
+                    ConcurrentWrites = true,
+                    EnableArchiveFileCompression = true
                 };
 
                 ConsoleTarget logConsole = new("logConsole");

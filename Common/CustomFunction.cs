@@ -1,16 +1,13 @@
-﻿using AngleSharp.Dom;
-using AngleSharp;
-using Microsoft.Extensions.Logging;
-using NLog;
+﻿using NLog;
+using OfficeOpenXml.Drawing;
 using System.Diagnostics;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Speech.Synthesis;
 using System.Text.RegularExpressions;
-using OfficeOpenXml.Drawing;
-using System.Drawing.Imaging;
 
 namespace YTLiveChatCatcher.Common;
 
@@ -70,64 +67,6 @@ public class CustomFunction
     }
 
     /// <summary>
-    /// 取得 HttpClient
-    /// </summary>
-    /// <param name="httpClientFactory">IHttpClientFactory</param>
-    /// <param name="logger">Microsoft.Extensions.Logging.ILogger</param>
-    /// <param name="userAgent">字串，使用者代理字串</param>
-    /// <returns>HttpClient</returns>
-    public static HttpClient GetHttpClient(
-        IHttpClientFactory httpClientFactory,
-        Microsoft.Extensions.Logging.ILogger logger,
-        string userAgent = "")
-    {
-        HttpClient outputHttpClient = httpClientFactory.CreateClient();
-
-        if (!string.IsNullOrEmpty(userAgent))
-        {
-            bool result = SetUserAgent(outputHttpClient, userAgent);
-
-            if (result)
-            {
-                logger.LogInformation("本次連線使用的使用者代理字串：{UserAgent}", userAgent);
-            }
-
-        }
-
-        return outputHttpClient;
-    }
-
-    /// <summary>
-    /// 為 HttpClient 設定指定的使用者代理字串
-    /// </summary>
-    /// <param name="httpClient">HttpClient</param>
-    /// <param name="userAgent">字串，使用者代理字串</param>
-    /// <returns>布林值</returns>
-    public static bool SetUserAgent(HttpClient httpClient, string userAgent)
-    {
-        bool result = httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
-
-        if (result)
-        {
-            httpClient.DefaultRequestHeaders.UserAgent.Clear();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
-        }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 檢查使用者代理字串
-    /// </summary>
-    /// <param name="httpClient">HttpClient</param>
-    /// <param name="userAgent">字串，使用者代理字串</param>
-    /// <returns>布林值</returns>
-    public static bool CheckUserAgent(HttpClient httpClient, string userAgent)
-    {
-        return httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
-    }
-
-    /// <summary>
     /// 取得隨機間隔值（毫秒）
     /// </summary>
     /// <returns>數值，3000 ~ 10000</returns>
@@ -163,35 +102,6 @@ public class CustomFunction
         {
             _logger.Debug("不支援的作業系統。");
         }
-    }
-
-    /// <summary>
-    /// 從 YouTube 頻道自定義網址取得頻道 ID
-    /// </summary>
-    /// <param name="ytChannelCustomUrl">字串，YouTube 頻道自定義網址</param>
-    /// <returns>字串</returns>
-    public static async Task<string?> GetYtChannelIdByYtChannelCustomUrl(string ytChannelCustomUrl)
-    {
-        string? ytChannelId = string.Empty;
-
-        IConfiguration configuration = Configuration.Default.WithDefaultLoader();
-        IBrowsingContext browsingContext = BrowsingContext.New(configuration);
-        IDocument document = await browsingContext.OpenAsync(ytChannelCustomUrl);
-        IElement? element = document?.Body?.Children
-            .FirstOrDefault(n => n.LocalName == "meta" &&
-                n.GetAttribute("property") == "og:url");
-
-        if (element != null)
-        {
-            ytChannelId = element.GetAttribute("content");
-        }
-
-        if (!string.IsNullOrEmpty(ytChannelId))
-        {
-            ytChannelId = ytChannelId.Replace("https://www.youtube.com/channel/", string.Empty);
-        }
-
-        return ytChannelId;
     }
 
     /// <summary>

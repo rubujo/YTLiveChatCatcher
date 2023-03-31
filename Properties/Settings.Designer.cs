@@ -38,7 +38,7 @@ namespace YTLiveChatCatcher.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/110.0.0.0 Safari/537.36 Edg/110.0.1587.57")]
+            "Chrome/111.0.0.0 Safari/537.36")]
         public string UserAgent {
             get {
                 return ((string)(this["UserAgent"]));
@@ -129,6 +129,69 @@ namespace YTLiveChatCatcher.Properties {
             }
             set {
                 this["UpdateSettings"] = value;
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("\"Google Chrome\";v=\"111\", \"Not A(Brand\";v=\"8\", \"Chromium\";v=\"111\"")]
+        public string SecChUa {
+            get {
+                return ((string)(this["SecChUa"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("?0")]
+        public string SecChUaMobile {
+            get {
+                return ((string)(this["SecChUaMobile"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Windows")]
+        public string SecChUaPlatform {
+            get {
+                return ((string)(this["SecChUaPlatform"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("empty")]
+        public string SecFetchDest {
+            get {
+                return ((string)(this["SecFetchDest"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("same-origin")]
+        public string SecFetchMode {
+            get {
+                return ((string)(this["SecFetchMode"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("same-origin")]
+        public string SecFetchSite {
+            get {
+                return ((string)(this["SecFetchSite"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("?1")]
+        public string SecFetchUser {
+            get {
+                return ((string)(this["SecFetchUser"]));
             }
         }
     }
