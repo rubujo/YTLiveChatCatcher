@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWindowsForms>true</UseWindowsForms>
 		<RootNamespace>YTLiveChatCatcher</RootNamespace>
-		<Version>1.4.7</Version>
+		<Version>1.4.8</Version>
 		<AssemblyName>YTLiveChatCatcher</AssemblyName>
 		<ApplicationIcon>Resources\app_icon_large.ico</ApplicationIcon>
 		<DebugType>embedded</DebugType>
@@ -19,12 +19,12 @@
 
 	<ItemGroup>
 		<PackageReference Include="AngleSharp" Version="1.0.1" />
-		<PackageReference Include="EPPlus" Version="6.2.1" />
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.4" />
+		<PackageReference Include="EPPlus" Version="6.2.3" />
+		<PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.5" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Windows.Compatibility" Version="7.0.0" />
-		<PackageReference Include="NLog" Version="5.1.3" />
+		<PackageReference Include="Microsoft.Windows.Compatibility" Version="7.0.1" />
+		<PackageReference Include="NLog" Version="5.1.4" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.2.3" />
 		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
 	</ItemGroup>
