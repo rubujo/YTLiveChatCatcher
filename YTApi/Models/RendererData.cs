@@ -6,6 +6,11 @@
 public class RendererData
 {
     /// <summary>
+    /// ID 值
+    /// </summary>
+    public string? ID { get; set; }
+
+    /// <summary>
     /// 類型
     /// </summary>
     public string? Type { get; set; }

@@ -236,12 +236,28 @@ public class JsonParser
             {
                 foreach (JsonElement singleAction in actions.Value.EnumerateArray())
                 {
+                    // TODO: 2023-05-29 測試如何解析 addBannerToLiveChatCommand。
+                    _logger.Debug("singleAction");
+                    _logger.Debug(singleAction);
+
                     JsonElement? item = singleAction.Get("addChatItemAction")?.Get("item");
 
                     if (item.HasValue)
                     {
                         output.AddRange(GetRenderer(item.Value, isLarge));
                     }
+
+                    // TODO: 2023-05-29 未測試，不確定是否有效。。
+                    JsonElement? singleBannerRenderer = singleAction.Get("addBannerToLiveChatCommand")?.Get("bannerRenderer");
+
+                    if (singleBannerRenderer.HasValue)
+                    {
+                        output.AddRange(GetRenderer(singleBannerRenderer.Value, isLarge));
+                    }
+
+                    JsonElement? videoOffsetTimeMsec = singleAction.Get("addChatItemAction")?.Get("videoOffsetTimeMsec");
+
+                    string videoOffsetTimeText = GetVideoOffsetTimeMsec(videoOffsetTimeMsec);
 
                     JsonElement? replayActions = singleAction.Get("replayChatItemAction")?.Get("actions");
 
@@ -254,9 +270,48 @@ public class JsonParser
 
                             if (replayItem.HasValue)
                             {
-                                output.AddRange(GetRenderer(replayItem.Value, isLarge));
+                                List<RendererData> rendererDatas = GetRenderer(replayItem.Value, isLarge);
+
+                                foreach (RendererData rendererData in rendererDatas)
+                                {
+                                    if (string.IsNullOrEmpty(rendererData.TimestampText) &&
+                                        string.IsNullOrEmpty(rendererData.TimestampUsec))
+                                    {
+                                        rendererData.TimestampText = videoOffsetTimeText;
+                                    }
+                                }
+
+                                output.AddRange(rendererDatas);
+                            }
+
+                            JsonElement? replayBannerRenderer = replayAction.Get("addBannerToLiveChatCommand")?.Get("bannerRenderer");
+
+                            if (replayBannerRenderer.HasValue)
+                            {
+                                List<RendererData> rendererDatas = GetRenderer(replayBannerRenderer.Value, isLarge);
+
+                                foreach (RendererData rendererData in rendererDatas)
+                                {
+                                    if ((string.IsNullOrEmpty(rendererData.TimestampText) &&
+                                        string.IsNullOrEmpty(rendererData.TimestampUsec)) ||
+                                        rendererData.TimestampText == StringSet.NoTimestampText)
+                                    {
+                                        rendererData.TimestampText = videoOffsetTimeText;
+                                    }
+                                }
+
+                                output.AddRange(rendererDatas);
                             }
                         }
+                    }
+
+                    // TODO: 2023-05-29 用於取得 replaceChatItemAction 使用。
+                    JsonElement? replaceAction = singleAction.Get("replaceChatItemAction");
+
+                    if (replaceAction.HasValue)
+                    {
+                        _logger.Debug("replaceChatItemAction");
+                        _logger.Debug(replaceAction);
                     }
                 }
             }
@@ -287,6 +342,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatTextMessageRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatTextMessageRenderer, isLarge);
 
+            string id = GetID(liveChatTextMessageRenderer);
             string timestampUsec = GetTimestampUsec(liveChatTextMessageRenderer);
             string authorName = GetAuthorName(liveChatTextMessageRenderer);
             string authorPhoto = GetAuthorPhoto(liveChatTextMessageRenderer, isLarge);
@@ -299,6 +355,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.ChatGeneral,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -324,6 +381,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatPaidMessageRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatPaidMessageRenderer, isLarge);
 
+            string id = GetID(liveChatPaidMessageRenderer);
             string timestampUsec = GetTimestampUsec(liveChatPaidMessageRenderer);
             string authorName = GetAuthorName(liveChatPaidMessageRenderer);
             string authorPhoto = GetAuthorPhoto(liveChatPaidMessageRenderer, isLarge);
@@ -336,6 +394,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.ChatSuperChat,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -361,6 +420,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatPaidStickerRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatPaidStickerRenderer, isLarge);
 
+            string id = GetID(liveChatPaidStickerRenderer);
             string timestampUsec = GetTimestampUsec(liveChatPaidStickerRenderer);
             string authorName = GetAuthorName(liveChatPaidStickerRenderer);
             string authorPhoto = GetAuthorPhoto(liveChatPaidStickerRenderer, isLarge);
@@ -373,6 +433,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.ChatSuperSticker,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -398,6 +459,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatMembershipItemRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatMembershipItemRenderer, isLarge);
 
+            string id = GetID(liveChatMembershipItemRenderer);
             string timestampUsec = GetTimestampUsec(liveChatMembershipItemRenderer);
             string authorName = GetAuthorName(liveChatMembershipItemRenderer);
             string authorPhoto = GetAuthorPhoto(liveChatMembershipItemRenderer, isLarge);
@@ -425,6 +487,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = type,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -450,6 +513,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatViewerEngagementMessageRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatViewerEngagementMessageRenderer, isLarge);
 
+            string id = GetID(liveChatViewerEngagementMessageRenderer);
             string timestampUsec = GetTimestampUsec(liveChatViewerEngagementMessageRenderer);
             string authorName = $"[{StringSet.YouTube}]";
             string authorPhoto = StringSet.NoAuthorPhotoUrl;
@@ -462,6 +526,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.YouTube,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -487,6 +552,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatModeChangeMessageRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatModeChangeMessageRenderer, isLarge);
 
+            string id = GetID(liveChatModeChangeMessageRenderer);
             string timestampUsec = GetTimestampUsec(liveChatModeChangeMessageRenderer);
             string authorName = $"[{StringSet.YouTube}]";
             string authorPhoto = StringSet.NoAuthorPhotoUrl;
@@ -499,6 +565,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.YouTube,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -524,6 +591,7 @@ public class JsonParser
             AuthorBadgesData? authorBadgesData = null;
             MessageData? messageData = null;
 
+            string id = GetID(liveChatSponsorshipsGiftPurchaseAnnouncementRenderer);
             string authorName = StringSet.NoAuthorName;
             string authorPhoto = StringSet.NoAuthorPhotoUrl;
             string authorBadges = StringSet.NoAuthorBadges;
@@ -552,6 +620,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.ChatMemberGift,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -577,6 +646,7 @@ public class JsonParser
             AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer, isLarge);
             MessageData messageData = GetMessage(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer, isLarge);
 
+            string id = GetID(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer);
             string timestampUsec = GetTimestampUsec(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer);
             string authorName = GetAuthorName(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer);
             string authorPhoto = GetAuthorPhoto(liveChatSponsorshipsGiftRedemptionAnnouncementRenderer, isLarge);
@@ -589,6 +659,7 @@ public class JsonParser
 
             output.Add(new RendererData()
             {
+                ID = id,
                 Type = StringSet.ChatReceivedMemberGift,
                 TimestampUsec = timestampUsec,
                 AuthorName = authorName,
@@ -602,6 +673,153 @@ public class JsonParser
                 Emojis = messageData.Emojis ?? null,
                 Badges = authorBadgesData.Badges ?? null
             });
+        }
+        else if (element.TryGetProperty("liveChatBannerRenderer", out JsonElement liveChatBannerRenderer))
+        {
+            if (Settings.Default.EnableDebug)
+            {
+                _logger.Debug("liveChatBannerRenderer");
+                _logger.Debug(liveChatBannerRenderer);
+            }
+
+            // TODO: 2023-05-29 疑似有插入時間順序的問題。
+            if (liveChatBannerRenderer.TryGetProperty("header", out JsonElement header))
+            {
+                if (Settings.Default.EnableDebug)
+                {
+                    _logger.Debug("liveChatBannerRenderer -> header");
+                    _logger.Debug(header);
+                }
+
+                if (header.TryGetProperty("liveChatBannerHeaderRenderer", out JsonElement liveChatBannerHeaderRenderer))
+                {
+                    if (Settings.Default.EnableDebug)
+                    {
+                        _logger.Debug("liveChatBannerRenderer -> header -> liveChatBannerHeaderRenderer");
+                        _logger.Debug(liveChatBannerHeaderRenderer);
+                    }
+
+                    AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatBannerHeaderRenderer, isLarge);
+                    MessageData messageData = GetMessage(liveChatBannerHeaderRenderer, isLarge);
+
+                    string id = GetID(liveChatBannerHeaderRenderer);
+                    string timestampUsec = GetTimestampUsec(liveChatBannerHeaderRenderer);
+                    string authorName = GetAuthorName(liveChatBannerHeaderRenderer);
+                    string authorPhoto = GetAuthorPhoto(liveChatBannerHeaderRenderer, isLarge);
+                    string authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
+                    string message = messageData.Text ?? StringSet.NoMessageContent;
+                    string purchaseAmountText = StringSet.NoPurchaseAmountText;
+                    string backgroundColor = StringSet.NoBackgroundColor;
+                    string timestampText = StringSet.NoTimestampText;
+                    string authorExternalChannelID = GetAuthorExternalChannelId(liveChatBannerHeaderRenderer);
+
+                    output.Add(new RendererData()
+                    {
+                        ID = id,
+                        Type = StringSet.ChatPinned,
+                        TimestampUsec = timestampUsec,
+                        AuthorName = authorName,
+                        AuthorBadges = authorBadges,
+                        AuthorPhotoUrl = authorPhoto,
+                        MessageContent = message,
+                        PurchaseAmountText = purchaseAmountText,
+                        BackgroundColor = backgroundColor,
+                        TimestampText = timestampText,
+                        AuthorExternalChannelID = authorExternalChannelID,
+                        Emojis = messageData.Emojis ?? null,
+                        Badges = authorBadgesData.Badges ?? null
+                    });
+                }
+            }
+
+            if (liveChatBannerRenderer.TryGetProperty("contents", out JsonElement contents))
+            {
+                if (Settings.Default.EnableDebug)
+                {
+                    _logger.Debug("liveChatBannerRenderer -> contents");
+                    _logger.Debug(contents);
+                }
+
+                if (contents.TryGetProperty("liveChatTextMessageRenderer", out JsonElement subLiveChatTextMessageRenderer))
+                {
+                    if (Settings.Default.EnableDebug)
+                    {
+                        _logger.Debug("liveChatBannerRenderer -> contents -> liveChatTextMessageRenderer");
+                        _logger.Debug(subLiveChatTextMessageRenderer);
+                    }
+
+                    AuthorBadgesData authorBadgesData = GetAuthorBadges(subLiveChatTextMessageRenderer, isLarge);
+                    MessageData messageData = GetMessage(subLiveChatTextMessageRenderer, isLarge);
+
+                    string id = GetID(subLiveChatTextMessageRenderer);
+                    string timestampUsec = GetTimestampUsec(subLiveChatTextMessageRenderer);
+                    string authorName = GetAuthorName(subLiveChatTextMessageRenderer);
+                    string authorPhoto = GetAuthorPhoto(subLiveChatTextMessageRenderer, isLarge);
+                    string authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
+                    string message = messageData.Text ?? StringSet.NoMessageContent;
+                    string purchaseAmountText = StringSet.NoPurchaseAmountText;
+                    string backgroundColor = StringSet.NoBackgroundColor;
+                    string timestampText = GetTimestampText(subLiveChatTextMessageRenderer);
+                    string authorExternalChannelID = GetAuthorExternalChannelId(subLiveChatTextMessageRenderer);
+
+                    output.Add(new RendererData()
+                    {
+                        ID = id,
+                        Type = StringSet.ChatRedirect,
+                        TimestampUsec = timestampUsec,
+                        AuthorName = authorName,
+                        AuthorBadges = authorBadges,
+                        AuthorPhotoUrl = authorPhoto,
+                        MessageContent = message,
+                        PurchaseAmountText = purchaseAmountText,
+                        BackgroundColor = backgroundColor,
+                        TimestampText = timestampText,
+                        AuthorExternalChannelID = authorExternalChannelID,
+                        Emojis = messageData.Emojis ?? null,
+                        Badges = authorBadgesData.Badges ?? null
+                    });
+                }
+
+                if (contents.TryGetProperty("liveChatBannerRedirectRenderer", out JsonElement liveChatBannerRedirectRenderer))
+                {
+                    if (Settings.Default.EnableDebug)
+                    {
+                        _logger.Debug("liveChatBannerRenderer -> contents -> liveChatBannerRedirectRenderer");
+                        _logger.Debug(liveChatBannerRedirectRenderer);
+                    }
+
+                    AuthorBadgesData authorBadgesData = GetAuthorBadges(liveChatBannerRedirectRenderer, isLarge);
+                    MessageData messageData = GetMessage(liveChatBannerRedirectRenderer, isLarge);
+
+                    string id = GetID(liveChatBannerRedirectRenderer);
+                    string timestampUsec = GetTimestampUsec(liveChatBannerRedirectRenderer);
+                    string authorName = GetAuthorName(liveChatBannerRedirectRenderer);
+                    string authorPhoto = GetAuthorPhoto(liveChatBannerRedirectRenderer, isLarge);
+                    string authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
+                    string message = messageData.Text ?? StringSet.NoMessageContent;
+                    string purchaseAmountText = StringSet.NoPurchaseAmountText;
+                    string backgroundColor = StringSet.NoBackgroundColor;
+                    string timestampText = StringSet.NoTimestampText;
+                    string authorExternalChannelID = GetAuthorExternalChannelId(liveChatBannerRedirectRenderer);
+
+                    output.Add(new RendererData()
+                    {
+                        ID = id,
+                        Type = StringSet.ChatRedirect,
+                        TimestampUsec = timestampUsec,
+                        AuthorName = authorName,
+                        AuthorBadges = authorBadges,
+                        AuthorPhotoUrl = authorPhoto,
+                        MessageContent = message,
+                        PurchaseAmountText = purchaseAmountText,
+                        BackgroundColor = backgroundColor,
+                        TimestampText = timestampText,
+                        AuthorExternalChannelID = authorExternalChannelID,
+                        Emojis = messageData.Emojis ?? null,
+                        Badges = authorBadgesData.Badges ?? null
+                    });
+                }
+            }
         }
         else if (element.TryGetProperty("liveChatTickerPaidMessageItemRenderer", out _) ||
             element.TryGetProperty("liveChatTickerPaidStickerItemRenderer", out _) ||
@@ -629,6 +847,25 @@ public class JsonParser
                 _logger.Debug("方法：GetRenderer() -> 尚未支援的內容：{Message}",
                     $"{Environment.NewLine}{element.GetRawText()}{Environment.NewLine}");
             }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 id
+    /// </summary>
+    /// <param name="element">JsonElement</param>
+    /// <returns>字串</returns>
+    private static string GetID(JsonElement element)
+    {
+        string output = string.Empty;
+
+        JsonElement? id = element.Get("id");
+
+        if (id.HasValue)
+        {
+            output = id.Value.GetString() ?? string.Empty;
         }
 
         return output;
@@ -1030,6 +1267,20 @@ public class JsonParser
             }
         }
 
+        JsonElement? bannerMessage = element.Get("bannerMessage");
+
+        if (bannerMessage.HasValue)
+        {
+            RunsData runsData = GetRuns(bannerMessage.Value, isLarge);
+
+            tempText += runsData.Text;
+
+            if (runsData.Emojis != null)
+            {
+                tempEmojis.AddRange(runsData.Emojis);
+            }
+        }
+
         if (Settings.Default.EnableDebug)
         {
             _logger.Debug($"方法：GetMessage() -> 除錯用的內容：" +
@@ -1062,7 +1313,11 @@ public class JsonParser
         if (runs.HasValue &&
             runs.Value.ValueKind == JsonValueKind.Array)
         {
-            string tempText = string.Empty;
+            string tempText = string.Empty,
+                tempTextColor = string.Empty,
+                tempFontFace = string.Empty;
+
+            bool isBold = false;
 
             List<EmojiData> tempEmojis = new();
 
@@ -1073,6 +1328,27 @@ public class JsonParser
                 if (text.HasValue)
                 {
                     tempText += text.Value.GetString();
+                }
+
+                JsonElement? bold = singleRun.Get("bold");
+
+                if (text.HasValue)
+                {
+                    isBold = bold?.GetBoolean() ?? false;
+                }
+
+                JsonElement? textColor = singleRun.Get("textColor");
+
+                if (textColor.HasValue)
+                {
+                    tempTextColor += GetColorHexCode(textColor.Value.GetInt64());
+                }
+
+                JsonElement? fontFace = singleRun.Get("fontFace");
+
+                if (fontFace.HasValue)
+                {
+                    tempFontFace += fontFace.Value.GetString();
                 }
 
                 JsonElement? emoji = singleRun.Get("emoji");
@@ -1163,6 +1439,9 @@ public class JsonParser
             }
 
             output.Text = tempText;
+            output.Bold = isBold;
+            output.TextColor = tempTextColor;
+            output.FontFace = tempFontFace;
             output.Emojis = tempEmojis;
         }
 
@@ -1181,5 +1460,24 @@ public class JsonParser
         int integer = Convert.ToInt32(hex, 16);
 
         return ColorTranslator.ToHtml(Color.FromArgb(integer));
+    }
+
+    /// <summary>
+    /// 取得 videoOffsetTimeMsec
+    /// </summary>
+    /// <param name="element">JsonElement</param>
+    /// <returns>字串</returns>
+    private static string GetVideoOffsetTimeMsec(JsonElement? element)
+    {
+        string output = string.Empty;
+
+        JsonElement? videoOffsetTimeMsec = element?.Get("videoOffsetTimeMsec");
+
+        if (videoOffsetTimeMsec.HasValue)
+        {
+            output = DateTimeOffset.FromUnixTimeMilliseconds(videoOffsetTimeMsec.Value.GetInt64()).ToString("HH:mm:ss");
+        }
+
+        return output;
     }
 }

@@ -45,6 +45,8 @@ public class StringSet
     public static readonly string ChatMemberMilestone = "會員里程碑";
     public static readonly string ChatMemberGift = "贈送會員";
     public static readonly string ChatReceivedMemberGift = "接收會員贈送";
+    public static readonly string ChatRedirect = "重新導向";
+    public static readonly string ChatPinned = "置頂留言";
 
     #endregion
 
