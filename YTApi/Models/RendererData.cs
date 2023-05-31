@@ -1,7 +1,7 @@
 ﻿namespace YTApi.Models;
 
 /// <summary>
-/// *Renderer 的資料
+/// *Renderer 資料
 /// </summary>
 public class RendererData
 {
@@ -44,6 +44,11 @@ public class RendererData
     /// 購買金額（文字格式）
     /// </summary>
     public string? PurchaseAmountText { get; set; }
+
+    /// <summary>
+    /// 前景顏色（Hex 色碼）
+    /// </summary>
+    public string? ForegroundColor { get; set; }
 
     /// <summary>
     /// 背景顏色（Hex 色碼）

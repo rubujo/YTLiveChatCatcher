@@ -1,7 +1,7 @@
 ﻿namespace YTApi.Models;
 
 /// <summary>
-/// runs 的資料
+/// runs 資料
 /// </summary>
 public class RunsData
 {
