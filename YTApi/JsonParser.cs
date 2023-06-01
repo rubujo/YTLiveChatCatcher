@@ -3,7 +3,6 @@ using System.Text.Json;
 using YTApi.Extensions;
 using YTApi.Models;
 using YTLiveChatCatcher.Common.Sets;
-using YTLiveChatCatcher.Properties;
 
 namespace YTApi;
 
@@ -25,14 +24,14 @@ public partial class JsonParser
 
         if (jsonElement.HasValue)
         {
-            JsonElement? continuations = jsonElement.Value.Get("continuationContents")
+            JsonElement.ArrayEnumerator? continuations = jsonElement.Value.Get("continuationContents")
                 ?.Get("liveChatContinuation")
-                ?.Get("continuations");
+                ?.Get("continuations")
+                ?.ToArrayEnumerator();
 
-            if (continuations.HasValue &&
-                continuations.Value.ValueKind == JsonValueKind.Array)
+            if (continuations.HasValue)
             {
-                foreach (JsonElement singleContinuation in continuations.Value.EnumerateArray())
+                foreach (JsonElement singleContinuation in continuations)
                 {
                     #region invalidationContinuationData
 
@@ -115,21 +114,15 @@ public partial class JsonParser
                     {
                         // 略過不進行任何的處理。
 
-                        if (Settings.Default.EnableDebug)
-                        {
-                            _logger.Debug("方法：GetContinuation() -> playerSeekContinuationData -> 略過不處理的內容：{Message}",
-                                $"{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
-                        }
+                        _logger.Debug("方法：GetContinuation() -> playerSeekContinuationData -> 略過不處理的內容：{Message}",
+                             $"{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
                     }
 
                     #endregion
 
-                    if (Settings.Default.EnableDebug)
-                    {
-                        // 尚未支援的內容。
-                        _logger.Debug("方法：GetContinuation() -> 尚未支援的內容：{Message}",
-                            $"{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
-                    }
+                    // 尚未支援的內容。
+                    _logger.Debug("方法：GetContinuation() -> 尚未支援的內容：{Message}",
+                        $"{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
                 }
             }
         }
@@ -142,68 +135,72 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetReplayContinuation(JsonElement jsonElement)
+    public static string GetReplayContinuation(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? liveChatRenderer = jsonElement.Get("contents")
-            ?.Get("twoColumnWatchNextResults")
-            ?.Get("conversationBar")
-            ?.Get("liveChatRenderer");
-
-        if (liveChatRenderer.HasValue)
+        if (jsonElement.HasValue)
         {
-            JsonElement? subMenuItems = liveChatRenderer?.Get("header")
-                ?.Get("liveChatHeaderRenderer")
-                ?.Get("viewSelector")
-                ?.Get("sortFilterSubMenuRenderer")
-                ?.Get("subMenuItems");
+            JsonElement? liveChatRenderer = jsonElement?.Get("contents")
+                ?.Get("twoColumnWatchNextResults")
+                ?.Get("conversationBar")
+                ?.Get("liveChatRenderer");
 
-            if (subMenuItems.HasValue &&
-                subMenuItems.Value.ValueKind == JsonValueKind.Array)
+            if (liveChatRenderer.HasValue)
             {
-                foreach (JsonElement subMenuItem in subMenuItems.Value.EnumerateArray())
+                JsonElement.ArrayEnumerator? subMenuItems = liveChatRenderer?.Get("header")
+                    ?.Get("liveChatHeaderRenderer")
+                    ?.Get("viewSelector")
+                    ?.Get("sortFilterSubMenuRenderer")
+                    ?.Get("subMenuItems")
+                    ?.ToArrayEnumerator();
+
+                if (subMenuItems.HasValue)
                 {
-                    JsonElement? title = subMenuItem.Get("title");
-
-                    // "StringSet.TitleHotReplay" 與 "StringSet.TitleReplay" 的結構是一樣的。
-                    if (title.HasValue && title.Value.GetString() == StringSet.TitleReplay)
+                    foreach (JsonElement subMenuItem in subMenuItems)
                     {
-                        JsonElement? continuation = subMenuItem.Get("continuation")
-                            ?.Get("reloadContinuationData")
-                            ?.Get("continuation");
+                        JsonElement? title = subMenuItem.Get("title");
 
-                        if (continuation.HasValue)
+                        // "StringSet.TitleHotReplay" 與 "StringSet.TitleReplay" 的結構是一樣的。
+                        if (title.HasValue && title.Value.GetString() == StringSet.TitleReplay)
                         {
-                            output = continuation.Value.GetString() ?? string.Empty;
+                            JsonElement? continuation = subMenuItem.Get("continuation")
+                                ?.Get("reloadContinuationData")
+                                ?.Get("continuation");
 
-                            break;
+                            if (continuation.HasValue)
+                            {
+                                output = continuation.Value.GetString() ?? string.Empty;
+
+                                break;
+                            }
                         }
                     }
                 }
-            }
 
-            // 當從 "subMenuItem" 取不到 "continuation" 時，
-            // 才使用此處的 "continuation"。
-            if (string.IsNullOrEmpty(output))
-            {
-                JsonElement? continuations = liveChatRenderer?.Get("continuations");
-
-                if (continuations.HasValue &&
-                    continuations.Value.ValueKind == JsonValueKind.Array)
+                // 當從 "subMenuItem" 取不到 "continuation" 時，
+                // 才使用此處的 "continuation"。
+                if (string.IsNullOrEmpty(output))
                 {
-                    foreach (JsonElement singleContinuation in continuations.Value.EnumerateArray())
+                    JsonElement.ArrayEnumerator? continuations = liveChatRenderer
+                        ?.Get("continuations")
+                        ?.ToArrayEnumerator();
+
+                    if (continuations.HasValue)
                     {
-                        // 用此 "continuation" 可能無法抓到全部的訊息。
-                        JsonElement? continuation = singleContinuation
-                            .Get("reloadContinuationData")
-                            ?.Get("continuation");
-
-                        if (continuation.HasValue)
+                        foreach (JsonElement singleContinuation in continuations)
                         {
-                            output = continuation.Value.GetString() ?? string.Empty;
+                            // 用此 "continuation" 可能無法抓到全部的訊息。
+                            JsonElement? continuation = singleContinuation
+                                .Get("reloadContinuationData")
+                                ?.Get("continuation");
 
-                            break;
+                            if (continuation.HasValue)
+                            {
+                                output = continuation.Value.GetString() ?? string.Empty;
+
+                                break;
+                            }
                         }
                     }
                 }
@@ -225,14 +222,14 @@ public partial class JsonParser
 
         if (jsonElement.HasValue)
         {
-            JsonElement? actions = jsonElement.Value.Get("continuationContents")
+            JsonElement.ArrayEnumerator? actions = jsonElement.Value.Get("continuationContents")
                 ?.Get("liveChatContinuation")
-                ?.Get("actions");
+                ?.Get("actions")
+                ?.ToArrayEnumerator();
 
-            if (actions.HasValue &&
-                actions.Value.ValueKind == JsonValueKind.Array)
+            if (actions.HasValue)
             {
-                foreach (JsonElement singleAction in actions.Value.EnumerateArray())
+                foreach (JsonElement singleAction in actions)
                 {
                     // TODO: 2023-05-29 測試如何解析 addBannerToLiveChatCommand。
                     _logger.Debug("singleAction");
@@ -246,23 +243,29 @@ public partial class JsonParser
                     }
 
                     // TODO: 2023-05-29 未測試，不確定是否有效。。
-                    JsonElement? singleBannerRenderer = singleAction.Get("addBannerToLiveChatCommand")?.Get("bannerRenderer");
+                    JsonElement? singleBannerRenderer = singleAction
+                        .Get("addBannerToLiveChatCommand")
+                        ?.Get("bannerRenderer");
 
                     if (singleBannerRenderer.HasValue)
                     {
                         output.AddRange(GetRenderer(singleBannerRenderer.Value, isLarge));
                     }
 
-                    JsonElement? videoOffsetTimeMsec = singleAction.Get("addChatItemAction")?.Get("videoOffsetTimeMsec");
+                    JsonElement? videoOffsetTimeMsec = singleAction
+                        .Get("addChatItemAction")
+                        ?.Get("videoOffsetTimeMsec");
 
                     string videoOffsetTimeText = GetVideoOffsetTimeMsec(videoOffsetTimeMsec);
 
-                    JsonElement? replayActions = singleAction.Get("replayChatItemAction")?.Get("actions");
+                    JsonElement.ArrayEnumerator? replayActions = singleAction
+                        .Get("replayChatItemAction")
+                        ?.Get("actions")
+                        ?.ToArrayEnumerator();
 
-                    if (replayActions.HasValue &&
-                        replayActions.Value.ValueKind == JsonValueKind.Array)
+                    if (replayActions.HasValue)
                     {
-                        foreach (JsonElement replayAction in replayActions.Value.EnumerateArray())
+                        foreach (JsonElement replayAction in replayActions)
                         {
                             JsonElement? replayItem = replayAction.Get("addChatItemAction")?.Get("item");
 
@@ -282,7 +285,9 @@ public partial class JsonParser
                                 output.AddRange(rendererDatas);
                             }
 
-                            JsonElement? replayBannerRenderer = replayAction.Get("addBannerToLiveChatCommand")?.Get("bannerRenderer");
+                            JsonElement? replayBannerRenderer = replayAction
+                                .Get("addBannerToLiveChatCommand")
+                                ?.Get("bannerRenderer");
 
                             if (replayBannerRenderer.HasValue)
                             {
@@ -304,7 +309,8 @@ public partial class JsonParser
                     }
 
                     // TODO: 2023-05-29 用於取得 replaceChatItemAction 使用。
-                    JsonElement? replaceAction = singleAction.Get("replaceChatItemAction");
+                    JsonElement? replaceAction = singleAction
+                        .Get("replaceChatItemAction");
 
                     if (replaceAction.HasValue)
                     {
@@ -421,22 +427,16 @@ public partial class JsonParser
             "liveChatBannerRenderer",
             out JsonElement liveChatBannerRenderer))
         {
-            if (Settings.Default.EnableDebug)
-            {
-                _logger.Debug("liveChatBannerRenderer");
-                _logger.Debug(liveChatBannerRenderer);
-            }
+            _logger.Debug("liveChatBannerRenderer");
+            _logger.Debug(liveChatBannerRenderer);
 
-            // TODO: 2023-05-29 疑似有插入時間順序的問題。
+            // TODO: 2023-05-29 有插入時間順序的問題。
             if (liveChatBannerRenderer.TryGetProperty(
                 "header",
                 out JsonElement header))
             {
-                if (Settings.Default.EnableDebug)
-                {
-                    _logger.Debug("liveChatBannerRenderer -> header");
-                    _logger.Debug(header);
-                }
+                _logger.Debug("liveChatBannerRenderer -> header");
+                _logger.Debug(header);
 
                 if (header.TryGetProperty(
                     "liveChatBannerHeaderRenderer",
@@ -456,11 +456,8 @@ public partial class JsonParser
                 "contents",
                 out JsonElement contents))
             {
-                if (Settings.Default.EnableDebug)
-                {
-                    _logger.Debug("liveChatBannerRenderer -> contents");
-                    _logger.Debug(contents);
-                }
+                _logger.Debug("liveChatBannerRenderer -> contents");
+                _logger.Debug(contents);
 
                 if (contents.TryGetProperty(
                     "liveChatTextMessageRenderer",
@@ -501,19 +498,13 @@ public partial class JsonParser
             // 略過進不行任何處理。
             // 參考：https://taiyakisun.hatenablog.com/entry/2020/10/13/223443
 
-            if (Settings.Default.EnableDebug)
-            {
-                _logger.Debug("方法：GetRenderer() -> 略過不處理的內容：{Message}",
-                    $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
-            }
+            _logger.Debug("方法：GetRenderer() -> 略過不處理的內容：{Message}",
+                $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
         }
         else
         {
-            if (Settings.Default.EnableDebug)
-            {
-                _logger.Debug("方法：GetRenderer() -> 尚未支援的內容：{Message}",
-                    $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
-            }
+            _logger.Debug("方法：GetRenderer() -> 尚未支援的內容：{Message}",
+                $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
         }
 
         return output;
@@ -529,43 +520,26 @@ public partial class JsonParser
     {
         AuthorBadgesData output = new();
 
-        JsonElement? authorBadges = jsonElement.Get("authorBadges");
+        JsonElement.ArrayEnumerator? authorBadges = jsonElement
+            .Get("authorBadges")
+            ?.ToArrayEnumerator();
 
-        if (authorBadges.HasValue &&
-            authorBadges.Value.ValueKind == JsonValueKind.Array)
+        if (authorBadges.HasValue)
         {
             List<BadgeData> tempBadges = new();
 
-            foreach (JsonElement singleAuthorBadge in authorBadges.Value.EnumerateArray())
+            foreach (JsonElement singleAuthorBadge in authorBadges)
             {
                 BadgeData badgeData = new();
 
                 // 自定義預覽圖。
-                JsonElement? customThumbnail = singleAuthorBadge.Get("liveChatAuthorBadgeRenderer")
+                JsonElement? customThumbnail = singleAuthorBadge
+                    .Get("liveChatAuthorBadgeRenderer")
                     ?.Get("customThumbnail");
 
                 if (customThumbnail.HasValue)
                 {
-                    JsonElement? thumbnails = customThumbnail.Value.Get("thumbnails");
-
-                    if (thumbnails.HasValue &&
-                        thumbnails.Value.ValueKind == JsonValueKind.Array)
-                    {
-                        if (thumbnails.Value.GetArrayLength() > 0)
-                        {
-                            int valIndex = isLarge ? 1 : 0;
-
-                            if (thumbnails.Value.GetArrayLength() == 1)
-                            {
-                                valIndex = 0;
-                            }
-
-                            // 0：16x16、1：32x32
-                            JsonElement? url = thumbnails.Value[valIndex].Get("url");
-
-                            badgeData.Url = url.HasValue ? url.Value.GetString() : string.Empty;
-                        }
-                    }
+                    badgeData.Url = GetThumbnailUrl(customThumbnail, isLarge);
                 }
 
                 // 圖示類型。
@@ -609,12 +583,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 Message
+    /// 取得 Message 資料
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>MessageData</returns>
-    public static MessageData GetMessage(JsonElement jsonElement, bool isLarge = true)
+    public static MessageData GetMessageData(JsonElement jsonElement, bool isLarge = true)
     {
         MessageData output = new();
 
@@ -630,7 +604,7 @@ public partial class JsonParser
 
         if (headerPrimaryText.HasValue)
         {
-            RunsData runsData = GetRuns(headerPrimaryText.Value, isLarge);
+            RunsData runsData = GetRunData(headerPrimaryText.Value, isLarge);
 
             tempText += $" [{runsData.Text}] ";
 
@@ -659,7 +633,7 @@ public partial class JsonParser
                 tempText += $" [{simpleText.Value}] ";
             }
 
-            RunsData runsData = GetRuns(headerSubtext.Value, isLarge);
+            RunsData runsData = GetRunData(headerSubtext.Value, isLarge);
 
             tempText += $" {runsData.Text} ";
 
@@ -677,7 +651,7 @@ public partial class JsonParser
 
         if (primaryText.HasValue)
         {
-            RunsData runsData = GetRuns(primaryText.Value, isLarge);
+            RunsData runsData = GetRunData(primaryText.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -695,7 +669,7 @@ public partial class JsonParser
 
         if (text.HasValue)
         {
-            RunsData runsData = GetRuns(text.Value, isLarge);
+            RunsData runsData = GetRunData(text.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -713,7 +687,7 @@ public partial class JsonParser
 
         if (subtext.HasValue)
         {
-            RunsData runsData = GetRuns(subtext.Value, isLarge);
+            RunsData runsData = GetRunData(subtext.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -752,7 +726,7 @@ public partial class JsonParser
 
         if (message.HasValue)
         {
-            RunsData runsData = GetRuns(message.Value, isLarge);
+            RunsData runsData = GetRunData(message.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -770,7 +744,7 @@ public partial class JsonParser
 
         if (bannerMessage.HasValue)
         {
-            RunsData runsData = GetRuns(bannerMessage.Value, isLarge);
+            RunsData runsData = GetRunData(bannerMessage.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -784,11 +758,8 @@ public partial class JsonParser
             }
         }
 
-        if (Settings.Default.EnableDebug)
-        {
-            _logger.Debug($"方法：GetMessage() -> 除錯用的內容：" +
-                $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
-        }
+        _logger.Debug($"方法：GetMessage() -> 除錯用的內容：" +
+            $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
 
         if (string.IsNullOrEmpty(tempText))
         {
@@ -805,19 +776,20 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 runs
+    /// 取得 runs 資料
     /// </summary>
-    /// <param name="element">JsonElement</param>
+    /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>RunsData</returns>
-    public static RunsData GetRuns(JsonElement element, bool isLarge = true)
+    public static RunsData GetRunData(JsonElement jsonElement, bool isLarge = true)
     {
         RunsData output = new();
 
-        JsonElement? runs = element.Get("runs");
+        JsonElement.ArrayEnumerator? runs = jsonElement
+            .Get("runs")
+            ?.ToArrayEnumerator();
 
-        if (runs.HasValue &&
-            runs.Value.ValueKind == JsonValueKind.Array)
+        if (runs.HasValue)
         {
             string tempText = string.Empty,
                 tempTextColor = string.Empty,
@@ -827,13 +799,13 @@ public partial class JsonParser
 
             List<EmojiData> tempEmojis = new();
 
-            foreach (JsonElement singleRun in runs.Value.EnumerateArray())
+            foreach (JsonElement singleRun in runs)
             {
                 JsonElement? text = singleRun.Get("text");
 
                 if (text.HasValue)
                 {
-                    tempText += text.Value.GetString();
+                    tempText += text?.GetString();
                 }
 
                 JsonElement? bold = singleRun.Get("bold");
@@ -854,20 +826,20 @@ public partial class JsonParser
 
                 if (fontFace.HasValue)
                 {
-                    tempFontFace += fontFace.Value.GetString();
+                    tempFontFace += fontFace?.GetString();
                 }
 
                 JsonElement? emoji = singleRun.Get("emoji");
 
                 if (emoji.HasValue)
                 {
-                    if (!string.IsNullOrEmpty(emoji.Value.ToString()))
+                    if (!string.IsNullOrEmpty(emoji?.ToString()))
                     {
                         EmojiData emojiData = new();
 
-                        JsonElement? emojiId = emoji.Value.Get("emojiId");
+                        JsonElement? emojiId = emoji?.Get("emojiId");
 
-                        emojiData.ID = emojiId.HasValue ? emojiId.Value.GetString() : string.Empty;
+                        emojiData.ID = emojiId.HasValue ? emojiId?.GetString() : string.Empty;
 
                         // 2022-05-18 不再取 "shortcuts" 的第一個值。
                         /*
@@ -885,31 +857,12 @@ public partial class JsonParser
                         */
 
                         // "image" 的 "thumbnails"。
-                        JsonElement? thumbnails = emoji.Value.Get("image")
-                            ?.Get("thumbnails");
+                        JsonElement? image = emoji?.Get("image");
 
-                        if (thumbnails.HasValue &&
-                            thumbnails.Value.ValueKind == JsonValueKind.Array)
-                        {
-                            if (thumbnails.Value.GetArrayLength() > 0)
-                            {
-                                int valIndex = isLarge ? 1 : 0;
-
-                                // 非自定義表情符號的的索引值只有 1。
-                                if (thumbnails.Value.GetArrayLength() == 1)
-                                {
-                                    valIndex = 0;
-                                }
-
-                                // 0：24x24、1：48x48
-                                JsonElement? url = thumbnails.Value[valIndex].Get("url");
-
-                                emojiData.Url = url.HasValue ? url.Value.GetString() : string.Empty;
-                            }
-                        }
+                        emojiData.Url = GetThumbnailUrl(image, isLarge);
 
                         // "image" 的 "label"。
-                        JsonElement? label = emoji.Value.Get("image")
+                        JsonElement? label = image
                             ?.Get("accessibility")
                             ?.Get("accessibilityData")
                             ?.Get("label");
@@ -917,31 +870,28 @@ public partial class JsonParser
                         if (label.HasValue)
                         {
                             // 仿 "shortcuts" 以利人工辨識。
-                            tempText += $" :{label.Value.GetString()}: ";
+                            tempText += $" :{label?.GetString()}: ";
                         }
 
-                        emojiData.Text = label.HasValue ? $":{label.Value.GetString()}:" : string.Empty;
-                        emojiData.Label = label.HasValue ? label.Value.GetString() : string.Empty;
+                        emojiData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
+                        emojiData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
-                        JsonElement? isCustomEmoji = emoji.Value.Get("isCustomEmoji");
+                        JsonElement? isCustomEmoji = emoji?.Get("isCustomEmoji");
 
-                        emojiData.IsCustomEmoji = isCustomEmoji.HasValue && isCustomEmoji.Value.GetBoolean();
-
-                        if (Settings.Default.EnableDebug)
+                        if (isCustomEmoji.HasValue)
                         {
-                            _logger.Debug($"方法：GetRuns() -> emoji -> 除錯用的內容：" +
-                                $"{Environment.NewLine}{emoji.Value.GetRawText()}{Environment.NewLine}");
+                            emojiData.IsCustomEmoji = isCustomEmoji?.GetBoolean() ?? false;
                         }
+
+                        _logger.Debug($"方法：GetRunData() -> emoji -> 除錯用的內容：" +
+                            $"{Environment.NewLine}{emoji?.GetRawText()}{Environment.NewLine}");
 
                         tempEmojis.Add(emojiData);
                     }
                 }
 
-                if (Settings.Default.EnableDebug)
-                {
-                    _logger.Debug($"方法：GetRuns() -> 除錯用的內容：" +
-                        $"{Environment.NewLine}{singleRun.GetRawText()}{Environment.NewLine}");
-                }
+                _logger.Debug($"方法：GetRunData() -> 除錯用的內容：" +
+                    $"{Environment.NewLine}{singleRun.GetRawText()}{Environment.NewLine}");
             }
 
             output.Text = tempText;
@@ -971,22 +921,19 @@ public partial class JsonParser
         string customRendererName = "",
         bool isLarge = true)
     {
-        if (Settings.Default.EnableDebug)
+        if (!string.IsNullOrEmpty(customRendererName))
         {
-            if (!string.IsNullOrEmpty(customRendererName))
-            {
-                logger.Debug(customRendererName);
-            }
-            else
-            {
-                logger.Debug(rendererName);
-            }
-
-            logger.Debug(jsonElement);
+            logger.Debug(customRendererName);
+        }
+        else
+        {
+            logger.Debug(rendererName);
         }
 
+        logger.Debug(jsonElement);
+
         AuthorBadgesData authorBadgesData = GetAuthorBadges(jsonElement, isLarge);
-        MessageData messageData = GetMessage(jsonElement, isLarge);
+        MessageData messageData = GetMessageData(jsonElement, isLarge);
 
         string id = GetID(jsonElement),
             type = GetRendererDataType(rendererName),
@@ -1001,7 +948,8 @@ public partial class JsonParser
             timestampText = GetTimestampText(jsonElement),
             authorExternalChannelID = GetAuthorExternalChannelId(jsonElement);
 
-        // 處理特例。
+        #region 處理特例
+
         if (type == StringSet.YouTube)
         {
             authorName = $"[{type}]";
@@ -1009,7 +957,7 @@ public partial class JsonParser
 
         if (rendererName == "liveChatMembershipItemRenderer")
         {
-            // 此處 message = headerSubtext.
+            // 此處 message 為 headerSubtext。
             if (message.Contains(StringSet.MemberUpgrade))
             {
                 type = StringSet.ChatMemberUpgrade;
@@ -1032,12 +980,12 @@ public partial class JsonParser
             if (liveChatSponsorshipsHeaderRenderer.HasValue)
             {
                 authorBadgesData = GetAuthorBadges(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
-                messageData = GetMessage(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
+                messageData = GetMessageData(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
 
                 authorName = GetAuthorName(liveChatSponsorshipsHeaderRenderer.Value);
                 authorPhoto = GetAuthorPhoto(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
                 authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
-                // 此處 message = primaryText.
+                // 此處 message 為 primaryText。
                 message = messageData.Text ?? StringSet.NoMessageContent;
             }
         }
@@ -1045,6 +993,8 @@ public partial class JsonParser
         {
             // 不進行任何處理。
         }
+
+        #endregion
 
         dataSet.Add(new RendererData()
         {

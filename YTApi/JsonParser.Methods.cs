@@ -14,15 +14,18 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetID(JsonElement jsonElement)
+    public static string GetID(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? id = jsonElement.Get("id");
-
-        if (id.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = id.Value.GetString() ?? string.Empty;
+            JsonElement? id = jsonElement?.Get("id");
+
+            if (id.HasValue)
+            {
+                output = id.Value.GetString() ?? string.Empty;
+            }
         }
 
         return output;
@@ -33,15 +36,20 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetAuthorName(JsonElement jsonElement)
+    public static string GetAuthorName(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? simpleText = jsonElement.Get("authorName")?.Get("simpleText");
-
-        if (simpleText.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = simpleText.Value.GetString() ?? string.Empty;
+            JsonElement? simpleText = jsonElement
+                ?.Get("authorName")
+                ?.Get("simpleText");
+
+            if (simpleText.HasValue)
+            {
+                output = simpleText.Value.GetString() ?? string.Empty;
+            }
         }
 
         if (string.IsNullOrEmpty(output))
@@ -58,32 +66,15 @@ public partial class JsonParser
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>字串</returns>
-    public static string GetAuthorPhoto(JsonElement jsonElement, bool isLarge = true)
+    public static string GetAuthorPhoto(JsonElement? jsonElement, bool isLarge = true)
     {
         string output = string.Empty;
 
-        JsonElement? thumbnails = jsonElement.Get("authorPhoto")?.Get("thumbnails");
-
-        if (thumbnails.HasValue &&
-            thumbnails.Value.ValueKind == JsonValueKind.Array)
+        if (jsonElement.HasValue)
         {
-            if (thumbnails.Value.GetArrayLength() > 0)
-            {
-                int valIndex = isLarge ? 1 : 0;
+            JsonElement? authorPhoto = jsonElement?.Get("authorPhoto");
 
-                if (thumbnails.Value.GetArrayLength() == 1)
-                {
-                    valIndex = 0;
-                }
-
-                // 0：32x32、1：64x64
-                JsonElement? url = thumbnails.Value[valIndex].Get("url");
-
-                if (url.HasValue)
-                {
-                    output = url.Value.GetString() ?? string.Empty;
-                }
-            }
+            output = GetThumbnailUrl(authorPhoto, isLarge);
         }
 
         if (string.IsNullOrEmpty(output))
@@ -99,15 +90,18 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetAuthorExternalChannelId(JsonElement jsonElement)
+    public static string GetAuthorExternalChannelId(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? authorExternalChannelId = jsonElement.Get("authorExternalChannelId");
-
-        if (authorExternalChannelId.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = authorExternalChannelId.Value.GetString() ?? string.Empty;
+            JsonElement? authorExternalChannelId = jsonElement?.Get("authorExternalChannelId");
+
+            if (authorExternalChannelId.HasValue)
+            {
+                output = authorExternalChannelId.Value.GetString() ?? string.Empty;
+            }
         }
 
         if (string.IsNullOrEmpty(output))
@@ -123,18 +117,21 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetTimestampUsec(JsonElement jsonElement)
+    public static string GetTimestampUsec(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? timestampUsec = jsonElement.Get("timestampUsec");
-
-        if (timestampUsec.HasValue)
+        if (jsonElement.HasValue)
         {
-            // 將 Microseconds 轉換成 Miliseconds。
-            long timestamp = Convert.ToInt64(timestampUsec.Value.GetString()) / 1000L;
+            JsonElement? timestampUsec = jsonElement?.Get("timestampUsec");
 
-            output = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime.ToString();
+            if (timestampUsec.HasValue)
+            {
+                // 將 Microseconds 轉換成 Miliseconds。
+                long timestamp = Convert.ToInt64(timestampUsec.Value.GetString()) / 1000L;
+
+                output = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime.ToString();
+            }
         }
 
         return output;
@@ -145,15 +142,20 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetTimestampText(JsonElement jsonElement)
+    public static string GetTimestampText(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? simpleText = jsonElement.Get("timestampText")?.Get("simpleText");
-
-        if (simpleText.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = simpleText.Value.GetString() ?? string.Empty;
+            JsonElement? simpleText = jsonElement
+                ?.Get("timestampText")
+                ?.Get("simpleText");
+
+            if (simpleText.HasValue)
+            {
+                output = simpleText.Value.GetString() ?? string.Empty;
+            }
         }
 
         if (string.IsNullOrEmpty(output))
@@ -169,16 +171,20 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetPurchaseAmountText(JsonElement jsonElement)
+    public static string GetPurchaseAmountText(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? simpleText = jsonElement.Get("purchaseAmountText")
-            ?.Get("simpleText");
-
-        if (simpleText.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = simpleText.Value.GetString() ?? string.Empty;
+            JsonElement? simpleText = jsonElement
+                ?.Get("purchaseAmountText")
+                ?.Get("simpleText");
+
+            if (simpleText.HasValue)
+            {
+                output = simpleText.Value.GetString() ?? string.Empty;
+            }
         }
 
         if (string.IsNullOrEmpty(output))
@@ -194,22 +200,25 @@ public partial class JsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetBackgroundColor(JsonElement jsonElement)
+    public static string GetBackgroundColor(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
-        JsonElement? backgroundColor = jsonElement.Get("backgroundColor");
-
-        if (backgroundColor.HasValue)
+        if (jsonElement.HasValue)
         {
-            output = GetColorHexCode(backgroundColor.Value.GetInt64());
-        }
+            JsonElement? backgroundColor = jsonElement?.Get("backgroundColor");
 
-        JsonElement? bodyBackgroundColor = jsonElement.Get("bodyBackgroundColor");
+            if (backgroundColor.HasValue)
+            {
+                output = GetColorHexCode(backgroundColor.Value.GetInt64());
+            }
 
-        if (bodyBackgroundColor.HasValue)
-        {
-            output = GetColorHexCode(bodyBackgroundColor.Value.GetInt64());
+            JsonElement? bodyBackgroundColor = jsonElement?.Get("bodyBackgroundColor");
+
+            if (bodyBackgroundColor.HasValue)
+            {
+                output = GetColorHexCode(bodyBackgroundColor.Value.GetInt64());
+            }
         }
 
         if (string.IsNullOrEmpty(output))
@@ -229,13 +238,16 @@ public partial class JsonParser
     {
         string output = string.Empty;
 
-        JsonElement? videoOffsetTimeMsec = jsonElement?.Get("videoOffsetTimeMsec");
-
-        if (videoOffsetTimeMsec.HasValue)
+        if (jsonElement.HasValue)
         {
-            long milliseconds = videoOffsetTimeMsec.Value.GetInt64();
+            JsonElement? videoOffsetTimeMsec = jsonElement?.Get("videoOffsetTimeMsec");
 
-            output = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).ToString("HH:mm:ss");
+            if (videoOffsetTimeMsec.HasValue)
+            {
+                long milliseconds = videoOffsetTimeMsec.Value.GetInt64();
+
+                output = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).ToString("HH:mm:ss");
+            }
         }
 
         return output;
@@ -276,5 +288,45 @@ public partial class JsonParser
             "liveChatBannerRedirectRenderer" => StringSet.ChatRedirect,
             _ => string.Empty
         };
+    }
+
+    /// <summary>
+    /// 取得預覽圖網址
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
+    /// <returns>字串</returns>
+    public static string GetThumbnailUrl(JsonElement? jsonElement, bool isLarge = true)
+    {
+        string output = string.Empty;
+
+        if (jsonElement.HasValue)
+        {
+            JsonElement.ArrayEnumerator? thumbnails = jsonElement
+                ?.Get("thumbnails")
+                ?.ToArrayEnumerator();
+
+            if (thumbnails.HasValue && thumbnails?.Any() == true)
+            {
+                int index = isLarge ? 1 : 0;
+
+                if (thumbnails?.Count() == 1)
+                {
+                    index = 0;
+                }
+
+                // badge -> 0：16x16、1：32x32
+                // image -> 0：24x24、1：48x48
+                // authorPhoto -> 0：32x32、1：64x64
+                JsonElement? url = thumbnails?.Get(index)?.Get("url");
+
+                if (url.HasValue)
+                {
+                    output = url?.GetString() ?? string.Empty;
+                }
+            }
+        }
+
+        return output;
     }
 }

@@ -15,6 +15,9 @@ namespace YTLiveChatCatcher.Common;
 /// </summary>
 public class BrowserManager
 {
+    /// <summary>
+    /// NLog 的 Logger
+    /// </summary>
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     /// <summary>
@@ -127,7 +130,7 @@ public class BrowserManager
                     $@"{profileName}\Network\Cookies");
         }
 
-        _logger.Debug($"Cookie 檔案的路徑：{cookieFilePath}");
+        _logger.Debug("Cookie 檔案的路徑：{Path}", cookieFilePath);
 
         if (File.Exists(cookieFilePath))
         {

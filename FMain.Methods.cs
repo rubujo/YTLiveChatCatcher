@@ -1,5 +1,6 @@
 ﻿using GetCachable;
 using Microsoft.Extensions.Logging;
+using NLog;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing;
 using OfficeOpenXml.Drawing.Chart;
@@ -120,8 +121,8 @@ public partial class FMain
             },
             new ColumnHeader()
             {
-                Name = "ID",
-                Text = "ID 值",
+                Name = "MessageID",
+                Text = "訊息 ID 值",
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
@@ -1033,6 +1034,17 @@ public partial class FMain
             ActiveControl = TBVideoID;
         });
 
+        bool enableDebug = Properties.Settings.Default.EnableDebug;
+
+        if(enableDebug)
+        {
+            LogManager.ResumeLogging();
+        }
+        else
+        {
+            LogManager.SuspendLogging();
+        }
+
         TBInterval.InvokeIfRequired(() =>
         {
             // 預設 5 秒。
@@ -1107,7 +1119,7 @@ public partial class FMain
         CBEnableDebug.InvokeIfRequired(() =>
         {
             // 載入啟用輸出錯誤資訊的設定值。
-            CBEnableDebug.Checked = Properties.Settings.Default.EnableDebug;
+            CBEnableDebug.Checked = enableDebug;
         });
 
         // 設定提示。
