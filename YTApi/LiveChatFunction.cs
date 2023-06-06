@@ -498,7 +498,7 @@ public partial class LiveChatFunction
                 SetHttpRequestMessageHeader(httpRequestMessage, cookies, ytConfig);
             }
 
-            HttpContent content = new StringContent(inputJsonContent, Encoding.UTF8, "application/jsonElement");
+            HttpContent content = new StringContent(inputJsonContent, Encoding.UTF8, "application/json");
 
             httpRequestMessage.Content = content;
 
