@@ -2303,17 +2303,17 @@ public partial class FMain
 
                 CBBrowser.InvokeIfRequired(() =>
                 {
-                    List<BrowserManager.Cookie> cookies = CBBrowser.SelectedItem.ToString() switch
+                    List<BrowserManager.CookieData> cookies = CBBrowser.SelectedItem.ToString() switch
                     {
-                        "Brave" => BrowserManager.GetCookies(BrowserManager.Browser.Brave, profileFolderName, ".youtube.com"),
-                        "Google Chrome" => BrowserManager.GetCookies(BrowserManager.Browser.GoogleChrome, profileFolderName, ".youtube.com"),
-                        "Chromium" => BrowserManager.GetCookies(BrowserManager.Browser.Chromium, profileFolderName, ".youtube.com"),
-                        "Microsoft Edge" => BrowserManager.GetCookies(BrowserManager.Browser.MicrosoftEdge, profileFolderName, ".youtube.com"),
-                        "Opera" => BrowserManager.GetCookies(BrowserManager.Browser.Opera, profileFolderName, ".youtube.com"),
-                        "Opera GX" => BrowserManager.GetCookies(BrowserManager.Browser.OperaGX, profileFolderName, ".youtube.com"),
-                        "Vivaldi" => BrowserManager.GetCookies(BrowserManager.Browser.Vivaldi, profileFolderName, ".youtube.com"),
-                        "Mozilla Firefox" => BrowserManager.GetCookies(BrowserManager.Browser.MozillaFirefox, profileFolderName, ".youtube.com"),
-                        _ => BrowserManager.GetCookies(BrowserManager.Browser.GoogleChrome, profileFolderName, ".youtube.com")
+                        "Brave" => BrowserManager.GetCookies(BrowserManager.BrowserType.Brave, profileFolderName, ".youtube.com"),
+                        "Google Chrome" => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com"),
+                        "Chromium" => BrowserManager.GetCookies(BrowserManager.BrowserType.Chromium, profileFolderName, ".youtube.com"),
+                        "Microsoft Edge" => BrowserManager.GetCookies(BrowserManager.BrowserType.MicrosoftEdge, profileFolderName, ".youtube.com"),
+                        "Opera" => BrowserManager.GetCookies(BrowserManager.BrowserType.Opera, profileFolderName, ".youtube.com"),
+                        "Opera GX" => BrowserManager.GetCookies(BrowserManager.BrowserType.OperaGX, profileFolderName, ".youtube.com"),
+                        "Vivaldi" => BrowserManager.GetCookies(BrowserManager.BrowserType.Vivaldi, profileFolderName, ".youtube.com"),
+                        "Mozilla Firefox" => BrowserManager.GetCookies(BrowserManager.BrowserType.MozillaFirefox, profileFolderName, ".youtube.com"),
+                        _ => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com")
                     };
 
                     cookiesStr = string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
