@@ -18,7 +18,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AngleSharp" Version="1.0.2" />
+		<PackageReference Include="AngleSharp" Version="1.0.3" />
 		<PackageReference Include="EPPlus" Version="6.2.4" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.5" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
