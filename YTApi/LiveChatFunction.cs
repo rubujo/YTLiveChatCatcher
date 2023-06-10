@@ -498,7 +498,7 @@ public partial class LiveChatFunction
                 SetHttpRequestMessageHeader(httpRequestMessage, cookies, ytConfig);
             }
 
-            HttpContent content = new StringContent(inputJsonContent, Encoding.UTF8, "application/jsonElement");
+            HttpContent content = new StringContent(inputJsonContent, Encoding.UTF8, "application/json");
 
             httpRequestMessage.Content = content;
 
@@ -506,13 +506,10 @@ public partial class LiveChatFunction
 
             string receivedJsonContent = httpResponseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
-            if (YTLiveChatCatcher.Properties.Settings.Default.EnableDebug)
-            {
-                _logger.Debug(httpRequestMessage);
-                _logger.Debug(inputJsonContent);
-                _logger.Debug(httpResponseMessage);
-                _logger.Debug(receivedJsonContent);
-            }
+            _logger.Debug(httpRequestMessage);
+            _logger.Debug(inputJsonContent);
+            _logger.Debug(httpResponseMessage);
+            _logger.Debug(receivedJsonContent);
 
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {

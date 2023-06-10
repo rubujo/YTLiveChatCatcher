@@ -1,4 +1,6 @@
 ﻿using GetCachable;
+using Microsoft.Extensions.Logging;
+using NLog;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing;
 using OfficeOpenXml.Drawing.Chart;
@@ -116,6 +118,15 @@ public partial class FMain
                 // 設成 0，預設不直接顯示。
                 Width = 0,
                 DisplayIndex = 9
+            },
+            new ColumnHeader()
+            {
+                Name = "MessageID",
+                Text = "訊息 ID 值",
+                TextAlign = HorizontalAlignment.Center,
+                // 設成 0，預設不直接顯示。
+                Width = 0,
+                DisplayIndex = 10
             }
         };
 
@@ -247,7 +258,7 @@ public partial class FMain
 
                             using ExcelPackage package = new();
 
-                            double[] widthSet = { 5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0 };
+                            double[] widthSet = { 5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 0.0 };
 
                             ExcelWorkbook workbook = package.Workbook;
                             ExcelWorksheet worksheet1 = workbook.Worksheets.Add(StringSet.SheetName1);
@@ -370,6 +381,14 @@ public partial class FMain
                                         excelRange.Style.Font.Color.SetColor(listViewItem.SubItems[j].ForeColor);
                                         excelRange.Style.Fill.SetBackground(listViewItem.BackColor);
                                         excelRange.Style.WrapText = true;
+
+                                        if (j == 8)
+                                        {
+                                            if (!string.IsNullOrEmpty(listViewSubItem.Text))
+                                            {
+                                                excelRange.Hyperlink = new Uri(listViewSubItem.Text, UriKind.Absolute);
+                                            }
+                                        }
                                     }
 
                                     startIdx1++;
@@ -384,7 +403,7 @@ public partial class FMain
 
                                 int summaryIdx = 1;
 
-                                ExcelRange summaryHeaderRange = worksheet1.Cells[summaryIdx, 13, summaryIdx, 14];
+                                ExcelRange summaryHeaderRange = worksheet1.Cells[summaryIdx, 14, summaryIdx, 15];
 
                                 summaryHeaderRange.Merge = true;
                                 summaryHeaderRange.StyleName = "HeaderStyle";
@@ -424,14 +443,14 @@ public partial class FMain
                                 }
 
                                 // 設定預設寬度。
-                                worksheet1.Column(13).Width = 15.0;
+                                worksheet1.Column(14).Width = 15.0;
 
                                 for (int i = 0; i < arraySummaryInfo.Count; i++)
                                 {
                                     string[] arrayInfo = arraySummaryInfo[i].Split(new char[] { '：' },
                                         StringSplitOptions.RemoveEmptyEntries);
 
-                                    ExcelRange summaryTitleRange = worksheet1.Cells[summaryIdx, 13];
+                                    ExcelRange summaryTitleRange = worksheet1.Cells[summaryIdx, 14];
 
                                     summaryTitleRange.StyleName = "HeaderStyle";
                                     summaryTitleRange.Style.Font.Bold = false;
@@ -439,7 +458,7 @@ public partial class FMain
                                     // 2022-05-30 改為使用固定寬度。
                                     //summaryTitleRange.AutoFitColumns();
 
-                                    ExcelRange summaryContentRange = worksheet1.Cells[summaryIdx, 14];
+                                    ExcelRange summaryContentRange = worksheet1.Cells[summaryIdx, 15];
 
                                     summaryContentRange.StyleName = "ContentStyle";
                                     summaryContentRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
@@ -563,7 +582,6 @@ public partial class FMain
                                     excelLineChart.YAxis.Font.EastAsianFont = "微軟正黑體";
                                     excelLineChart.YAxis.Font.LatinFont = "微軟正黑體";
 
-                                    // TODO: 2022-07-10 需要再觀察圖表沒有在指定位置的情況。
                                     excelLineChart.SetPosition(1, 0, 3, 0);
 
                                     int lastRowIdx = sourceList.Count + 1;
@@ -701,6 +719,11 @@ public partial class FMain
 
                                     range6.StyleName = "ContentStyle";
                                     range6.Value = emojiData.Url;
+
+                                    if (!string.IsNullOrEmpty(emojiData.Url))
+                                    {
+                                        range6.Hyperlink = new Uri(emojiData.Url, UriKind.Absolute);
+                                    }
 
                                     ExcelRange range7 = worksheet3.Cells[startIdx2, 6];
 
@@ -843,6 +866,11 @@ public partial class FMain
 
                                     range13.StyleName = "ContentStyle";
                                     range13.Value = badgeData.Url;
+
+                                    if (!string.IsNullOrEmpty(badgeData.Url))
+                                    {
+                                        range13.Hyperlink = new Uri(badgeData.Url, UriKind.Absolute);
+                                    }
 
                                     ExcelRange range14 = worksheet4.Cells[startIdx3, 6];
 
@@ -1006,6 +1034,17 @@ public partial class FMain
             ActiveControl = TBVideoID;
         });
 
+        bool enableDebug = Properties.Settings.Default.EnableDebug;
+
+        if(enableDebug)
+        {
+            LogManager.ResumeLogging();
+        }
+        else
+        {
+            LogManager.SuspendLogging();
+        }
+
         TBInterval.InvokeIfRequired(() =>
         {
             // 預設 5 秒。
@@ -1080,7 +1119,7 @@ public partial class FMain
         CBEnableDebug.InvokeIfRequired(() =>
         {
             // 載入啟用輸出錯誤資訊的設定值。
-            CBEnableDebug.Checked = Properties.Settings.Default.EnableDebug;
+            CBEnableDebug.Checked = enableDebug;
         });
 
         // 設定提示。
@@ -1305,46 +1344,38 @@ public partial class FMain
                                     }
                                 }
 
+                                string id = rendererData.ID ?? string.Empty;
                                 string authorName = (rendererData.AuthorName != null &&
                                     rendererData.AuthorName != StringSet.NoAuthorName) ?
                                     rendererData.AuthorName :
                                     string.Empty;
-
                                 string authorBages = (rendererData.AuthorBadges != null &&
                                     rendererData.AuthorBadges != StringSet.NoAuthorBadges) ?
                                     rendererData.AuthorBadges :
                                     string.Empty;
-
                                 string authorPhotoUrl = (rendererData.AuthorPhotoUrl != null &&
                                     rendererData.AuthorPhotoUrl != StringSet.NoAuthorPhotoUrl) ?
                                     rendererData.AuthorPhotoUrl :
                                     string.Empty;
-
                                 string messageContent = (rendererData.MessageContent != null &&
                                     rendererData.MessageContent != StringSet.NoMessageContent) ?
                                     rendererData.MessageContent :
                                     string.Empty;
-
                                 string purchaseAmountText = (rendererData.PurchaseAmountText != null &&
                                     rendererData.PurchaseAmountText != StringSet.NoPurchaseAmountText) ?
                                     rendererData.PurchaseAmountText :
                                     string.Empty;
-
                                 string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
-
                                 string type = rendererData.Type ?? string.Empty;
-
                                 string backgroundColor = (rendererData.BackgroundColor != null &&
                                     rendererData.BackgroundColor != StringSet.NoBackgroundColor) ?
                                     rendererData.BackgroundColor :
                                     string.Empty;
-
                                 // 直播不會有，只有重播才會有。
                                 string timestampText = (rendererData.TimestampText != null &&
                                     rendererData.TimestampText != StringSet.NoTimestampText) ?
                                     rendererData.TimestampText :
                                     string.Empty;
-
                                 string authorExternalChannelID = (rendererData.AuthorExternalChannelID != null &&
                                     rendererData.AuthorExternalChannelID != StringSet.NoAuthorExternalChannelID) ?
                                     rendererData.AuthorExternalChannelID :
@@ -1364,7 +1395,7 @@ public partial class FMain
                                     UseItemStyleForSubItems = false
                                 };
 
-                                string[] subItemContents = new string[9];
+                                string[] subItemContents = new string[10];
 
                                 subItemContents[0] = authorBages;
                                 subItemContents[1] = messageContent;
@@ -1375,6 +1406,7 @@ public partial class FMain
                                 subItemContents[6] = timestampText;
                                 subItemContents[7] = authorPhotoUrl;
                                 subItemContents[8] = authorExternalChannelID;
+                                subItemContents[9] = id;
 
                                 if (authorBages.Contains(StringSet.BadgeOwner))
                                 {
@@ -1427,6 +1459,16 @@ public partial class FMain
                                     {
                                         item.ForeColor = Color.White;
                                         item.BackColor = Color.Green;
+                                    }
+                                }
+
+                                if (type == StringSet.ChatRedirect ||
+                                    type == StringSet.ChatPinned)
+                                {
+                                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                                    {
+                                        item.ForeColor = Color.White;
+                                        item.BackColor = ColorTranslator.FromHtml("#203d6c");
                                     }
                                 }
 
@@ -1594,6 +1636,7 @@ public partial class FMain
                         string backgroundColor = sheet1.Cells[rowIdx1, 8].Text;
                         string timestampText = sheet1.Cells[rowIdx1, 9].Text;
                         string authorExternalChannelID = sheet1.Cells[rowIdx1, 11].Text;
+                        string id = sheet1.Cells[rowIdx1, 12].Text;
 
                         // 當 "type" 為 null 或空值時，直接進入下一個。
                         if (string.IsNullOrEmpty(type))
@@ -1606,7 +1649,7 @@ public partial class FMain
                             UseItemStyleForSubItems = false
                         };
 
-                        string[] subItemContents = new string[9];
+                        string[] subItemContents = new string[10];
 
                         subItemContents[0] = authorBages;
                         subItemContents[1] = messageContent;
@@ -1617,6 +1660,7 @@ public partial class FMain
                         subItemContents[6] = timestampText;
                         subItemContents[7] = authorPhotoUrl;
                         subItemContents[8] = authorExternalChannelID;
+                        subItemContents[9] = id;
 
                         if (authorBages.Contains(StringSet.BadgeOwner))
                         {
@@ -1669,6 +1713,16 @@ public partial class FMain
                             {
                                 item.ForeColor = Color.White;
                                 item.BackColor = Color.Green;
+                            }
+                        }
+
+                        if (type == StringSet.ChatRedirect ||
+                            type == StringSet.ChatPinned)
+                        {
+                            foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                            {
+                                item.ForeColor = Color.White;
+                                item.BackColor = ColorTranslator.FromHtml("#203d6c");
                             }
                         }
 
@@ -2068,7 +2122,9 @@ public partial class FMain
                 n.SubItems[5].Text != StringSet.ChatMemberUpgrade &&
                 n.SubItems[5].Text != StringSet.ChatMemberMilestone &&
                 n.SubItems[5].Text != StringSet.ChatMemberGift &&
-                n.SubItems[5].Text != StringSet.ChatReceivedMemberGift)
+                n.SubItems[5].Text != StringSet.ChatReceivedMemberGift &&
+                n.SubItems[5].Text != StringSet.ChatRedirect &&
+                n.SubItems[5].Text != StringSet.ChatPinned)
                 .Count();
 
             LChatCount.Text = $"留言數量：{count} 個";
@@ -2247,17 +2303,17 @@ public partial class FMain
 
                 CBBrowser.InvokeIfRequired(() =>
                 {
-                    List<BrowserManager.Cookie> cookies = CBBrowser.SelectedItem.ToString() switch
+                    List<BrowserManager.CookieData> cookies = CBBrowser.SelectedItem.ToString() switch
                     {
-                        "Brave" => BrowserManager.GetCookies(BrowserManager.Browser.Brave, profileFolderName, ".youtube.com"),
-                        "Google Chrome" => BrowserManager.GetCookies(BrowserManager.Browser.GoogleChrome, profileFolderName, ".youtube.com"),
-                        "Chromium" => BrowserManager.GetCookies(BrowserManager.Browser.Chromium, profileFolderName, ".youtube.com"),
-                        "Microsoft Edge" => BrowserManager.GetCookies(BrowserManager.Browser.MicrosoftEdge, profileFolderName, ".youtube.com"),
-                        "Opera" => BrowserManager.GetCookies(BrowserManager.Browser.Opera, profileFolderName, ".youtube.com"),
-                        "Opera GX" => BrowserManager.GetCookies(BrowserManager.Browser.OperaGX, profileFolderName, ".youtube.com"),
-                        "Vivaldi" => BrowserManager.GetCookies(BrowserManager.Browser.Vivaldi, profileFolderName, ".youtube.com"),
-                        "Mozilla Firefox" => BrowserManager.GetCookies(BrowserManager.Browser.MozillaFirefox, profileFolderName, ".youtube.com"),
-                        _ => BrowserManager.GetCookies(BrowserManager.Browser.GoogleChrome, profileFolderName, ".youtube.com")
+                        "Brave" => BrowserManager.GetCookies(BrowserManager.BrowserType.Brave, profileFolderName, ".youtube.com"),
+                        "Google Chrome" => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com"),
+                        "Chromium" => BrowserManager.GetCookies(BrowserManager.BrowserType.Chromium, profileFolderName, ".youtube.com"),
+                        "Microsoft Edge" => BrowserManager.GetCookies(BrowserManager.BrowserType.MicrosoftEdge, profileFolderName, ".youtube.com"),
+                        "Opera" => BrowserManager.GetCookies(BrowserManager.BrowserType.Opera, profileFolderName, ".youtube.com"),
+                        "Opera GX" => BrowserManager.GetCookies(BrowserManager.BrowserType.OperaGX, profileFolderName, ".youtube.com"),
+                        "Vivaldi" => BrowserManager.GetCookies(BrowserManager.BrowserType.Vivaldi, profileFolderName, ".youtube.com"),
+                        "Mozilla Firefox" => BrowserManager.GetCookies(BrowserManager.BrowserType.MozillaFirefox, profileFolderName, ".youtube.com"),
+                        _ => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com")
                     };
 
                     cookiesStr = string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));

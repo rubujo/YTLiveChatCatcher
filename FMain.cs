@@ -748,5 +748,14 @@ public partial class FMain : Form
                 Properties.Settings.Default.Save();
             }
         });
+
+        if (Properties.Settings.Default.EnableDebug)
+        {
+            LogManager.ResumeLogging();
+        }
+        else
+        {
+            LogManager.SuspendLogging();
+        }
     }
 }

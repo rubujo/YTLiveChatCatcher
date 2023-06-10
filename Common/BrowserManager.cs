@@ -15,12 +15,15 @@ namespace YTLiveChatCatcher.Common;
 /// </summary>
 public class BrowserManager
 {
+    /// <summary>
+    /// NLog 的 Logger
+    /// </summary>
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     /// <summary>
     /// 網頁瀏覽器
     /// </summary>
-    public enum Browser
+    public enum BrowserType
     {
         /// <summary>
         /// Brave
@@ -59,12 +62,12 @@ public class BrowserManager
     /// <summary>
     /// 取得 Cookies
     /// </summary>
-    /// <param name="browser">Browser</param>
+    /// <param name="browserType">BrowserType</param>
     /// <param name="profileName">字串，設定檔名稱</param>
     /// <param name="hostKey">字串，主機鍵值</param>
     /// <returns>List&lt;Cookie&gt;</returns>
-    public static List<Cookie> GetCookies(
-        Browser browser,
+    public static List<CookieData> GetCookies(
+        BrowserType browserType,
         string profileName,
         string hostKey)
     {
@@ -76,17 +79,17 @@ public class BrowserManager
             isCustomProfilePath = true;
         }
 
-        List<Cookie> outputData = new();
+        List<CookieData> outputData = new();
 
         string cookieFilePath = string.Empty;
 
-        if (browser == Browser.MozillaFirefox)
+        if (browserType == BrowserType.MozillaFirefox)
         {
             cookieFilePath = isCustomProfilePath ?
                 profileName :
                 Path.Combine(
                     $@"C:\Users\{Environment.UserName}\AppData\Roaming\",
-                    GetPartialPath(browser));
+                    GetPartialPath(browserType));
 
             DirectoryInfo directoryInfo = new(cookieFilePath);
 
@@ -123,15 +126,15 @@ public class BrowserManager
             cookieFilePath = isCustomProfilePath ?
                 Path.Combine(profileName, @"Network\Cookies") :
                 Path.Combine(
-                    $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browser)}\User Data",
+                    $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browserType)}\User Data",
                     $@"{profileName}\Network\Cookies");
         }
 
-        _logger.Debug($"Cookie 檔案的路徑：{cookieFilePath}");
+        _logger.Debug("Cookie 檔案的路徑：{Path}", cookieFilePath);
 
         if (File.Exists(cookieFilePath))
         {
-            outputData = QuerySQLiteDB(browser, cookieFilePath, hostKey);
+            outputData = QuerySQLiteDB(browserType, cookieFilePath, hostKey);
         }
 
         return outputData;
@@ -140,20 +143,20 @@ public class BrowserManager
     /// <summary>
     /// 取得部分路徑
     /// </summary>
-    /// <param name="browser">Browser</param>
+    /// <param name="browserType">BrowserType</param>
     /// <returns>字串</returns>
-    public static string GetPartialPath(Browser browser)
+    public static string GetPartialPath(BrowserType browserType)
     {
-        return browser switch
+        return browserType switch
         {
-            Browser.Brave => @"BraveSoftware\Brave-Browser",
-            Browser.GoogleChrome => @"Google\Chrome",
-            Browser.Chromium => @"Chromium",
-            Browser.MicrosoftEdge => @"Microsoft\Edge",
-            Browser.Opera => @"Opera Software\Opera Stable",
-            Browser.OperaGX => @"Opera Software\Opera GX Stable",
-            Browser.Vivaldi => "Vivaldi",
-            Browser.MozillaFirefox => @"Mozilla\Firefox\Profiles",
+            BrowserType.Brave => @"BraveSoftware\Brave-Browser",
+            BrowserType.GoogleChrome => @"Google\Chrome",
+            BrowserType.Chromium => @"Chromium",
+            BrowserType.MicrosoftEdge => @"Microsoft\Edge",
+            BrowserType.Opera => @"Opera Software\Opera Stable",
+            BrowserType.OperaGX => @"Opera Software\Opera GX Stable",
+            BrowserType.Vivaldi => "Vivaldi",
+            BrowserType.MozillaFirefox => @"Mozilla\Firefox\Profiles",
             _ => @"Google\Chrome"
         };
     }
@@ -161,30 +164,30 @@ public class BrowserManager
     /// <summary>
     /// 查詢 SQLite 資料庫
     /// </summary>
-    /// <param name="browser">Browser</param>
+    /// <param name="browserType">BrowserType</param>
     /// <param name="cookieFilePath">字串，Cookie 檔案的位置</param>
     /// <param name="hostKey">字串，主機鍵值</param>
     /// <returns>List&lt;Cookie&gt;</returns>
-    private static List<Cookie> QuerySQLiteDB(
-        Browser browser,
+    private static List<CookieData> QuerySQLiteDB(
+        BrowserType browserType,
         string cookieFilePath,
         string hostKey)
     {
-        List<Cookie> outputData = new();
+        List<CookieData> outputData = new();
 
         try
         {
             using SqliteConnection sqliteConnection = new($"Data Source={cookieFilePath}");
             using SqliteCommand sqliteCommand = sqliteConnection.CreateCommand();
 
-            string rawTSQL = browser switch
+            string rawTSQL = browserType switch
             {
-                Browser.MozillaFirefox => "SELECT [name], [value], [host] FROM [moz_cookies]",
+                BrowserType.MozillaFirefox => "SELECT [name], [value], [host] FROM [moz_cookies]",
                 _ => "SELECT [name], [encrypted_value], [host_key] FROM [cookies]"
             };
-            string rawWhereClauseTSQL = browser switch
+            string rawWhereClauseTSQL = browserType switch
             {
-                Browser.MozillaFirefox => $" WHERE [host] = '{hostKey}'",
+                BrowserType.MozillaFirefox => $" WHERE [host] = '{hostKey}'",
                 //Browser.MozillaFirefox =>  $" WHERE [host] = LIKE '%{hostKey}%'",
                 _ => $" WHERE [host_key] = '{hostKey}'"
                 //_ => $" WHERE [host_key] LIKE '%{hostKey}%'"
@@ -201,10 +204,10 @@ public class BrowserManager
 
             using (SqliteDataReader sqliteDataReader = sqliteCommand.ExecuteReader())
             {
-                byte[] key = browser switch
+                byte[] key = browserType switch
                 {
-                    Browser.MozillaFirefox => Array.Empty<byte>(),
-                    _ => AesGcm256.GetKey(browser)
+                    BrowserType.MozillaFirefox => Array.Empty<byte>(),
+                    _ => AesGcm256.GetKey(browserType)
                 };
 
                 while (sqliteDataReader.Read())
@@ -213,9 +216,9 @@ public class BrowserManager
                     {
                         string value = string.Empty;
 
-                        switch (browser)
+                        switch (browserType)
                         {
-                            case Browser.MozillaFirefox:
+                            case BrowserType.MozillaFirefox:
                                 value = sqliteDataReader.GetString(1);
 
                                 break;
@@ -230,7 +233,7 @@ public class BrowserManager
                                 break;
                         }
 
-                        outputData.Add(new Cookie()
+                        outputData.Add(new CookieData()
                         {
                             HostKey = sqliteDataReader.GetString(2),
                             Name = sqliteDataReader.GetString(0),
@@ -278,9 +281,9 @@ public class BrowserManager
     }
 
     /// <summary>
-    /// Cookie 類別
+    /// Cookie 資料類別
     /// </summary>
-    public class Cookie
+    public class CookieData
     {
         /// <summary>
         /// 名稱
@@ -308,7 +311,7 @@ public class BrowserManager
         /// </summary>
         /// <param name="browser">Browser</param>
         /// <returns>字串</returns>
-        public static byte[] GetKey(Browser browser)
+        public static byte[] GetKey(BrowserType browser)
         {
             //string sR = string.Empty;
             //string appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

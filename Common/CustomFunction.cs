@@ -16,6 +16,9 @@ namespace YTLiveChatCatcher.Common;
 /// </summary>
 public class CustomFunction
 {
+    /// <summary>
+    /// NLog 的 Logger
+    /// </summary>
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     /// <summary>

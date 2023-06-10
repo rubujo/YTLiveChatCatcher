@@ -8,6 +8,9 @@ namespace YTLiveChatCatcher.Common.Utils;
 /// </summary>
 public class HttpClientUtil
 {
+    /// <summary>
+    /// NLog 的 Logger
+    /// </summary>
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     /// <summary>
@@ -41,7 +44,7 @@ public class HttpClientUtil
                     stringBuilder.AppendLine($"{requestHeader.Key}：{value}");
                 }
 
-                _logger.Info($"本次連線使用的請求標頭：{Environment.NewLine}{stringBuilder}");
+                _logger.Debug("本次連線使用的請求標頭：{Message}", $"{Environment.NewLine}{stringBuilder}");
             }
         }
 
