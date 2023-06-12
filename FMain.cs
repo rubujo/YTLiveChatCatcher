@@ -297,7 +297,7 @@ public partial class FMain : Form
                             _httpClientFactory,
                             userAgent);
 
-                        SharedYTConfig = LiveChatFunction.GetYTConfig(
+                        SharedYTConfigData = LiveChatFunction.GetYTConfigData(
                             httpClient,
                             videoID,
                             IsStreaming,
@@ -356,7 +356,7 @@ public partial class FMain : Form
             // 清理全域變數。
             SharedJsonElement = new();
 
-            SharedYTConfig = null;
+            SharedYTConfigData = null;
 
             SharedTimeoutMs = 0;
 
@@ -478,7 +478,7 @@ public partial class FMain : Form
             using HttpClient httpClient = HttpClientUtil
                 .GetHttpClient(_httpClientFactory, userAgent);
 
-            if (HttpClientUtil.CheckUserAgent(httpClient, TBUserAgent.Text))
+            if (HttpClientUtil.SetUserAgent(httpClient, TBUserAgent.Text))
             {
                 if (TBUserAgent.Text != Properties.Settings.Default.UserAgent)
                 {

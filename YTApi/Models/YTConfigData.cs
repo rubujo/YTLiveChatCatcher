@@ -3,7 +3,7 @@
 /// <summary>
 /// 必要資料類別
 /// </summary>
-public class YTConfig
+public class YTConfigData
 {
     /// <summary>
     /// 初始頁面

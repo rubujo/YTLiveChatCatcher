@@ -2,7 +2,7 @@
 
 namespace YTApi.Models;
 
-public class RequestPayload
+public class RequestPayloadData
 {
     [JsonPropertyName("context")]
     public Context? Context { get; set; }

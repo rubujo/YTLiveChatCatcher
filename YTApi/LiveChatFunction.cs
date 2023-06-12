@@ -4,6 +4,7 @@ using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using NLog;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -218,22 +219,22 @@ public partial class LiveChatFunction
     }
 
     /// <summary>
-    /// 取得 YTConfig
+    /// 取得 YTConfigData
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
     /// <param name="videoID">字串，影片 ID</param>
     /// <param name="isStreaming">布林值，用於判斷是否為直播中的影片</param>
     /// <param name="cookies">字串，Cookies</param>
     /// <param name="control">TextBox</param>
-    /// <returns>YTConfig</returns>
-    public static YTConfig GetYTConfig(
+    /// <returns>YTConfigData</returns>
+    public static YTConfigData GetYTConfigData(
         HttpClient httpClient,
         string videoID,
         bool isStreaming,
         string cookies,
         TextBox control)
     {
-        YTConfig ytConfig = new();
+        YTConfigData ytConfig = new();
 
         string url = isStreaming ? $"{StringSet.Origin}/live_chat?v={videoID}" :
             $"{StringSet.Origin}/watch?v={videoID}";
@@ -439,6 +440,27 @@ public partial class LiveChatFunction
 
                 ytConfig.Continuation = JsonParser.GetReplayContinuation(jsonElement);
             }
+
+            /*
+            "INNERTUBE_CONTEXT.clickTracking.clickTrackingParams"
+            "INNERTUBE_CONTEXT.request.useSsl"
+            "INNERTUBE_CONTEXT.client.browserName"
+            "INNERTUBE_CONTEXT.client.browserVersion"
+            "INNERTUBE_CONTEXT.client.clientFormFactor"
+            "INNERTUBE_CONTEXT.client.clientName"
+            "INNERTUBE_CONTEXT.client.clientVersion"
+            "INNERTUBE_CONTEXT.client.deviceMake"
+            "INNERTUBE_CONTEXT.client.deviceModel"
+            "INNERTUBE_CONTEXT.client.gl"
+            "INNERTUBE_CONTEXT.client.hl"
+            "INNERTUBE_CONTEXT.client.originalUrl"
+            "INNERTUBE_CONTEXT.client.osName"
+            "INNERTUBE_CONTEXT.client.osVersion"
+            "INNERTUBE_CONTEXT.client.platform"
+            "INNERTUBE_CONTEXT.client.remoteHost"
+            "INNERTUBE_CONTEXT.client.userAgent"
+            "INNERTUBE_CONTEXT.client.visitorData"
+            */
         }
         else
         {
@@ -468,17 +490,17 @@ public partial class LiveChatFunction
     /// <returns>JsonElement</returns>
     public static JsonElement GetJsonElement(
         HttpClient httpClient,
-        YTConfig ytConfig,
+        YTConfigData ytConfig,
         bool isStreaming,
         string cookies,
         TextBox control)
     {
-        JsonElement outputJsonElement = new();
+        JsonElement jsonElement = new();
 
         string methodName = isStreaming ? "get_live_chat" : "get_live_chat_replay";
         string url = $"{StringSet.Origin}/youtubei/v1/live_chat/{methodName}?key={ytConfig.APIKey}";
 
-        // 當 ytConfig.Continuation 為 null 或空值時，則表示已經抓取完成。
+        // 當 ytConfigData.Continuation 為 null 或空值時，則表示已經抓取完成。
         if (!string.IsNullOrEmpty(ytConfig.Continuation))
         {
             // 當沒有時才指定，後續不更新。
@@ -489,7 +511,7 @@ public partial class LiveChatFunction
                 ytConfig.InitPage = $"{StringSet.Origin}/{apiType}/?continuation={ytConfig.Continuation}";
             }
 
-            string inputJsonContent = GetRequestPayload(ytConfig, httpClient.DefaultRequestHeaders.UserAgent.ToString());
+            string jsonContent = GetRequestPayloadData(ytConfig, httpClient.DefaultRequestHeaders.UserAgent.ToString());
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
@@ -498,22 +520,22 @@ public partial class LiveChatFunction
                 SetHttpRequestMessageHeader(httpRequestMessage, cookies, ytConfig);
             }
 
-            HttpContent content = new StringContent(inputJsonContent, Encoding.UTF8, "application/json");
+            HttpContent httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            httpRequestMessage.Content = content;
+            httpRequestMessage.Content = httpContent;
 
             HttpResponseMessage httpResponseMessage = httpClient.SendAsync(httpRequestMessage).GetAwaiter().GetResult();
 
             string receivedJsonContent = httpResponseMessage.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 
             _logger.Debug(httpRequestMessage);
-            _logger.Debug(inputJsonContent);
+            _logger.Debug(jsonContent);
             _logger.Debug(httpResponseMessage);
             _logger.Debug(receivedJsonContent);
 
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
-                outputJsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
+                jsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
             }
             else
             {
@@ -530,17 +552,17 @@ public partial class LiveChatFunction
             }
         }
 
-        return outputJsonElement;
+        return jsonElement;
     }
 
     /// <summary>
-    /// 取得要求裝載
+    /// 取得要求裝載資料
     /// </summary>
-    /// <param name="ytConfig">YTConfig</param>
+    /// <param name="ytConfigData">YTConfigData</param>
     /// <param name="userAgent">字串，使用者代理字串</param>
     /// <returns>字串</returns>
-    private static string GetRequestPayload(
-        YTConfig ytConfig,
+    private static string GetRequestPayloadData(
+        YTConfigData ytConfigData,
         string userAgent)
     {
         // 2022-05-19 尚未測試會員限定直播是否需要 "clickTracking" 參數。
@@ -549,7 +571,7 @@ public partial class LiveChatFunction
         // 參考：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/main/yt_chat.go
 
         // 內容是精簡過的。
-        return JsonSerializer.Serialize(new RequestPayload()
+        return JsonSerializer.Serialize(new RequestPayloadData()
         {
             Context = new()
             {
@@ -560,10 +582,10 @@ public partial class LiveChatFunction
                     Gl = "TW",
                     DeviceMake = string.Empty,
                     DeviceModel = string.Empty,
-                    VisitorData = ytConfig.VisitorData,
+                    VisitorData = ytConfigData.VisitorData,
                     UserAgent = userAgent,
-                    ClientName = ytConfig.ClientName,
-                    ClientVersion = ytConfig.ClientVersion,
+                    ClientName = ytConfigData.ClientName,
+                    ClientVersion = ytConfigData.ClientVersion,
                     OsName = "Windows",
                     OsVersion = "10.0",
                     Platform = "DESKTOP",
@@ -571,7 +593,7 @@ public partial class LiveChatFunction
                     TimeZone = "Asia/Taipei"
                 }
             },
-            Continuation = ytConfig.Continuation
+            Continuation = ytConfigData.Continuation
         });
     }
 
@@ -579,80 +601,84 @@ public partial class LiveChatFunction
     /// 設定 HttpRequestMessage 的標頭
     /// <para>參考：https://stackoverflow.com/questions/12373738/how-do-i-set-a-cookie-on-httpclients-httprequestmessage/13287224#13287224 </para>
     /// </summary>
-    /// <param name="request">HttpRequestMessage</param>
+    /// <param name="httpRequestMessage">HttpRequestMessage</param>
     /// <param name="cookies">字串，Cookies</param>
-    /// <param name="ytConfig">YTConfig</param>
+    /// <param name="ytConfigData">YTConfigData</param>
     private static void SetHttpRequestMessageHeader(
-        HttpRequestMessage request,
+        HttpRequestMessage httpRequestMessage,
         string cookies,
-        YTConfig? ytConfig = null)
+        YTConfigData? ytConfigData = null)
     {
-        request.Headers.Add("Cookie", cookies);
-
-        string[] cookieSet = cookies.Split(
-            new char[] { ';' },
-            StringSplitOptions.RemoveEmptyEntries);
-
-        string? sapiSid = cookieSet.FirstOrDefault(n => n.Contains("SAPISID"));
-
-        if (!string.IsNullOrEmpty(sapiSid))
+        if (!string.IsNullOrEmpty(cookies))
         {
-            string[] tempArray = sapiSid.Split(
-                new char[] { '=' },
+            httpRequestMessage.Headers.Add("Cookie", cookies);
+
+            string[] cookiesArray = cookies.Split(
+                new char[] { ';' },
                 StringSplitOptions.RemoveEmptyEntries);
 
-            if (tempArray.Length == 2)
+            string? sapiSid = cookiesArray.FirstOrDefault(n => n.Contains("SAPISID"));
+
+            if (!string.IsNullOrEmpty(sapiSid))
             {
-                request.Headers.Add(
-                    "authorization",
-                    $"SAPISIDHASH {GetSapiSidHash(tempArray[1], StringSet.Origin)}");
+                string[] tempArray = sapiSid.Split(
+                    new char[] { '=' },
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                if (tempArray.Length == 2)
+                {
+                    httpRequestMessage.Headers.Authorization =
+                        new AuthenticationHeaderValue(
+                            "SAPISIDHASH",
+                            GetSapiSidHash(tempArray[1], StringSet.Origin));
+                }
             }
         }
 
-        if (ytConfig != null)
+        if (ytConfigData != null)
         {
             string xGoogAuthuser = "0",
                 xGoogPageId = string.Empty;
 
-            if (!string.IsNullOrEmpty(ytConfig.DATASYNC_ID))
+            if (!string.IsNullOrEmpty(ytConfigData.DATASYNC_ID))
             {
-                xGoogPageId = ytConfig.DATASYNC_ID;
+                xGoogPageId = ytConfigData.DATASYNC_ID;
             }
 
             if (string.IsNullOrEmpty(xGoogPageId) &&
-                !string.IsNullOrEmpty(ytConfig.DELEGATED_SESSION_ID))
+                !string.IsNullOrEmpty(ytConfigData.DELEGATED_SESSION_ID))
             {
-                xGoogPageId = ytConfig.DELEGATED_SESSION_ID;
+                xGoogPageId = ytConfigData.DELEGATED_SESSION_ID;
             }
 
             if (!string.IsNullOrEmpty(xGoogPageId))
             {
-                request.Headers.Add("x-goog-pageid", xGoogPageId);
+                httpRequestMessage.Headers.Add("x-goog-pageid", xGoogPageId);
             }
 
-            if (!string.IsNullOrEmpty(ytConfig.ID_TOKEN))
+            if (!string.IsNullOrEmpty(ytConfigData.ID_TOKEN))
             {
-                request.Headers.Add("x-youtube-identity-token", ytConfig.ID_TOKEN);
+                httpRequestMessage.Headers.Add("x-youtube-identity-token", ytConfigData.ID_TOKEN);
             }
 
-            if (!string.IsNullOrEmpty(ytConfig.SESSION_INDEX))
+            if (!string.IsNullOrEmpty(ytConfigData.SESSION_INDEX))
             {
-                xGoogAuthuser = ytConfig.SESSION_INDEX;
+                xGoogAuthuser = ytConfigData.SESSION_INDEX;
             }
 
-            request.Headers.Add("x-goog-authuser", xGoogAuthuser);
-            request.Headers.Add("x-goog-visitor-id", ytConfig.VisitorData);
-            request.Headers.Add("x-youtube-client-name", ytConfig.INNERTUBE_CONTEXT_CLIENT_NAME);
-            request.Headers.Add("x-youtube-client-version", ytConfig.INNERTUBE_CLIENT_VERSION);
+            httpRequestMessage.Headers.Add("x-goog-authuser", xGoogAuthuser);
+            httpRequestMessage.Headers.Add("x-goog-visitor-id", ytConfigData.VisitorData);
+            httpRequestMessage.Headers.Add("x-youtube-client-name", ytConfigData.INNERTUBE_CONTEXT_CLIENT_NAME);
+            httpRequestMessage.Headers.Add("x-youtube-client-version", ytConfigData.INNERTUBE_CLIENT_VERSION);
 
-            if (!string.IsNullOrEmpty(ytConfig.InitPage))
+            if (!string.IsNullOrEmpty(ytConfigData.InitPage))
             {
-                request.Headers.Add("referer", ytConfig.InitPage);
+                httpRequestMessage.Headers.Referrer = new Uri(ytConfigData.InitPage);
             }
         }
 
-        request.Headers.Add("origin", StringSet.Origin);
-        request.Headers.Add("x-origin", StringSet.Origin);
+        httpRequestMessage.Headers.Add("origin", StringSet.Origin);
+        httpRequestMessage.Headers.Add("x-origin", StringSet.Origin);
     }
 
     /// <summary>

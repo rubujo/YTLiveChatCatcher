@@ -1,5 +1,4 @@
 ﻿using GetCachable;
-using Microsoft.Extensions.Logging;
 using NLog;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing;
@@ -7,9 +6,11 @@ using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Reflection;
 using System.Runtime.Versioning;
+using System.Windows.Forms.VisualStyles;
 using YTApi;
 using YTApi.Models;
 using YTLiveChatCatcher.Common;
@@ -1036,7 +1037,7 @@ public partial class FMain
 
         bool enableDebug = Properties.Settings.Default.EnableDebug;
 
-        if(enableDebug)
+        if (enableDebug)
         {
             LogManager.ResumeLogging();
         }
@@ -1185,10 +1186,9 @@ public partial class FMain
         {
             try
             {
-                if (SharedCancellationToken.HasValue &&
-                    !SharedCancellationToken.Value.IsCancellationRequested)
+                if (SharedCancellationToken?.IsCancellationRequested == false)
                 {
-                    if (SharedYTConfig != null)
+                    if (SharedYTConfigData != null)
                     {
                         string userAgent = string.Empty;
 
@@ -1204,7 +1204,7 @@ public partial class FMain
 
                         SharedJsonElement = LiveChatFunction.GetJsonElement(
                             httpClient,
-                            SharedYTConfig,
+                            SharedYTConfigData,
                             IsStreaming,
                             GetCookies(),
                             TBLog);
@@ -1213,15 +1213,15 @@ public partial class FMain
                         if (!string.IsNullOrEmpty(SharedJsonElement.ToString()))
                         {
                             // 2021-12-10
-                            // 可能會因為 BtnStop_Click() 造成 SharedYTConfig 為 null。
-                            // 再次檢查 SharedYTConfig 是否為 null。
-                            if (SharedYTConfig != null)
+                            // 可能會因為 BtnStop_Click() 造成 SharedYTConfigData 為 null。
+                            // 再次檢查 SharedYTConfigData 是否為 null。
+                            if (SharedYTConfigData != null)
                             {
                                 // 0：continuation、1：timeoutMs。
                                 string[] continuationData = JsonParser.GetContinuation(SharedJsonElement);
 
                                 // 更換 Continuation。
-                                SharedYTConfig.Continuation = continuationData[0];
+                                SharedYTConfigData.Continuation = continuationData[0];
 
                                 if (int.TryParse(continuationData[1], out int timeoutMs))
                                 {
@@ -2303,17 +2303,84 @@ public partial class FMain
 
                 CBBrowser.InvokeIfRequired(() =>
                 {
-                    List<BrowserManager.CookieData> cookies = CBBrowser.SelectedItem.ToString() switch
+                    List<WebBrowserUtil.CookieData> cookies = CBBrowser.SelectedItem.ToString() switch
                     {
-                        "Brave" => BrowserManager.GetCookies(BrowserManager.BrowserType.Brave, profileFolderName, ".youtube.com"),
-                        "Google Chrome" => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com"),
-                        "Chromium" => BrowserManager.GetCookies(BrowserManager.BrowserType.Chromium, profileFolderName, ".youtube.com"),
-                        "Microsoft Edge" => BrowserManager.GetCookies(BrowserManager.BrowserType.MicrosoftEdge, profileFolderName, ".youtube.com"),
-                        "Opera" => BrowserManager.GetCookies(BrowserManager.BrowserType.Opera, profileFolderName, ".youtube.com"),
-                        "Opera GX" => BrowserManager.GetCookies(BrowserManager.BrowserType.OperaGX, profileFolderName, ".youtube.com"),
-                        "Vivaldi" => BrowserManager.GetCookies(BrowserManager.BrowserType.Vivaldi, profileFolderName, ".youtube.com"),
-                        "Mozilla Firefox" => BrowserManager.GetCookies(BrowserManager.BrowserType.MozillaFirefox, profileFolderName, ".youtube.com"),
-                        _ => BrowserManager.GetCookies(BrowserManager.BrowserType.GoogleChrome, profileFolderName, ".youtube.com")
+                        "Brave" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.Brave,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Brave Beta" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.BraveBeta,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Brave Nightly" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.BraveNightly,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Google Chrome" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.GoogleChrome,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Google Chrome Beta" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.GoogleChromeBeta,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Google Chrome Canary" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.GoogleChromeCanary,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Chromium" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.Chromium,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Microsoft Edge" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.MicrosoftEdge,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Microsoft Edge Insider Beta" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderBeta,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Microsoft Edge Insider Dev" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderDev,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Microsoft Edge Insider Canary" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderCanary,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Opera" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.Opera,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Opera Beta" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.OperaBeta,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Opera Developer" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.OperaDeveloper,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Opera GX" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.OperaGX,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Opera Crypto" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.OperaCrypto,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Vivaldi" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.Vivaldi,
+                            profileFolderName,
+                            ".youtube.com"),
+                        "Mozilla Firefox" => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.MozillaFirefox,
+                            profileFolderName,
+                            ".youtube.com"),
+                        _ => WebBrowserUtil.GetCookies(
+                            WebBrowserUtil.BrowserType.GoogleChrome,
+                            profileFolderName,
+                            ".youtube.com")
                     };
 
                     cookiesStr = string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
