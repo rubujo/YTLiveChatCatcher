@@ -58,7 +58,7 @@ public class YTConfigData
     /// <summary>
     /// INNERTUBE_CONTEXT_CLIENT_NAME
     /// </summary>
-    public string? InnetrubeContextClientName { get; set; }
+    public int InnetrubeContextClientName { get; set; }
 
     /// <summary>
     /// INNERTUBE_CONTEXT_CLIENT_VERSION

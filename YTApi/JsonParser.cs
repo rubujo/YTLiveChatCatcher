@@ -68,7 +68,7 @@ public partial class JsonParser
             }
 
             ytConfigData.SessionIndex = jeSessionIndex?.GetString();
-            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32().ToString();
+            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
             ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
             ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
 
