@@ -6,11 +6,9 @@ using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
-using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Reflection;
 using System.Runtime.Versioning;
-using System.Windows.Forms.VisualStyles;
 using YTApi;
 using YTApi.Models;
 using YTLiveChatCatcher.Common;
@@ -1218,7 +1216,7 @@ public partial class FMain
                             if (SharedYTConfigData != null)
                             {
                                 // 0：continuation、1：timeoutMs。
-                                string[] continuationData = JsonParser.GetContinuation(SharedJsonElement);
+                                string[] continuationData = JsonParser.ParseContinuation(SharedJsonElement);
 
                                 // 更換 Continuation。
                                 SharedYTConfigData.Continuation = continuationData[0];
@@ -1235,7 +1233,7 @@ public partial class FMain
 
                             bool isLarge = true;
 
-                            List<RendererData> messages = JsonParser.GetActions(SharedJsonElement, isLarge);
+                            List<RendererData> messages = JsonParser.ParseActions(SharedJsonElement, isLarge);
 
                             foreach (RendererData rendererData in messages)
                             {

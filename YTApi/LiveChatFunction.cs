@@ -22,48 +22,8 @@ public partial class LiveChatFunction
 {
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-    #region GeneratedRegex
-
     [GeneratedRegex("v=(.+)")]
     private static partial Regex RegexVideoID();
-
-    [GeneratedRegex("INNERTUBE_API_KEY\":\"(.+?)\",")]
-    private static partial Regex RegexInnertubeApiKey();
-
-    [GeneratedRegex("continuation\":\"(.+?)\",")]
-    private static partial Regex RegexContinuation();
-
-    [GeneratedRegex("visitorData\":\"(.+?)\",")]
-    private static partial Regex RegexVisitorData();
-
-    [GeneratedRegex("clientName\":\"(.+?)\",")]
-    private static partial Regex RegexClientName();
-
-    [GeneratedRegex("clientVersion\":\"(.+?)\",")]
-    private static partial Regex RegexClientVersion();
-
-    [GeneratedRegex("ID_TOKEN\"(.+?)\",")]
-    private static partial Regex RegexIDToken();
-
-    [GeneratedRegex("SESSION_INDEX\":\"(.*?)\"")]
-    private static partial Regex RegexSessionIndex();
-
-    [GeneratedRegex("INNERTUBE_CONTEXT_CLIENT_NAME\":(.*?),")]
-    private static partial Regex RegexInnertubeContextClientName();
-
-    [GeneratedRegex("INNERTUBE_CONTEXT_CLIENT_VERSION\":\"(.*?)\"")]
-    private static partial Regex RegexInnertubeContextClientVersion();
-
-    [GeneratedRegex("INNERTUBE_CLIENT_VERSION\":\"(.*?)\"")]
-    private static partial Regex RegexInnertubeClientVersion();
-
-    [GeneratedRegex("DATASYNC_ID\":\"(.*?)\"")]
-    private static partial Regex RegexDatasyncID();
-
-    [GeneratedRegex("DELEGATED_SESSION_ID\":\"(.*?)\"")]
-    private static partial Regex RegexDelegatedSessionID();
-
-    #endregion
 
     /// <summary>
     /// 從 YouTube 頻道自定義網址取得頻道 ID
@@ -234,7 +194,7 @@ public partial class LiveChatFunction
         string cookies,
         TextBox control)
     {
-        YTConfigData ytConfig = new();
+        YTConfigData ytConfigData = new();
 
         string url = isStreaming ? $"{StringSet.Origin}/live_chat?v={videoID}" :
             $"{StringSet.Origin}/watch?v={videoID}";
@@ -252,215 +212,61 @@ public partial class LiveChatFunction
 
         if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
         {
-            MatchCollection collection1 = RegexInnertubeApiKey().Matches(htmlContent);
+            HtmlParser htmlParser = new();
+            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+            IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+            IElement elementYtCfg = scriptElements
+                .FirstOrDefault(n => n.InnerHtml.Contains("ytcfg.set({"))!;
 
-            foreach (Match match in collection1.Cast<Match>())
+            string jsonYtCfg = elementYtCfg.InnerHtml;
+
+            if (isStreaming)
             {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.APIKey = match.Groups[1].Captures[0].Value;
-                }
+                jsonYtCfg = jsonYtCfg.Replace("ytcfg.set(", string.Empty);
+
+                int endTokenIndex = jsonYtCfg.LastIndexOf("});");
+
+                // 要補回最後一個 "}"。
+                jsonYtCfg = jsonYtCfg[..(endTokenIndex + 1)];
+            }
+            else
+            {
+                int startTokenIndex = jsonYtCfg.IndexOf("ytcfg.set({"),
+                    endTokenIndex = jsonYtCfg.IndexOf("});");
+
+                // 只擷取要的部分。
+                jsonYtCfg = jsonYtCfg.Substring(startTokenIndex, endTokenIndex);
+                jsonYtCfg = jsonYtCfg.Replace("ytcfg.set(", string.Empty);
+
+                // 重新再在找一次。
+                endTokenIndex = jsonYtCfg.LastIndexOf("});");
+
+                // 要補回最後一個 "}"。
+                jsonYtCfg = jsonYtCfg[..(endTokenIndex + 1)];
             }
 
-            MatchCollection collection2 = RegexContinuation().Matches(htmlContent);
+            JsonElement jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
 
-            foreach (Match match in collection2.Cast<Match>())
+            ytConfigData = JsonParser.ParseYtCfg(jeYtCfg);
+
+            IElement elementYtInitialData = isStreaming ?
+                scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] ="))! :
+                scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialData ="))!;
+
+            string jsonYtInitialData = isStreaming ?
+                elementYtInitialData.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty) :
+                elementYtInitialData.InnerHtml.Replace("var ytInitialData = ", string.Empty);
+
+            if (jsonYtInitialData.EndsWith(";"))
             {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.Continuation = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
+                jsonYtInitialData = jsonYtInitialData[0..^1];
             }
 
-            MatchCollection collection3 = RegexVisitorData().Matches(htmlContent);
+            JsonElement jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
 
-            foreach (Match match in collection3.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.VisitorData = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection4 = RegexClientName().Matches(htmlContent);
-
-            foreach (Match match in collection4.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    string clientName = match.Groups[1].Captures[0].Value;
-
-                    if (clientName == "WEB")
-                    {
-                        ytConfig.ClientName = clientName;
-
-                        break;
-                    }
-                }
-            }
-
-            MatchCollection collection5 = RegexClientVersion().Matches(htmlContent);
-
-            foreach (Match match in collection5.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.ClientVersion = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection6 = RegexIDToken().Matches(htmlContent);
-
-            foreach (Match match in collection6.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.ID_TOKEN = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection7 = RegexSessionIndex().Matches(htmlContent);
-
-            foreach (Match match in collection7.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.SESSION_INDEX = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection8 = RegexInnertubeContextClientName().Matches(htmlContent);
-
-            foreach (Match match in collection8.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.INNERTUBE_CONTEXT_CLIENT_NAME = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection9 = RegexInnertubeContextClientVersion().Matches(htmlContent);
-
-            foreach (Match match in collection9.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.INNERTUBE_CONTEXT_CLIENT_VERSION = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            MatchCollection collection10 = RegexInnertubeClientVersion().Matches(htmlContent);
-
-            foreach (Match match in collection10.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.INNERTUBE_CLIENT_VERSION = match.Groups[1].Captures[0].Value;
-
-                    break;
-                }
-            }
-
-            bool useDelegatedSessionID = false;
-
-            MatchCollection collection11 = RegexDatasyncID().Matches(htmlContent);
-
-            foreach (Match match in collection11.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    string dataSyncID = match.Groups[1].Captures[0].Value;
-
-                    string[] tempArray = dataSyncID
-                        .Split("||".ToCharArray(),
-                        StringSplitOptions.RemoveEmptyEntries);
-
-                    if (tempArray.Length >= 2 && !string.IsNullOrEmpty(tempArray[1]))
-                    {
-                        ytConfig.DATASYNC_ID = tempArray[0];
-                    }
-                    else
-                    {
-                        useDelegatedSessionID = true;
-                    }
-
-                    break;
-                }
-            }
-
-            // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
-            MatchCollection collection12 = RegexDelegatedSessionID().Matches(htmlContent);
-
-            foreach (Match match in collection12.Cast<Match>())
-            {
-                if (match.Success && match.Groups.Count >= 2)
-                {
-                    ytConfig.DELEGATED_SESSION_ID = match.Groups[1].Captures[0].Value;
-
-                    if (useDelegatedSessionID)
-                    {
-                        ytConfig.DATASYNC_ID = ytConfig.DELEGATED_SESSION_ID;
-                    }
-
-                    break;
-                }
-            }
-
-            if (!isStreaming)
-            {
-                HtmlParser htmlParser = new();
-                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-                IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
-                IElement scriptElement = scriptElements
-                    .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialData ="))!;
-
-                string json = scriptElement.InnerHtml
-                    .Replace("var ytInitialData = ", "");
-
-                if (json.EndsWith(";"))
-                {
-                    json = json[0..^1];
-                }
-
-                JsonElement jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
-
-                ytConfig.Continuation = JsonParser.GetReplayContinuation(jsonElement);
-            }
-
-            /*
-            "INNERTUBE_CONTEXT.clickTracking.clickTrackingParams"
-            "INNERTUBE_CONTEXT.request.useSsl"
-            "INNERTUBE_CONTEXT.client.browserName"
-            "INNERTUBE_CONTEXT.client.browserVersion"
-            "INNERTUBE_CONTEXT.client.clientFormFactor"
-            "INNERTUBE_CONTEXT.client.clientName"
-            "INNERTUBE_CONTEXT.client.clientVersion"
-            "INNERTUBE_CONTEXT.client.deviceMake"
-            "INNERTUBE_CONTEXT.client.deviceModel"
-            "INNERTUBE_CONTEXT.client.gl"
-            "INNERTUBE_CONTEXT.client.hl"
-            "INNERTUBE_CONTEXT.client.originalUrl"
-            "INNERTUBE_CONTEXT.client.osName"
-            "INNERTUBE_CONTEXT.client.osVersion"
-            "INNERTUBE_CONTEXT.client.platform"
-            "INNERTUBE_CONTEXT.client.remoteHost"
-            "INNERTUBE_CONTEXT.client.userAgent"
-            "INNERTUBE_CONTEXT.client.visitorData"
-            */
+            ytConfigData.Continuation = isStreaming ?
+                JsonParser.ParseFirstTimeContinuation(jeYtInitialData)[0] :
+                JsonParser.ParseReplayContinuation(jeYtInitialData);
         }
         else
         {
@@ -476,7 +282,7 @@ public partial class LiveChatFunction
             });
         }
 
-        return ytConfig;
+        return ytConfigData;
     }
 
     /// <summary>
@@ -640,36 +446,36 @@ public partial class LiveChatFunction
             string xGoogAuthuser = "0",
                 xGoogPageId = string.Empty;
 
-            if (!string.IsNullOrEmpty(ytConfigData.DATASYNC_ID))
+            if (!string.IsNullOrEmpty(ytConfigData.DataSyncID))
             {
-                xGoogPageId = ytConfigData.DATASYNC_ID;
+                xGoogPageId = ytConfigData.DataSyncID;
             }
 
             if (string.IsNullOrEmpty(xGoogPageId) &&
-                !string.IsNullOrEmpty(ytConfigData.DELEGATED_SESSION_ID))
+                !string.IsNullOrEmpty(ytConfigData.DelegatedSessionID))
             {
-                xGoogPageId = ytConfigData.DELEGATED_SESSION_ID;
+                xGoogPageId = ytConfigData.DelegatedSessionID;
             }
 
             if (!string.IsNullOrEmpty(xGoogPageId))
             {
-                httpRequestMessage.Headers.Add("x-goog-pageid", xGoogPageId);
+                httpRequestMessage.Headers.Add("X-Goog-Pageid", xGoogPageId);
             }
 
-            if (!string.IsNullOrEmpty(ytConfigData.ID_TOKEN))
+            if (!string.IsNullOrEmpty(ytConfigData.IDToken))
             {
-                httpRequestMessage.Headers.Add("x-youtube-identity-token", ytConfigData.ID_TOKEN);
+                httpRequestMessage.Headers.Add("X-Youtube-Identity-Token", ytConfigData.IDToken);
             }
 
-            if (!string.IsNullOrEmpty(ytConfigData.SESSION_INDEX))
+            if (!string.IsNullOrEmpty(ytConfigData.SessionIndex))
             {
-                xGoogAuthuser = ytConfigData.SESSION_INDEX;
+                xGoogAuthuser = ytConfigData.SessionIndex;
             }
 
-            httpRequestMessage.Headers.Add("x-goog-authuser", xGoogAuthuser);
-            httpRequestMessage.Headers.Add("x-goog-visitor-id", ytConfigData.VisitorData);
-            httpRequestMessage.Headers.Add("x-youtube-client-name", ytConfigData.INNERTUBE_CONTEXT_CLIENT_NAME);
-            httpRequestMessage.Headers.Add("x-youtube-client-version", ytConfigData.INNERTUBE_CLIENT_VERSION);
+            httpRequestMessage.Headers.Add("X-Goog-Authuser", xGoogAuthuser);
+            httpRequestMessage.Headers.Add("X-Goog-Visitor-Id", ytConfigData.VisitorData);
+            httpRequestMessage.Headers.Add("X-Youtube-Client-Name", ytConfigData.InnetrubeContextClientName);
+            httpRequestMessage.Headers.Add("X-Youtube-Client-Version", ytConfigData.InnetrubeClientVersion);
 
             if (!string.IsNullOrEmpty(ytConfigData.InitPage))
             {
@@ -677,8 +483,8 @@ public partial class LiveChatFunction
             }
         }
 
-        httpRequestMessage.Headers.Add("origin", StringSet.Origin);
-        httpRequestMessage.Headers.Add("x-origin", StringSet.Origin);
+        httpRequestMessage.Headers.Add("Origin", StringSet.Origin);
+        httpRequestMessage.Headers.Add("X-Origin", StringSet.Origin);
     }
 
     /// <summary>

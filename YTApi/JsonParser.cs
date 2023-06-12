@@ -14,17 +14,219 @@ namespace YTApi;
 public partial class JsonParser
 {
     /// <summary>
-    /// 取得 continuation
+    /// 解析 ytcfg 
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>YTConfigData</returns>
+    public static YTConfigData ParseYtCfg(JsonElement? jsonElement)
+    {
+        bool useDelegatedSessionID = false;
+
+        YTConfigData ytConfigData = new();
+
+        if (jsonElement.HasValue)
+        {
+            JsonElement? jejeInnertubeApiKey = jsonElement?.Get("INNERTUBE_API_KEY");
+            JsonElement? jeIDToken = jsonElement?.Get("ID_TOKEN");
+            JsonElement? jeSessionIndex = jsonElement?.Get("SESSION_INDEX");
+            JsonElement? jeInnertubeContextClientName = jsonElement?.Get("INNERTUBE_CONTEXT_CLIENT_NAME");
+            JsonElement? jeInnertubeContextClientVersion = jsonElement?.Get("INNERTUBE_CONTEXT_CLIENT_VERSION");
+            JsonElement? jeInnertubeClientVersion = jsonElement?.Get("INNERTUBE_CLIENT_VERSION");
+            JsonElement? jeDataSyncID = jsonElement?.Get("DATASYNC_ID");
+            JsonElement? jeDelegatedSessionID = jsonElement?.Get("DELEGATED_SESSION_ID");
+            JsonElement? jeInnertubeContext = jsonElement?.Get("INNERTUBE_CONTEXT");
+            JsonElement? jeClient = jeInnertubeContext?.Get("client");
+            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
+            JsonElement? jeClientName = jeClient?.Get("clientName");
+            JsonElement? jeClientVersion = jeClient?.Get("clientVersion");
+
+            ytConfigData.APIKey = jejeInnertubeApiKey?.GetString();
+            ytConfigData.VisitorData = jeVisitorData?.GetString();
+            ytConfigData.ClientName = jeClientName?.GetString();
+            ytConfigData.ClientVersion = jeClientVersion?.GetString();
+            ytConfigData.IDToken = jeIDToken?.GetString();
+            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
+
+            // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
+            string[]? arrayDataSyncID = ytConfigData.DataSyncID
+                ?.Split("||".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+
+            if (arrayDataSyncID?.Length >= 2 && !string.IsNullOrEmpty(arrayDataSyncID[1]))
+            {
+                ytConfigData.DataSyncID = arrayDataSyncID[0];
+            }
+            else
+            {
+                useDelegatedSessionID = true;
+            }
+
+            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
+
+            if (useDelegatedSessionID)
+            {
+                ytConfigData.DataSyncID = ytConfigData.DelegatedSessionID;
+            }
+
+            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
+            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32().ToString();
+            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
+            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
+
+            // TODO: 2023-06-12 考慮是否擴充。
+            /*
+            "INNERTUBE_CONTEXT.clickTracking.clickTrackingParams"
+            "INNERTUBE_CONTEXT.request.useSsl"
+            "INNERTUBE_CONTEXT.client.browserName"
+            "INNERTUBE_CONTEXT.client.browserVersion"
+            "INNERTUBE_CONTEXT.client.clientFormFactor"
+            "INNERTUBE_CONTEXT.client.clientName"
+            "INNERTUBE_CONTEXT.client.clientVersion"
+            "INNERTUBE_CONTEXT.client.deviceMake"
+            "INNERTUBE_CONTEXT.client.deviceModel"
+            "INNERTUBE_CONTEXT.client.gl"
+            "INNERTUBE_CONTEXT.client.hl"
+            "INNERTUBE_CONTEXT.client.originalUrl"
+            "INNERTUBE_CONTEXT.client.osName"
+            "INNERTUBE_CONTEXT.client.osVersion"
+            "INNERTUBE_CONTEXT.client.platform"
+            "INNERTUBE_CONTEXT.client.remoteHost"
+            "INNERTUBE_CONTEXT.client.userAgent"
+            "INNERTUBE_CONTEXT.client.visitorData"
+            */
+        }
+
+        return ytConfigData;
+    }
+
+    /// <summary>
+    /// 解析第一次的 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串陣列</returns>
-    public static string[] GetContinuation(JsonElement? jsonElement)
+    public static string[] ParseFirstTimeContinuation(JsonElement? jsonElement)
     {
         string[] output = new string[2];
 
         if (jsonElement.HasValue)
         {
-            JsonElement.ArrayEnumerator? continuations = jsonElement.Value.Get("continuationContents")
+            JsonElement.ArrayEnumerator? continuations = jsonElement?.Get("contents")
+                ?.Get("liveChatRenderer")
+                ?.Get("continuations")
+                ?.ToArrayEnumerator();
+
+            if (continuations.HasValue)
+            {
+                foreach (JsonElement singleContinuation in continuations)
+                {
+                    #region invalidationContinuationData
+
+                    JsonElement? invalidationContinuationData = singleContinuation.Get("invalidationContinuationData");
+
+                    if (invalidationContinuationData.HasValue)
+                    {
+                        JsonElement? continuation = invalidationContinuationData.Value.Get("continuation");
+
+                        if (continuation.HasValue)
+                        {
+                            output[0] = continuation.Value.ToString();
+                        }
+
+                        JsonElement? timeoutMs = invalidationContinuationData.Value.Get("timeoutMs");
+
+                        if (timeoutMs.HasValue)
+                        {
+                            output[1] = timeoutMs.Value.ToString();
+                        }
+
+                        break;
+                    }
+
+                    #endregion
+
+                    #region timedContinuationData
+
+                    JsonElement? timedContinuationData = singleContinuation.Get("timedContinuationData");
+
+                    if (timedContinuationData.HasValue)
+                    {
+                        JsonElement? continuation = timedContinuationData.Value.Get("continuation");
+
+                        if (continuation.HasValue)
+                        {
+                            output[0] = continuation.Value.ToString();
+                        }
+
+                        JsonElement? timeoutMs = timedContinuationData.Value.Get("timeoutMs");
+
+                        if (timeoutMs.HasValue)
+                        {
+                            output[1] = timeoutMs.Value.ToString();
+                        }
+
+                        break;
+                    }
+
+                    #endregion
+
+                    #region liveChatReplayContinuationData
+
+                    JsonElement? liveChatReplayContinuationData = singleContinuation.Get("liveChatReplayContinuationData");
+
+                    if (liveChatReplayContinuationData.HasValue)
+                    {
+                        JsonElement? continuation = liveChatReplayContinuationData.Value.Get("continuation");
+
+                        if (continuation.HasValue)
+                        {
+                            output[0] = continuation.Value.ToString();
+
+                            // 沒有 "timeoutMs"。
+                            output[1] = string.Empty;
+                        }
+
+                        JsonElement? _ = liveChatReplayContinuationData.Value.Get("timeUntilLastMessageMsec");
+
+                        break;
+                    }
+
+                    #endregion
+
+                    #region playerSeekContinuationData
+
+                    JsonElement? playerSeekContinuationData = singleContinuation.Get("playerSeekContinuationData");
+
+                    if (playerSeekContinuationData.HasValue)
+                    {
+                        // 略過不進行任何的處理。
+
+                        _logger.Debug("方法：GetFirstTimeContinuation() -> playerSeekContinuationData -> 略過不處理的內容：{Message}",
+                             $"{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
+                    }
+
+                    #endregion
+
+                    // 尚未支援的內容。
+                    _logger.Debug("方法：GetFirstTimeContinuation() -> 尚未支援的內容：{Message}",
+                        $"{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 解析 continuation
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串陣列</returns>
+    public static string[] ParseContinuation(JsonElement? jsonElement)
+    {
+        string[] output = new string[2];
+
+        if (jsonElement.HasValue)
+        {
+            JsonElement.ArrayEnumerator? continuations = jsonElement?.Get("continuationContents")
                 ?.Get("liveChatContinuation")
                 ?.Get("continuations")
                 ?.ToArrayEnumerator();
@@ -131,11 +333,11 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得重播時的 continuation
+    /// 解析重播時的 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    public static string GetReplayContinuation(JsonElement? jsonElement)
+    public static string ParseReplayContinuation(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -211,12 +413,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 action 的內容
+    /// 解析 action 的內容
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>List&lt;RendererData&gt;</returns>
-    public static List<RendererData> GetActions(JsonElement? jsonElement, bool isLarge = true)
+    public static List<RendererData> ParseActions(JsonElement? jsonElement, bool isLarge = true)
     {
         List<RendererData> output = new();
 
@@ -239,7 +441,7 @@ public partial class JsonParser
 
                     if (item.HasValue)
                     {
-                        output.AddRange(GetRenderer(item.Value, isLarge));
+                        output.AddRange(ParseRenderer(item.Value, isLarge));
                     }
 
                     // TODO: 2023-05-29 未測試，不確定是否有效。。
@@ -249,7 +451,7 @@ public partial class JsonParser
 
                     if (singleBannerRenderer.HasValue)
                     {
-                        output.AddRange(GetRenderer(singleBannerRenderer.Value, isLarge));
+                        output.AddRange(ParseRenderer(singleBannerRenderer.Value, isLarge));
                     }
 
                     JsonElement? videoOffsetTimeMsec = singleAction
@@ -271,7 +473,7 @@ public partial class JsonParser
 
                             if (replayItem.HasValue)
                             {
-                                List<RendererData> rendererDatas = GetRenderer(replayItem.Value, isLarge);
+                                List<RendererData> rendererDatas = ParseRenderer(replayItem.Value, isLarge);
 
                                 foreach (RendererData rendererData in rendererDatas)
                                 {
@@ -291,7 +493,7 @@ public partial class JsonParser
 
                             if (replayBannerRenderer.HasValue)
                             {
-                                List<RendererData> rendererDatas = GetRenderer(replayBannerRenderer.Value, isLarge);
+                                List<RendererData> rendererDatas = ParseRenderer(replayBannerRenderer.Value, isLarge);
 
                                 foreach (RendererData rendererData in rendererDatas)
                                 {
@@ -325,12 +527,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 *Renderer 的內容
+    /// 解析 *Renderer 的內容
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>List&lt;RendererData&gt;</returns>
-    public static List<RendererData> GetRenderer(JsonElement jsonElement, bool isLarge = true)
+    public static List<RendererData> ParseRenderer(JsonElement jsonElement, bool isLarge = true)
     {
         List<RendererData> output = new();
 
@@ -511,12 +713,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 authorBadges
+    /// 解析 authorBadges
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>AuthorBadgesData</returns>
-    public static AuthorBadgesData GetAuthorBadges(JsonElement jsonElement, bool isLarge = true)
+    public static AuthorBadgesData ParseAuthorBadges(JsonElement jsonElement, bool isLarge = true)
     {
         AuthorBadgesData output = new();
 
@@ -583,12 +785,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 Message 資料
+    /// 解析 Message 資料
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>MessageData</returns>
-    public static MessageData GetMessageData(JsonElement jsonElement, bool isLarge = true)
+    public static MessageData ParseMessageData(JsonElement jsonElement, bool isLarge = true)
     {
         MessageData output = new();
 
@@ -604,7 +806,7 @@ public partial class JsonParser
 
         if (headerPrimaryText.HasValue)
         {
-            RunsData runsData = GetRunData(headerPrimaryText.Value, isLarge);
+            RunsData runsData = ParseRunData(headerPrimaryText.Value, isLarge);
 
             tempText += $" [{runsData.Text}] ";
 
@@ -633,7 +835,7 @@ public partial class JsonParser
                 tempText += $" [{simpleText.Value}] ";
             }
 
-            RunsData runsData = GetRunData(headerSubtext.Value, isLarge);
+            RunsData runsData = ParseRunData(headerSubtext.Value, isLarge);
 
             tempText += $" {runsData.Text} ";
 
@@ -651,7 +853,7 @@ public partial class JsonParser
 
         if (primaryText.HasValue)
         {
-            RunsData runsData = GetRunData(primaryText.Value, isLarge);
+            RunsData runsData = ParseRunData(primaryText.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -669,7 +871,7 @@ public partial class JsonParser
 
         if (text.HasValue)
         {
-            RunsData runsData = GetRunData(text.Value, isLarge);
+            RunsData runsData = ParseRunData(text.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -687,7 +889,7 @@ public partial class JsonParser
 
         if (subtext.HasValue)
         {
-            RunsData runsData = GetRunData(subtext.Value, isLarge);
+            RunsData runsData = ParseRunData(subtext.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -726,7 +928,7 @@ public partial class JsonParser
 
         if (message.HasValue)
         {
-            RunsData runsData = GetRunData(message.Value, isLarge);
+            RunsData runsData = ParseRunData(message.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -744,7 +946,7 @@ public partial class JsonParser
 
         if (bannerMessage.HasValue)
         {
-            RunsData runsData = GetRunData(bannerMessage.Value, isLarge);
+            RunsData runsData = ParseRunData(bannerMessage.Value, isLarge);
 
             tempText += runsData.Text;
 
@@ -776,12 +978,12 @@ public partial class JsonParser
     }
 
     /// <summary>
-    /// 取得 runs 資料
+    /// 解析 runs 資料
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
     /// <returns>RunsData</returns>
-    public static RunsData GetRunData(JsonElement jsonElement, bool isLarge = true)
+    public static RunsData ParseRunData(JsonElement jsonElement, bool isLarge = true)
     {
         RunsData output = new();
 
@@ -932,8 +1134,8 @@ public partial class JsonParser
 
         logger.Debug(jsonElement);
 
-        AuthorBadgesData authorBadgesData = GetAuthorBadges(jsonElement, isLarge);
-        MessageData messageData = GetMessageData(jsonElement, isLarge);
+        AuthorBadgesData authorBadgesData = ParseAuthorBadges(jsonElement, isLarge);
+        MessageData messageData = ParseMessageData(jsonElement, isLarge);
 
         string id = GetID(jsonElement),
             type = GetRendererDataType(rendererName),
@@ -979,8 +1181,8 @@ public partial class JsonParser
 
             if (liveChatSponsorshipsHeaderRenderer.HasValue)
             {
-                authorBadgesData = GetAuthorBadges(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
-                messageData = GetMessageData(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
+                authorBadgesData = ParseAuthorBadges(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
+                messageData = ParseMessageData(liveChatSponsorshipsHeaderRenderer.Value, isLarge);
 
                 authorName = GetAuthorName(liveChatSponsorshipsHeaderRenderer.Value);
                 authorPhoto = GetAuthorPhoto(liveChatSponsorshipsHeaderRenderer.Value, isLarge);

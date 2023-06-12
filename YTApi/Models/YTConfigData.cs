@@ -38,35 +38,35 @@ public class YTConfigData
     /// <summary>
     /// ID_TOKEN
     /// </summary>
-    public string? ID_TOKEN { get; set; }
+    public string? IDToken { get; set; }
 
     /// <summary>
     /// DATASYNC_ID
     /// </summary>
-    public string? DATASYNC_ID { get; set; }
+    public string? DataSyncID { get; set; }
 
     /// <summary>
     /// DELEGATED_SESSION_ID
     /// </summary>
-    public string? DELEGATED_SESSION_ID { get; set; }
+    public string? DelegatedSessionID { get; set; }
 
     /// <summary>
     /// SESSION_INDEX
     /// </summary>
-    public string? SESSION_INDEX { get; set; }
+    public string? SessionIndex { get; set; }
 
     /// <summary>
     /// INNERTUBE_CONTEXT_CLIENT_NAME
     /// </summary>
-    public string? INNERTUBE_CONTEXT_CLIENT_NAME { get; set; }
+    public string? InnetrubeContextClientName { get; set; }
 
     /// <summary>
     /// INNERTUBE_CONTEXT_CLIENT_VERSION
     /// </summary>
-    public string? INNERTUBE_CONTEXT_CLIENT_VERSION { get; set; }
+    public string? InnetrubeContextClientVersion { get; set; }
 
     /// <summary>
     /// INNERTUBE_CLIENT_VERSION
     /// </summary>
-    public string? INNERTUBE_CLIENT_VERSION { get; set; }
+    public string? InnetrubeClientVersion { get; set; }
 }
