@@ -1045,16 +1045,14 @@ public partial class JsonParser
 
                         // 2022-05-18 不再取 "shortcuts" 的第一個值。
                         /*
-                        JsonElement? shortcuts = emoji.Value.Get("shortcuts");
+                        JsonElement.ArrayEnumerator? shortcuts = emoji
+                            ?.Get("shortcuts")
+                            ?.ToArrayEnumerator();
 
-                        if (shortcuts.HasValue &&
-                            shortcuts.Value.ValueKind == JsonValueKind.Array)
+                        if (shortcuts?.Any() == true)
                         {
-                            if (shortcuts.Value.GetArrayLength() > 0)
-                            {
-                                // 只取第一個。
-                                tempStr += $" {shortcuts.Value[0].GetString()} ";
-                            }
+                            // 只取第一個。
+                            tempText += $" {shortcuts?.ElementAtOrDefault(0).GetString()} ";
                         }
                         */
 

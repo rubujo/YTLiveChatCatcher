@@ -218,6 +218,9 @@ public partial class LiveChatFunction
             IElement elementYtCfg = scriptElements
                 .FirstOrDefault(n => n.InnerHtml.Contains("ytcfg.set({"))!;
 
+            // TODO: 2023-06-13 考慮是否待修改。
+            // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v1.0.5/yt_chat.go#L140
+            // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
             string jsonYtCfg = elementYtCfg.InnerHtml;
 
             if (isStreaming)
@@ -474,7 +477,7 @@ public partial class LiveChatFunction
 
             httpRequestMessage.Headers.Add("X-Goog-Authuser", xGoogAuthuser);
             httpRequestMessage.Headers.Add("X-Goog-Visitor-Id", ytConfigData.VisitorData);
-            httpRequestMessage.Headers.Add("X-Youtube-Client-Name", ytConfigData.InnetrubeContextClientName);
+            httpRequestMessage.Headers.Add("X-Youtube-Client-Name", ytConfigData.InnetrubeContextClientName.ToString());
             httpRequestMessage.Headers.Add("X-Youtube-Client-Version", ytConfigData.InnetrubeClientVersion);
 
             if (!string.IsNullOrEmpty(ytConfigData.InitPage))
