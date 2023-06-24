@@ -4,7 +4,10 @@ namespace YTApi.Extensions;
 
 /// <summary>
 /// JsonElement 的擴充方法
-/// <para>來源：https://stackoverflow.com/a/61561343 </para>
+/// <para>來源：https://stackoverflow.com/a/61561343</para>
+/// <para>原作者：dbc</para>
+/// <para>原授權：CC BY-SA 4.0</para>
+/// <para>CC BY-SA 4.0：https://creativecommons.org/licenses/by-sa/4.0/</para>
 /// </summary>
 public static partial class JsonElementExtension
 {

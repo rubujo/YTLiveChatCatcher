@@ -374,9 +374,7 @@ public partial class LiveChatFunction
         YTConfigData ytConfigData,
         string userAgent)
     {
-        // 2022-05-19 尚未測試會員限定直播是否需要 "clickTracking" 參數。
-        // 2022-05-29 已確認不需要 "clickTracking" 參數。
-        // 參考：https://github.com/xenova/chat-downloader/blob/ff9ddb1f840fa06d0cc3976badf75c1fffebd003/chat_downloader/sites/youtube.py#L1664
+        // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1764
         // 參考：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/main/yt_chat.go
 
         // 內容是精簡過的。
@@ -408,7 +406,10 @@ public partial class LiveChatFunction
 
     /// <summary>
     /// 設定 HttpRequestMessage 的標頭
-    /// <para>參考：https://stackoverflow.com/questions/12373738/how-do-i-set-a-cookie-on-httpclients-httprequestmessage/13287224#13287224 </para>
+    /// <para>來源：https://stackoverflow.com/a/13287224</para>
+    /// <para>原作者：Greg Beech</para>
+    /// <para>原授權：CC BY-SA 3.0</para>
+    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
     /// <param name="httpRequestMessage">HttpRequestMessage</param>
     /// <param name="cookies">字串，Cookies</param>

@@ -536,7 +536,7 @@ public partial class JsonParser
     {
         List<RendererData> output = new();
 
-        // 參考：https://github.com/xenova/chat-downloader/blob/657e56eeec4ebe5af28de66b4d3653dbb796c8c1/chat_downloader/sites/youtube.py#L926
+        // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L969
         if (jsonElement.TryGetProperty(
             "liveChatTextMessageRenderer",
             out JsonElement liveChatTextMessageRenderer))

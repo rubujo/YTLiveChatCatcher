@@ -4,8 +4,11 @@ namespace GetCachable;
 
 /// <summary>
 /// BetterCacheManager
-/// <para>參考：https://blog.darkthread.net/blog/improved-getcachabledata/ </para>
-/// <para>參考：https://blog.darkthread.net/blog/cachable-data-object </para>
+/// <para>來源 1：https://blog.darkthread.net/blog/improved-getcachabledata/</para>
+/// <para>來源 2：https://blog.darkthread.net/blog/cachable-data-object</para>
+/// <para>原作者：黑暗執行緒</para>
+/// <para>原授權：CC BY-NC-SA 3.0 TW</para>
+/// <para>CC BY-NC-SA 3.0 TW：https://creativecommons.org/licenses/by-nc-sa/3.0/tw/</para>
 /// </summary>
 public class BetterCacheManager
 {

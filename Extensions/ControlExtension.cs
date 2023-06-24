@@ -9,7 +9,8 @@ public static class ControlExtension
 {
     /// <summary>
     /// 非同步委派更新 UI
-    /// <para>來源：https://dotblogs.com.tw/shinli/2015/04/16/151076 </para>
+    /// <para>來源：https://dotblogs.com.tw/shinli/2015/04/16/151076</para>
+    /// <para>原作者：Shin.Li</para>
     /// </summary>
     /// <param name="control">Control</param>
     /// <param name="action">MethodInvoker</param>

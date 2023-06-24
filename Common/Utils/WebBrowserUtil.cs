@@ -11,7 +11,10 @@ namespace YTLiveChatCatcher.Common.Utils;
 
 /// <summary>
 /// 網頁瀏覽器工具
-/// <para>參考：https://stackoverflow.com/a/68703365 </para>
+/// <para>來源：https://stackoverflow.com/a/68703365</para>
+/// <para>原作者：Flint Charles</para>
+/// <para>原授權：CC BY-SA 4.0</para>
+/// <para>CC BY-SA 4.0：https://creativecommons.org/licenses/by-sa/4.0/</para>
 /// </summary>
 public class WebBrowserUtil
 {
@@ -78,8 +81,7 @@ public class WebBrowserUtil
         /// </summary>
         OperaBeta = 13,
         /// <summary>
-        /// Opera Developer (Opera One)
-        /// <para>僅西元 2023 年</para>
+        /// Opera Developer
         /// </summary>
         OperaDeveloper = 14,
         /// <summary>
