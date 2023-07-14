@@ -23,32 +23,20 @@ public class HttpClientUtil
         IHttpClientFactory httpClientFactory,
         string userAgent = "")
     {
-        HttpClient outputHttpClient = httpClientFactory.CreateClient();
+        HttpClient httpClient = httpClientFactory.CreateClient();
 
-        if (!string.IsNullOrEmpty(userAgent))
+        bool canTryParseAdd = SetUserAgent(httpClient, userAgent);
+
+        // 當可以設定使用者代理字串時，才設定 Client Hints。
+        if (canTryParseAdd)
         {
-            bool result = SetUserAgent(outputHttpClient, userAgent);
-
-            if (result)
-            {
-                // 設定 Client Hints。
-                ClientHintsUtil.SetClientHints(outputHttpClient);
-
-                StringBuilder stringBuilder = new();
-
-                foreach (KeyValuePair<string, IEnumerable<string>> requestHeader in
-                    outputHttpClient.DefaultRequestHeaders)
-                {
-                    string value = string.Join(",", requestHeader.Value);
-
-                    stringBuilder.AppendLine($"{requestHeader.Key}：{value}");
-                }
-
-                _logger.Debug("本次連線使用的請求標頭：{Message}", $"{Environment.NewLine}{stringBuilder}");
-            }
+            // 設定 Client Hints。
+            ClientHintsUtil.SetClientHints(httpClient);
         }
 
-        return outputHttpClient;
+        LogHeaders(httpClient);
+
+        return httpClient;
     }
 
     /// <summary>
@@ -59,25 +47,31 @@ public class HttpClientUtil
     /// <returns>布林值</returns>
     public static bool SetUserAgent(HttpClient httpClient, string userAgent)
     {
-        bool result = httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
-
-        if (result)
+        if (string.IsNullOrEmpty(userAgent))
         {
-            httpClient.DefaultRequestHeaders.UserAgent.Clear();
-            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+            return false;
         }
 
-        return result;
+        httpClient.DefaultRequestHeaders.UserAgent.Clear();
+
+        return httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
     }
 
     /// <summary>
-    /// 檢查使用者代理字串
+    /// 記錄 HttpClient 的標頭資訊
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
-    /// <param name="userAgent">字串，使用者代理字串</param>
-    /// <returns>布林值</returns>
-    public static bool CheckUserAgent(HttpClient httpClient, string userAgent)
+    public static void LogHeaders(HttpClient httpClient)
     {
-        return httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
+        StringBuilder stringBuilder = new();
+
+        foreach (KeyValuePair<string, IEnumerable<string>> defaultRequestHeader in httpClient.DefaultRequestHeaders)
+        {
+            string value = string.Join(",", defaultRequestHeader.Value);
+
+            stringBuilder.AppendLine($"{defaultRequestHeader.Key}：{value}");
+        }
+
+        _logger.Debug("本次連線使用的請求標頭：{Message}", $"{Environment.NewLine}{stringBuilder}");
     }
 }

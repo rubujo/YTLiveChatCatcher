@@ -9,7 +9,11 @@ public static class ImageExtension
 {
     /// <summary>
     /// 將 Image 轉換成 Stream
-    /// <para>來源：https://stackoverflow.com/a/1668493 </para>
+    /// <para>來源：https://stackoverflow.com/a/1668493</para>
+    /// <para>原作者：JaredPar</para>
+    /// <para>編輯者：Kristian Frost</para>
+    /// <para>原授權：CC BY-SA 3.0</para>
+    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
     /// <param name="image">Image</param>
     /// <param name="format">ImageFormat</param>

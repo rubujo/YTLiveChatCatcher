@@ -7,13 +7,16 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace YTLiveChatCatcher.Common;
+namespace YTLiveChatCatcher.Common.Utils;
 
 /// <summary>
-/// BrowserManager
-/// <para>參考：https://stackoverflow.com/a/68703365 </para>
+/// 網頁瀏覽器工具
+/// <para>來源：https://stackoverflow.com/a/68703365</para>
+/// <para>原作者：Flint Charles</para>
+/// <para>原授權：CC BY-SA 4.0</para>
+/// <para>CC BY-SA 4.0：https://creativecommons.org/licenses/by-sa/4.0/</para>
 /// </summary>
-public class BrowserManager
+public class WebBrowserUtil
 {
     /// <summary>
     /// NLog 的 Logger
@@ -21,7 +24,7 @@ public class BrowserManager
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
     /// <summary>
-    /// 網頁瀏覽器
+    /// 列舉：網頁瀏覽器類型
     /// </summary>
     public enum BrowserType
     {
@@ -30,33 +33,75 @@ public class BrowserManager
         /// </summary>
         Brave = 1,
         /// <summary>
+        /// Brave Beta
+        /// </summary>
+        BraveBeta = 2,
+        /// <summary>
+        /// Brave Nightly
+        /// </summary>
+        BraveNightly = 3,
+        /// <summary>
         /// Google Chrome
         /// </summary>
-        GoogleChrome = 2,
+        GoogleChrome = 4,
+        /// <summary>
+        /// Google Chrome Beta
+        /// </summary>
+        GoogleChromeBeta = 5,
+        /// <summary>
+        /// Google Chrome Canary
+        /// </summary>
+        GoogleChromeCanary = 6,
         /// <summary>
         /// Chromium
         /// </summary>
-        Chromium = 3,
+        Chromium = 7,
         /// <summary>
         /// Microsoft Edge
         /// </summary>
-        MicrosoftEdge = 4,
+        MicrosoftEdge = 8,
+        /// <summary>
+        /// Microsoft Edge Insider Beta
+        /// </summary>
+        MicrosoftEdgeInsiderBeta = 9,
+        /// <summary>
+        /// Microsoft Edge Insider Dev
+        /// </summary>
+        MicrosoftEdgeInsiderDev = 10,
+        /// <summary>
+        /// Microsoft Edge Insider Canary
+        /// </summary>
+        MicrosoftEdgeInsiderCanary = 11,
         /// <summary>
         /// Opera
         /// </summary>
-        Opera = 5,
+        Opera = 12,
+        /// <summary>
+        /// Opera Beta
+        /// </summary>
+        OperaBeta = 13,
+        /// <summary>
+        /// Opera Developer
+        /// </summary>
+        OperaDeveloper = 14,
         /// <summary>
         /// Opera GX
         /// </summary>
-        OperaGX = 6,
+        OperaGX = 15,
+        /// <summary>
+        /// Opera Crypto
+        /// </summary>
+        OperaCrypto = 16,
         /// <summary>
         /// Vivaldi
+        /// <para>※各版本共用同一資料夾</para>
         /// </summary>
-        Vivaldi = 7,
+        Vivaldi = 17,
         /// <summary>
         /// Mozilla Firefox
+        /// <para>※各版本共用上層資料夾</para>
         /// </summary>
-        MozillaFirefox = 8
+        MozillaFirefox = 18
     };
 
     /// <summary>
@@ -150,11 +195,21 @@ public class BrowserManager
         return browserType switch
         {
             BrowserType.Brave => @"BraveSoftware\Brave-Browser",
+            BrowserType.BraveBeta => @"BraveSoftware\Brave-Browser-Beta",
+            BrowserType.BraveNightly => @"BraveSoftware\Brave-Browser-Nightly",
             BrowserType.GoogleChrome => @"Google\Chrome",
+            BrowserType.GoogleChromeBeta => @"Google\Chrome Beta",
+            BrowserType.GoogleChromeCanary => @"Google\Chrome SxS",
             BrowserType.Chromium => @"Chromium",
             BrowserType.MicrosoftEdge => @"Microsoft\Edge",
+            BrowserType.MicrosoftEdgeInsiderBeta => @"Microsoft\Edge Beta",
+            BrowserType.MicrosoftEdgeInsiderDev => @"Microsoft\Edge Dev",
+            BrowserType.MicrosoftEdgeInsiderCanary => @"Microsoft\Edge SxS",
             BrowserType.Opera => @"Opera Software\Opera Stable",
+            BrowserType.OperaBeta => @"Opera Software\Opera Next",
+            BrowserType.OperaDeveloper => @"Opera Software\Opera Developer",
             BrowserType.OperaGX => @"Opera Software\Opera GX Stable",
+            BrowserType.OperaCrypto => @"Opera Software\Opera Crypto Stable",
             BrowserType.Vivaldi => "Vivaldi",
             BrowserType.MozillaFirefox => @"Mozilla\Firefox\Profiles",
             _ => @"Google\Chrome"
@@ -309,14 +364,14 @@ public class BrowserManager
         /// <summary>
         /// 取得金鑰
         /// </summary>
-        /// <param name="browser">Browser</param>
+        /// <param name="browserType">BrowserType</param>
         /// <returns>字串</returns>
-        public static byte[] GetKey(BrowserType browser)
+        public static byte[] GetKey(BrowserType browserType)
         {
             //string sR = string.Empty;
             //string appdata = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
 
-            string path = $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browser)}\User Data\Local State";
+            string path = $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browserType)}\User Data\Local State";
             string v = File.ReadAllText(path);
 
             JsonElement json = JsonSerializer.Deserialize<JsonElement>(v);

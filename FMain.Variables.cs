@@ -17,7 +17,7 @@ public partial class FMain
     private int SharedTimeoutMs = 0;
     private System.Windows.Forms.Timer? SharedTimer;
     private JsonElement? SharedJsonElement = new();
-    private YTConfig? SharedYTConfig = null;
+    private YTConfigData? SharedYTConfigData = null;
     private Task? SharedTask = null;
     private CancellationToken? SharedCancellationToken = null;
     private CancellationTokenSource? SharedCancellationTokenSource = null;

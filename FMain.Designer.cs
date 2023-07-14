@@ -172,7 +172,7 @@ namespace YTLiveChatCatcher
             LVLiveChatList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
             LVLiveChatList.Location = new Point(12, 137);
             LVLiveChatList.Name = "LVLiveChatList";
-            LVLiveChatList.Size = new Size(936, 305);
+            LVLiveChatList.Size = new Size(961, 305);
             LVLiveChatList.TabIndex = 21;
             LVLiveChatList.UseCompatibleStateImageBehavior = false;
             LVLiveChatList.View = View.Details;
@@ -203,14 +203,14 @@ namespace YTLiveChatCatcher
             // 
             // PBProgress
             // 
-            PBProgress.Location = new Point(849, 577);
+            PBProgress.Location = new Point(873, 576);
             PBProgress.Name = "PBProgress";
             PBProgress.Size = new Size(100, 23);
             PBProgress.TabIndex = 40;
             // 
             // BtnClear
             // 
-            BtnClear.Location = new Point(874, 108);
+            BtnClear.Location = new Point(898, 108);
             BtnClear.Name = "BtnClear";
             BtnClear.Size = new Size(75, 23);
             BtnClear.TabIndex = 27;
@@ -397,7 +397,7 @@ namespace YTLiveChatCatcher
             // 
             TBProfileFolderName.Location = new Point(791, 80);
             TBProfileFolderName.Name = "TBProfileFolderName";
-            TBProfileFolderName.Size = new Size(156, 23);
+            TBProfileFolderName.Size = new Size(182, 23);
             TBProfileFolderName.TabIndex = 16;
             TBProfileFolderName.TextChanged += TBProfileFolderName_TextChanged;
             // 
@@ -406,10 +406,10 @@ namespace YTLiveChatCatcher
             CBBrowser.DropDownStyle = ComboBoxStyle.DropDownList;
             CBBrowser.FormattingEnabled = true;
             CBBrowser.ItemHeight = 15;
-            CBBrowser.Items.AddRange(new object[] { "Brave", "Google Chrome", "Chromium", "Microsoft Edge", "Opera", "Opera GX", "Vivaldi", "Mozilla Firefox" });
+            CBBrowser.Items.AddRange(new object[] { "Brave", "Brave Beta", "Brave Nightly", "Google Chrome", "Google Chrome Beta", "Google Chrome Canary", "Chromium", "Microsoft Edge", "Microsoft Edge Insider Beta", "Microsoft Edge Insider Dev", "Microsoft Edge Insider Canary", "Opera", "Opera Beta", "Opera Developer", "Opera GX", "Opera Crypto", "Vivaldi", "Mozilla Firefox" });
             CBBrowser.Location = new Point(792, 33);
             CBBrowser.Name = "CBBrowser";
-            CBBrowser.Size = new Size(156, 23);
+            CBBrowser.Size = new Size(181, 23);
             CBBrowser.TabIndex = 14;
             CBBrowser.SelectedIndexChanged += CBBrowser_SelectedIndexChanged;
             // 
@@ -480,7 +480,7 @@ namespace YTLiveChatCatcher
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(985, 610);
+            ClientSize = new Size(994, 611);
             Controls.Add(BtnOpenVideoUrl);
             Controls.Add(BtnImport);
             Controls.Add(BtnSearch);
@@ -532,33 +532,33 @@ namespace YTLiveChatCatcher
 
         #endregion
 
-        private System.Windows.Forms.Button BtnStart;
-        private System.Windows.Forms.TextBox TBLog;
-        private System.Windows.Forms.TextBox TBChannelID;
-        private System.Windows.Forms.Button BtnStop;
-        private System.Windows.Forms.TextBox TBVideoID;
-        private System.Windows.Forms.Label LLiveChat;
-        private System.Windows.Forms.Label LChannelID;
-        private System.Windows.Forms.Label LVideoID;
-        private System.Windows.Forms.TextBox TBInterval;
-        private System.Windows.Forms.Label LInterval;
-        private System.Windows.Forms.ListView LVLiveChatList;
-        private System.Windows.Forms.Label LLog;
-        private System.Windows.Forms.Button BtnExport;
-        private System.Windows.Forms.ProgressBar PBProgress;
-        private System.Windows.Forms.Button BtnClear;
-        private System.Windows.Forms.RadioButton RBtnStreaming;
-        private System.Windows.Forms.RadioButton RBtnReplay;
-        private System.Windows.Forms.CheckBox CBExportAuthorPhoto;
-        private System.Windows.Forms.Label LChatCount;
-        private System.Windows.Forms.Label LVersion;
-        private System.Windows.Forms.Label LAuthorCount;
-        private System.Windows.Forms.Label LSuperChatCount;
-        private System.Windows.Forms.Label LSuperStickerCount;
-        private System.Windows.Forms.Label LMemberJoinCount;
-        private System.Windows.Forms.Label LMemberInRoomCount;
-        private System.Windows.Forms.CheckBox CBEnableTTS;
-        private System.Windows.Forms.Label LTempIncome;
+        private Button BtnStart;
+        private TextBox TBLog;
+        private TextBox TBChannelID;
+        private Button BtnStop;
+        private TextBox TBVideoID;
+        private Label LLiveChat;
+        private Label LChannelID;
+        private Label LVideoID;
+        private TextBox TBInterval;
+        private Label LInterval;
+        private ListView LVLiveChatList;
+        private Label LLog;
+        private Button BtnExport;
+        private ProgressBar PBProgress;
+        private Button BtnClear;
+        private RadioButton RBtnStreaming;
+        private RadioButton RBtnReplay;
+        private CheckBox CBExportAuthorPhoto;
+        private Label LChatCount;
+        private Label LVersion;
+        private Label LAuthorCount;
+        private Label LSuperChatCount;
+        private Label LSuperStickerCount;
+        private Label LMemberJoinCount;
+        private Label LMemberInRoomCount;
+        private CheckBox CBEnableTTS;
+        private Label LTempIncome;
         private Label LUserAgent;
         private TextBox TBUserAgent;
         private CheckBox CBRandomInterval;

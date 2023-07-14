@@ -29,7 +29,7 @@ internal static class Program
 
     /// <summary>
     /// 設定服務
-    /// <para>參考：https://docs.microsoft.com/zh-tw/archive/msdn-magazine/2019/may/net-core-3-0-create-a-centralized-pull-request-hub-with-winforms-in-net-core-3-0 </para>
+    /// <para>來源：https://docs.microsoft.com/zh-tw/archive/msdn-magazine/2019/may/net-core-3-0-create-a-centralized-pull-request-hub-with-winforms-in-net-core-3-0 </para>
     /// </summary>
     private static void ConfigureServices()
     {
@@ -75,7 +75,10 @@ internal static class Program
 
     /// <summary>
     /// 更新設定
-    /// <para>來源：https://stackoverflow.com/a/23924277 </para>
+    /// <para>來源：https://stackoverflow.com/a/23924277</para>
+    /// <para>原作者：Grant</para>
+    /// <para>原授權：CC BY-SA 3.0</para>
+    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
     private static void UpdateConfig()
     {
