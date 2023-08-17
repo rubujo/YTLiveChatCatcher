@@ -26,6 +26,11 @@ public class MessageData
     public string? FontFace { get; set; }
 
     /// <summary>
+    /// 列表：Sticker 資料
+    /// </summary>
+    public List<StickerData>? Stickers { get; set; }
+
+    /// <summary>
     /// 列表：Emoji 資料
     /// </summary>
     public List<EmojiData>? Emojis { get; set; }

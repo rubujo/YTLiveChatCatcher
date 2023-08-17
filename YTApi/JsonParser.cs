@@ -800,6 +800,7 @@ public partial class JsonParser
 
         bool isBold = false;
 
+        List<StickerData> tempStickers = new();
         List<EmojiData> tempEmojis = new();
 
         JsonElement? headerPrimaryText = jsonElement.Get("headerPrimaryText");
@@ -903,15 +904,49 @@ public partial class JsonParser
             }
         }
 
-        // "sticker" 的 "label"。
-        JsonElement? label = jsonElement.Get("sticker")
-            ?.Get("accessibility")
-            ?.Get("accessibilityData")
-            ?.Get("label");
+        JsonElement? sticker = jsonElement.Get("sticker");
 
-        if (label.HasValue)
+        if (sticker.HasValue)
         {
-            tempText += label.Value.GetString();
+            if (!string.IsNullOrEmpty(sticker?.ToString()))
+            {
+                StickerData stickerData = new();
+
+                // "sticker" 的 "label"。
+                JsonElement? label = sticker
+                    ?.Get("accessibility")
+                    ?.Get("accessibilityData")
+                    ?.Get("label");
+
+                if (label.HasValue)
+                {
+                    tempText += $":{label?.GetString()}:" ?? string.Empty;
+                }
+
+                // 是第一次購買超級留言或貼圖才會有。
+                JsonElement? content = jsonElement.Get("lowerBumper")
+                    ?.Get("liveChatItemBumperViewModel")
+                    ?.Get("content")
+                    ?.Get("bumperUserEduContentViewModel")
+                    ?.Get("text")
+                    ?.Get("content");
+
+                if (content.HasValue)
+                {
+                    // 手動在前後補一個空白跟 []。
+                    tempText += $" [{content?.GetString()}] " ?? string.Empty;
+                }
+
+                stickerData.ID = label.HasValue ? label?.GetString() : string.Empty;
+                stickerData.Url = GetThumbnailUrl(sticker, isLarge);
+                stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
+                stickerData.Label = label.HasValue ? label?.GetString() : string.Empty;
+
+                _logger.Debug($"方法：GetRunData() -> sticker -> 除錯用的內容：" +
+                    $"{Environment.NewLine}{sticker?.GetRawText()}{Environment.NewLine}");
+
+                tempStickers.Add(stickerData);
+            }
         }
 
         // "purchaseAmountText" 的 "simpleText"。
@@ -972,6 +1007,7 @@ public partial class JsonParser
         output.Bold = isBold;
         output.TextColor = tempTextColor;
         output.FontFace = tempFontFace;
+        output.Stickers = tempStickers;
         output.Emojis = tempEmojis;
 
         return output;
@@ -1043,19 +1079,6 @@ public partial class JsonParser
 
                         emojiData.ID = emojiId.HasValue ? emojiId?.GetString() : string.Empty;
 
-                        // 2022-05-18 不再取 "shortcuts" 的第一個值。
-                        /*
-                        JsonElement.ArrayEnumerator? shortcuts = emoji
-                            ?.Get("shortcuts")
-                            ?.ToArrayEnumerator();
-
-                        if (shortcuts?.Any() == true)
-                        {
-                            // 只取第一個。
-                            tempText += $" {shortcuts?.ElementAtOrDefault(0).GetString()} ";
-                        }
-                        */
-
                         // "image" 的 "thumbnails"。
                         JsonElement? image = emoji?.Get("image");
 
@@ -1073,7 +1096,19 @@ public partial class JsonParser
                             tempText += $" :{label?.GetString()}: ";
                         }
 
-                        emojiData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
+                        // 取 "shortcuts" 的第一個值。
+                        JsonElement.ArrayEnumerator? shortcuts = emoji
+                            ?.Get("shortcuts")
+                            ?.ToArrayEnumerator();
+
+                        if (shortcuts?.Any() == true)
+                        {
+                            // 只取第一個。
+                            emojiData.Text = $" {shortcuts?.ElementAtOrDefault(0).GetString()} ";
+                        }
+
+                        // 2023-08-17 因為部分 "emoji" 的 "label" 也是 "emoji" 本身，所以改回取 "shortcuts" 的值。
+                        //stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
                         emojiData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
                         JsonElement? isCustomEmoji = emoji?.Get("isCustomEmoji");
@@ -1210,6 +1245,7 @@ public partial class JsonParser
             BackgroundColor = backgroundColor,
             TimestampText = timestampText,
             AuthorExternalChannelID = authorExternalChannelID,
+            Stickers = messageData?.Stickers,
             Emojis = messageData?.Emojis,
             Badges = authorBadgesData?.Badges
         });

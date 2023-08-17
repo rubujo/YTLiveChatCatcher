@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Windows.Forms.VisualStyles;
 using YTApi.Extensions;
 using YTLiveChatCatcher.Common.Sets;
 
@@ -318,11 +319,29 @@ public partial class JsonParser
                 // badge -> 0：16x16、1：32x32
                 // image -> 0：24x24、1：48x48
                 // authorPhoto -> 0：32x32、1：64x64
+                // sticker -> 0：72x72、1：144x144
                 JsonElement? url = thumbnails?.Get(index)?.Get("url");
 
                 if (url.HasValue)
                 {
                     output = url?.GetString() ?? string.Empty;
+
+                    // 貼圖的網址會沒有 Protocol，需要手動再補上。
+                    if (!string.IsNullOrEmpty(output) && output.StartsWith("//"))
+                    {
+                        output = $"https:{output}";
+
+                        // 移除尾端的 =s144-rwa 以取得非 WebP 格式的圖檔網址。
+                        // 疑似 System.Drawing 的 Image 不支援動畫的 WebP。 
+                        string[] tempArray = output.Split("=");
+
+                        // 當陣列數量大於 1 時才執行後續的操作。
+                        if (tempArray.Length > 1)
+                        {
+                            // 取得 "=" 之前的網址部分。
+                            output = tempArray[0];
+                        }
+                    }
                 }
             }
         }

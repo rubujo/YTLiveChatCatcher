@@ -26,6 +26,7 @@ public partial class FMain
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ToolTip SharedTooltip = new();
+    private readonly List<StickerData> SharedStickers = new();
     private readonly List<EmojiData> SharedCustomEmojis = new();
     private readonly List<BadgeData> SharedBadges = new();
 

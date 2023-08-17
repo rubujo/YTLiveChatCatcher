@@ -510,10 +510,7 @@ public partial class FMain : Form
         try
         {
             // 藉由 Google 搜尋預設的網頁瀏覽器的使用者代理資訊。
-            //CustomFunction.OpenBrowser("https://www.google.com/search?q=My+User+Agent");
-
-            // 2023-03-01 改為使用 WhatIsMyBrowser.com 網站查詢。
-            CustomFunction.OpenBrowser("https://www.whatismybrowser.com/detect/what-is-my-user-agent/");
+            CustomFunction.OpenBrowser("https://www.google.com/search?q=My+User-Agent");
         }
         catch (Exception ex)
         {

@@ -17,6 +17,7 @@ public class StringSet
     public static readonly string SheetName3 = "熱點時間";
     public static readonly string SheetName4 = "自定義表情符號";
     public static readonly string SheetName5 = "會員徽章";
+    public static readonly string SheetName6 = "超級貼圖";
 
     #endregion
 

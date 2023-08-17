@@ -892,6 +892,126 @@ public partial class FMain
 
                             #endregion
 
+                            #region 超級貼圖
+
+                            if (SharedStickers.Any())
+                            {
+                                string sheetName = StringSet.SheetName6;
+
+                                ExcelWorksheet worksheet5 = workbook.Worksheets.Add(sheetName);
+
+                                worksheet5.DefaultRowHeight = 28;
+                                worksheet5.Column(1).Width = 5.0;
+
+                                #region 建置標題
+
+                                ExcelRange headerFirstRange17 = worksheet5.Cells[1, 1];
+
+                                headerFirstRange17.StyleName = "HeaderStyle";
+                                headerFirstRange17.Value = "影像";
+                                headerFirstRange17.Style.Fill.SetBackground(Color.BlanchedAlmond);
+
+                                ExcelRange headerFirstRange18 = worksheet5.Cells[1, 2];
+
+                                headerFirstRange18.StyleName = "HeaderStyle";
+                                headerFirstRange18.Value = "標籤";
+                                headerFirstRange18.Style.Fill.SetBackground(Color.BlanchedAlmond);
+
+                                ExcelRange headerFirstRange19 = worksheet5.Cells[1, 3];
+
+                                headerFirstRange19.StyleName = "HeaderStyle";
+                                headerFirstRange19.Value = "格式";
+                                headerFirstRange19.Style.Fill.SetBackground(Color.BlanchedAlmond);
+
+                                ExcelRange headerFirstRange20 = worksheet5.Cells[1, 4];
+
+                                headerFirstRange20.StyleName = "HeaderStyle";
+                                headerFirstRange20.Value = "網址";
+                                headerFirstRange20.Style.Fill.SetBackground(Color.BlanchedAlmond);
+
+                                #endregion
+
+                                int startIdx4 = 2;
+
+                                foreach (StickerData stickerData in SharedStickers)
+                                {
+                                    ExcelRange range15 = worksheet5.Cells[startIdx4, 1];
+
+                                    range15.StyleName = "ContentStyle";
+
+                                    Image? image = stickerData.Image;
+
+                                    if (image != null)
+                                    {
+                                        // 將 image 轉換成 stream。
+                                        Stream? imageStream = null;
+
+                                        try
+                                        {
+                                            imageStream = image.ToStream();
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            WriteLog($"無法將超級貼圖「{stickerData.Label}」轉換成 Stream。");
+                                            WriteLog($"超級貼圖的網址：{stickerData.Url}");
+                                            WriteLog($"發生錯誤：{ex}");
+                                        }
+
+                                        if (imageStream != null)
+                                        {
+                                            // 2021-04-01
+                                            // 對名稱加料，以免造成例外。
+                                            // 還沒找到方法可以重複利用 ExcelPicture。
+                                            ExcelPicture picture = worksheet5.Drawings
+                                                .AddPicture($"row{startIdx4}_{stickerData.Label}",
+                                                imageStream);
+
+                                            int zeroBasedRow = startIdx4 - 1;
+
+                                            picture.SetPosition(zeroBasedRow, 0, 0, 0);
+
+                                            imageStream.Close();
+                                            imageStream.Dispose();
+                                            imageStream = null;
+                                        }
+                                    }
+
+                                    ExcelRange range10 = worksheet5.Cells[startIdx4, 2];
+
+                                    range10.StyleName = "ContentStyle";
+                                    range10.Value = stickerData.Label;
+
+                                    ExcelRange range11 = worksheet5.Cells[startIdx4, 3];
+
+                                    range11.StyleName = "ContentStyle";
+                                    range11.Value = stickerData.Format;
+
+                                    ExcelRange range12 = worksheet5.Cells[startIdx4, 4];
+
+                                    range12.StyleName = "ContentStyle";
+                                    range12.Value = stickerData.Url;
+
+                                    if (!string.IsNullOrEmpty(stickerData.Url))
+                                    {
+                                        range12.Hyperlink = new Uri(stickerData.Url, UriKind.Absolute);
+                                    }
+
+                                    startIdx4++;
+                                }
+
+                                for (int i = 2; i <= worksheet5.Cells.Count(); i++)
+                                {
+                                    if (i < widthSet.Length)
+                                    {
+                                        ExcelColumn column = worksheet5.Column(i);
+
+                                        column.AutoFit();
+                                    }
+                                }
+                            }
+
+                            #endregion
+
                             string fileTitle = Path.GetFileNameWithoutExtension(saveFileDialog.FileName);
                             string comments = string.Empty;
 
@@ -904,6 +1024,7 @@ public partial class FMain
                             workbook.Properties.Subject = fileTitle;
                             workbook.Properties.Category = string.Empty;
                             workbook.Properties.Keywords = string.Empty;
+                            // TODO: 2023-08-17 考慮在 Author 欄位一併輸出應用程式的版本號。
                             workbook.Properties.Author = StringSet.AppName;
                             workbook.Properties.Comments = comments;
                             workbook.Properties.Company = string.Empty;
@@ -1237,18 +1358,16 @@ public partial class FMain
 
                             foreach (RendererData rendererData in messages)
                             {
-                                if (rendererData.Emojis != null)
+                                if (rendererData.Stickers != null)
                                 {
-                                    foreach (EmojiData emojiData in rendererData.Emojis)
+                                    foreach (StickerData stickerData in rendererData.Stickers)
                                     {
-                                        // 只處理自定義表情符號的資料。
-                                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID) &&
-                                            emojiData.IsCustomEmoji)
+                                        if (!SharedStickers.Any(n => n.ID == stickerData.ID))
                                         {
-                                            if (!string.IsNullOrEmpty(emojiData.Url))
+                                            if (!string.IsNullOrEmpty(stickerData.Url))
                                             {
-                                                // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                                Image? image = BetterCacheManager.GetCachableData(emojiData.ID!, () =>
+                                                // 以 stickerData.ID 為鍵值，將 Image 暫存 10 分鐘。
+                                                Image? image = BetterCacheManager.GetCachableData(stickerData.ID!, () =>
                                                 {
                                                     try
                                                     {
@@ -1256,7 +1375,7 @@ public partial class FMain
                                                         using HttpClient httpClient = HttpClientUtil
                                                             .GetHttpClient(_httpClientFactory, userAgent);
 
-                                                        byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
+                                                        byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
 
                                                         using MemoryStream memoryStream = new(bytes);
 
@@ -1264,8 +1383,8 @@ public partial class FMain
                                                     }
                                                     catch (Exception e)
                                                     {
-                                                        WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
-                                                        WriteLog($"自定義表情符號的網址：{emojiData.Url}");
+                                                        WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
+                                                        WriteLog($"超級貼圖的網址：{stickerData.Url}");
                                                         WriteLog($"發生錯誤：{e.Message}");
 
                                                         // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
@@ -1280,11 +1399,65 @@ public partial class FMain
                                                     }
                                                 }, 10);
 
-                                                emojiData.Image = image;
-                                                emojiData.Format = image.RawFormat.ToString();
+                                                stickerData.Image = image;
+                                                stickerData.Format = image.RawFormat.ToString();
                                             }
 
-                                            SharedCustomEmojis.Add(emojiData);
+                                            SharedStickers.Add(stickerData);
+                                        }
+                                    }
+                                }
+
+                                if (rendererData.Emojis != null)
+                                {
+                                    foreach (EmojiData emojiData in rendererData.Emojis)
+                                    {
+                                        // 只處理自定義表情符號的資料。
+                                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
+                                        {
+                                            if (emojiData.IsCustomEmoji)
+                                            {
+                                                if (!string.IsNullOrEmpty(emojiData.Url))
+                                                {
+                                                    // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
+                                                    Image? image = BetterCacheManager.GetCachableData(emojiData.ID!, () =>
+                                                    {
+                                                        try
+                                                        {
+                                                            // 取得 HttpClient。
+                                                            using HttpClient httpClient = HttpClientUtil
+                                                                .GetHttpClient(_httpClientFactory, userAgent);
+
+                                                            byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
+
+                                                            using MemoryStream memoryStream = new(bytes);
+
+                                                            return Image.FromStream(memoryStream);
+                                                        }
+                                                        catch (Exception e)
+                                                        {
+                                                            WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
+                                                            WriteLog($"自定義表情符號的網址：{emojiData.Url}");
+                                                            WriteLog($"發生錯誤：{e.Message}");
+
+                                                            // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
+                                                            Bitmap bitmap = isLarge ? new(24, 24) : new(48, 48);
+
+                                                            using (Graphics graphics = Graphics.FromImage(bitmap))
+                                                            {
+                                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                                            }
+
+                                                            return bitmap;
+                                                        }
+                                                    }, 10);
+
+                                                    emojiData.Image = image;
+                                                    emojiData.Format = image.RawFormat.ToString();
+                                                }
+
+                                                SharedCustomEmojis.Add(emojiData);
+                                            }
                                         }
                                     }
                                 }
@@ -1837,56 +2010,62 @@ public partial class FMain
                                 Format = format
                             };
 
-                            if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID) &&
-                                emojiData.IsCustomEmoji)
+                            if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
                             {
-                                if (!string.IsNullOrEmpty(emojiData.Url))
+                                if (emojiData.IsCustomEmoji)
                                 {
-                                    // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                    Image? image = BetterCacheManager.GetCachableData(emojiData.ID, () =>
+                                    if (!string.IsNullOrEmpty(emojiData.Url))
                                     {
-                                        try
+                                        // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
+                                        Image? image = BetterCacheManager.GetCachableData(emojiData.ID, () =>
                                         {
-                                            // 取得 HttpClient。
-                                            using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                            byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
-
-                                            using MemoryStream memoryStream = new(bytes);
-
-                                            return Image.FromStream(memoryStream);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
-                                            WriteLog($"自定義表情符號的網址：{emojiData.Url}");
-                                            WriteLog($"發生錯誤：{e.Message}");
-
-                                            // 建立一個 48x48 的白色 Bitmap。
-                                            Bitmap bitmap = new(48, 48);
-
-                                            using (Graphics graphics = Graphics.FromImage(bitmap))
+                                            try
                                             {
-                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                                // 取得 HttpClient。
+                                                using HttpClient httpClient = HttpClientUtil
+                                                    .GetHttpClient(_httpClientFactory, userAgent);
+
+                                                byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
+
+                                                using MemoryStream memoryStream = new(bytes);
+
+                                                return Image.FromStream(memoryStream);
                                             }
+                                            catch (Exception e)
+                                            {
+                                                WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
+                                                WriteLog($"自定義表情符號的網址：{emojiData.Url}");
+                                                WriteLog($"發生錯誤：{e.Message}");
 
-                                            return bitmap;
-                                        }
-                                    }, 10);
+                                                // 建立一個 48x48 的白色 Bitmap。
+                                                Bitmap bitmap = new(48, 48);
 
-                                    emojiData.Image = image;
-                                    emojiData.Format = image.RawFormat.ToString();
+                                                using (Graphics graphics = Graphics.FromImage(bitmap))
+                                                {
+                                                    graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                                }
+
+                                                return bitmap;
+                                            }
+                                        }, 10);
+
+                                        emojiData.Image = image;
+                                        emojiData.Format = image.RawFormat.ToString();
+                                    }
+
+                                    SharedCustomEmojis.Add(emojiData);
                                 }
-
-                                SharedCustomEmojis.Add(emojiData);
+                                else
+                                {
+                                    SharedCustomEmojis.Add(emojiData);
+                                }
                             }
                         }
 
                         rowIdx2++;
                     }
 
-                    WriteLog($"已匯入 {SharedCustomEmojis.Count} 個自定義表情符號資料。");
+                    WriteLog($"已匯入 {SharedCustomEmojis.Count} 個情符號資料。");
                 }
 
                 #endregion
@@ -1969,6 +2148,83 @@ public partial class FMain
                     }
 
                     WriteLog($"已匯入 {SharedBadges.Count} 個會員徽章資料。");
+                }
+
+                #endregion
+
+                #region 超級貼圖
+
+                ExcelWorksheet? sheet4 = package.Workbook.Worksheets
+                    .FirstOrDefault(n => n.Name == StringSet.SheetName6);
+
+                if (sheet4 != null)
+                {
+                    int rowIdx4 = 2;
+
+                    for (int i = rowIdx4; i <= sheet4.Rows.EndRow; i++)
+                    {
+                        string label = sheet4.Cells[rowIdx4, 2].Text;
+                        string format = sheet4.Cells[rowIdx4, 3].Text;
+                        string url = sheet4.Cells[rowIdx4, 4].Text;
+
+                        if (!string.IsNullOrEmpty(label))
+                        {
+                            StickerData stickerData = new()
+                            {
+                                Label = label,
+                                Url = url,
+                                Format = format
+                            };
+
+                            if (!SharedStickers.Any(n => n.Url == stickerData.Url))
+                            {
+                                if (!string.IsNullOrEmpty(stickerData.Url))
+                                {
+                                    // 以 stickerData.Label 為鍵值，將 Image 暫存 10 分鐘。
+                                    Image? image = BetterCacheManager.GetCachableData(stickerData.Label, () =>
+                                    {
+                                        try
+                                        {
+                                            // 取得 HttpClient。
+                                            using HttpClient httpClient = HttpClientUtil
+                                                .GetHttpClient(_httpClientFactory, userAgent);
+
+                                            byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
+
+                                            using MemoryStream memoryStream = new(bytes);
+
+                                            return Image.FromStream(memoryStream);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
+                                            WriteLog($"超級貼圖的網址：{stickerData.Url}");
+                                            WriteLog($"發生錯誤：{e.Message}");
+
+                                            // 建立一個 32x32 的白色 Bitmap。
+                                            Bitmap bitmap = new(32, 32);
+
+                                            using (Graphics graphics = Graphics.FromImage(bitmap))
+                                            {
+                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                            }
+
+                                            return bitmap;
+                                        }
+                                    }, 10);
+
+                                    stickerData.Image = image;
+                                    stickerData.Format = image.RawFormat.ToString();
+                                }
+
+                                SharedStickers.Add(stickerData);
+                            }
+                        }
+
+                        rowIdx4++;
+                    }
+
+                    WriteLog($"已匯入 {SharedStickers.Count} 個超級貼圖資料。");
                 }
 
                 #endregion
