@@ -6,6 +6,7 @@ using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
+using YTLiveChatCatcher.YTApi.Models;
 
 namespace YTLiveChatCatcher;
 
@@ -297,14 +298,23 @@ public partial class FMain : Form
                             _httpClientFactory,
                             userAgent);
 
-                        SharedYTConfigData = LiveChatFunction.GetYTConfigData(
+                        InitialData initailData = LiveChatFunction.GetYTConfigData(
                             httpClient,
                             videoID,
                             IsStreaming,
                             GetCookies(),
-                            TBLog);
+                            TBLog,
+                            isLarge);
+
+                        SharedYTConfigData = initailData.YTConfigData;
 
                         WriteLog("開始取得聊天室的內容。");
+
+                        // 處理直播中頁面內的影片聊天室的內容。
+                        if (initailData.Messages != null)
+                        {
+                            DoProcessMessage(initailData.Messages, userAgent);
+                        }
 
                         // 執行第一次取得影片聊天室的內容。
                         GetLiveChatData();

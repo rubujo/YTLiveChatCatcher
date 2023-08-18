@@ -7,7 +7,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWindowsForms>true</UseWindowsForms>
 		<RootNamespace>YTLiveChatCatcher</RootNamespace>
-		<Version>1.4.11</Version>
+		<Version>1.4.12</Version>
 		<AssemblyName>YTLiveChatCatcher</AssemblyName>
 		<ApplicationIcon>Resources\app_icon_large.ico</ApplicationIcon>
 		<DebugType>embedded</DebugType>

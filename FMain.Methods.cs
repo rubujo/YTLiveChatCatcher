@@ -7,7 +7,6 @@ using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
 using System.Drawing.Imaging;
-using System.Reflection;
 using System.Runtime.Versioning;
 using YTApi;
 using YTApi.Models;
@@ -1012,8 +1011,9 @@ public partial class FMain
 
                             #endregion
 
-                            string fileTitle = Path.GetFileNameWithoutExtension(saveFileDialog.FileName);
-                            string comments = string.Empty;
+                            string version = CustomFunction.GetAppVersion(),
+                                fileTitle = Path.GetFileNameWithoutExtension(saveFileDialog.FileName),
+                                comments = string.Empty;
 
                             if (!string.IsNullOrEmpty(videoID))
                             {
@@ -1024,8 +1024,7 @@ public partial class FMain
                             workbook.Properties.Subject = fileTitle;
                             workbook.Properties.Category = string.Empty;
                             workbook.Properties.Keywords = string.Empty;
-                            // TODO: 2023-08-17 考慮在 Author 欄位一併輸出應用程式的版本號。
-                            workbook.Properties.Author = StringSet.AppName;
+                            workbook.Properties.Author = $"{StringSet.AppName} {version}";
                             workbook.Properties.Comments = comments;
                             workbook.Properties.Company = string.Empty;
 
@@ -1148,9 +1147,7 @@ public partial class FMain
         this.InvokeIfRequired(() =>
         {
             Text = StringSet.AppName;
-
             Icon = Properties.Resources.app_icon;
-
             ActiveControl = TBVideoID;
         });
 
@@ -1228,9 +1225,9 @@ public partial class FMain
 
         LVersion.InvokeIfRequired(() =>
         {
-            Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+            string version = CustomFunction.GetAppVersion();
 
-            string verText = version != null ? $"v{version}" : "無";
+            string verText = !string.IsNullOrEmpty(version) ? version : "無";
 
             // 設定版本號顯示。
             LVersion.Text = $"版本號：{verText}";
@@ -1350,372 +1347,9 @@ public partial class FMain
                                 }
                             }
 
-                            List<ListViewItem> listTempItem = new();
-
-                            bool isLarge = true;
-
                             List<RendererData> messages = JsonParser.ParseActions(SharedJsonElement, isLarge);
 
-                            foreach (RendererData rendererData in messages)
-                            {
-                                if (rendererData.Stickers != null)
-                                {
-                                    foreach (StickerData stickerData in rendererData.Stickers)
-                                    {
-                                        if (!SharedStickers.Any(n => n.ID == stickerData.ID))
-                                        {
-                                            if (!string.IsNullOrEmpty(stickerData.Url))
-                                            {
-                                                // 以 stickerData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                                Image? image = BetterCacheManager.GetCachableData(stickerData.ID!, () =>
-                                                {
-                                                    try
-                                                    {
-                                                        // 取得 HttpClient。
-                                                        using HttpClient httpClient = HttpClientUtil
-                                                            .GetHttpClient(_httpClientFactory, userAgent);
-
-                                                        byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
-
-                                                        using MemoryStream memoryStream = new(bytes);
-
-                                                        return Image.FromStream(memoryStream);
-                                                    }
-                                                    catch (Exception e)
-                                                    {
-                                                        WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
-                                                        WriteLog($"超級貼圖的網址：{stickerData.Url}");
-                                                        WriteLog($"發生錯誤：{e.Message}");
-
-                                                        // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
-                                                        Bitmap bitmap = isLarge ? new(24, 24) : new(48, 48);
-
-                                                        using (Graphics graphics = Graphics.FromImage(bitmap))
-                                                        {
-                                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                                        }
-
-                                                        return bitmap;
-                                                    }
-                                                }, 10);
-
-                                                stickerData.Image = image;
-                                                stickerData.Format = image.RawFormat.ToString();
-                                            }
-
-                                            SharedStickers.Add(stickerData);
-                                        }
-                                    }
-                                }
-
-                                if (rendererData.Emojis != null)
-                                {
-                                    foreach (EmojiData emojiData in rendererData.Emojis)
-                                    {
-                                        // 只處理自定義表情符號的資料。
-                                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
-                                        {
-                                            if (emojiData.IsCustomEmoji)
-                                            {
-                                                if (!string.IsNullOrEmpty(emojiData.Url))
-                                                {
-                                                    // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                                    Image? image = BetterCacheManager.GetCachableData(emojiData.ID!, () =>
-                                                    {
-                                                        try
-                                                        {
-                                                            // 取得 HttpClient。
-                                                            using HttpClient httpClient = HttpClientUtil
-                                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                                            byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
-
-                                                            using MemoryStream memoryStream = new(bytes);
-
-                                                            return Image.FromStream(memoryStream);
-                                                        }
-                                                        catch (Exception e)
-                                                        {
-                                                            WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
-                                                            WriteLog($"自定義表情符號的網址：{emojiData.Url}");
-                                                            WriteLog($"發生錯誤：{e.Message}");
-
-                                                            // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
-                                                            Bitmap bitmap = isLarge ? new(24, 24) : new(48, 48);
-
-                                                            using (Graphics graphics = Graphics.FromImage(bitmap))
-                                                            {
-                                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                                            }
-
-                                                            return bitmap;
-                                                        }
-                                                    }, 10);
-
-                                                    emojiData.Image = image;
-                                                    emojiData.Format = image.RawFormat.ToString();
-                                                }
-
-                                                SharedCustomEmojis.Add(emojiData);
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (rendererData.Badges != null)
-                                {
-                                    foreach (BadgeData badgeData in rendererData.Badges)
-                                    {
-                                        // 只處理會員徽章的資料。
-                                        if (badgeData.Label != null &&
-                                            !SharedBadges.Any(n => n.Label == badgeData.Label) &&
-                                            badgeData.Label.Contains(StringSet.Member))
-                                        {
-                                            if (!string.IsNullOrEmpty(badgeData.Url))
-                                            {
-                                                // 以 badgeData.Label 為鍵值，將 Image 暫存 10 分鐘。
-                                                Image? image = BetterCacheManager.GetCachableData(badgeData.Label!, () =>
-                                                {
-                                                    try
-                                                    {
-                                                        // 取得 HttpClient。
-                                                        using HttpClient httpClient = HttpClientUtil
-                                                            .GetHttpClient(_httpClientFactory, userAgent);
-
-                                                        byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
-
-                                                        using MemoryStream memoryStream = new(bytes);
-
-                                                        return Image.FromStream(memoryStream);
-                                                    }
-                                                    catch (Exception e)
-                                                    {
-                                                        WriteLog($"無法下載會員徽章「{badgeData.Label}」。");
-                                                        WriteLog($"會員徽章的網址：{badgeData.Url}");
-                                                        WriteLog($"發生錯誤：{e.Message}");
-
-                                                        // 當 isLarge 的值為 true 時，建立一個 32x32 的白色 Bitmap。
-                                                        Bitmap bitmap = isLarge ? new(16, 16) : new(32, 32);
-
-                                                        using (Graphics graphics = Graphics.FromImage(bitmap))
-                                                        {
-                                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                                        }
-
-                                                        return bitmap;
-                                                    }
-                                                }, 10);
-
-                                                badgeData.Image = image;
-                                                badgeData.Format = image.RawFormat.ToString();
-                                            }
-
-                                            SharedBadges.Add(badgeData);
-                                        }
-                                    }
-                                }
-
-                                string id = rendererData.ID ?? string.Empty;
-                                string authorName = (rendererData.AuthorName != null &&
-                                    rendererData.AuthorName != StringSet.NoAuthorName) ?
-                                    rendererData.AuthorName :
-                                    string.Empty;
-                                string authorBages = (rendererData.AuthorBadges != null &&
-                                    rendererData.AuthorBadges != StringSet.NoAuthorBadges) ?
-                                    rendererData.AuthorBadges :
-                                    string.Empty;
-                                string authorPhotoUrl = (rendererData.AuthorPhotoUrl != null &&
-                                    rendererData.AuthorPhotoUrl != StringSet.NoAuthorPhotoUrl) ?
-                                    rendererData.AuthorPhotoUrl :
-                                    string.Empty;
-                                string messageContent = (rendererData.MessageContent != null &&
-                                    rendererData.MessageContent != StringSet.NoMessageContent) ?
-                                    rendererData.MessageContent :
-                                    string.Empty;
-                                string purchaseAmountText = (rendererData.PurchaseAmountText != null &&
-                                    rendererData.PurchaseAmountText != StringSet.NoPurchaseAmountText) ?
-                                    rendererData.PurchaseAmountText :
-                                    string.Empty;
-                                string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
-                                string type = rendererData.Type ?? string.Empty;
-                                string backgroundColor = (rendererData.BackgroundColor != null &&
-                                    rendererData.BackgroundColor != StringSet.NoBackgroundColor) ?
-                                    rendererData.BackgroundColor :
-                                    string.Empty;
-                                // 直播不會有，只有重播才會有。
-                                string timestampText = (rendererData.TimestampText != null &&
-                                    rendererData.TimestampText != StringSet.NoTimestampText) ?
-                                    rendererData.TimestampText :
-                                    string.Empty;
-                                string authorExternalChannelID = (rendererData.AuthorExternalChannelID != null &&
-                                    rendererData.AuthorExternalChannelID != StringSet.NoAuthorExternalChannelID) ?
-                                    rendererData.AuthorExternalChannelID :
-                                    string.Empty;
-
-                                if (string.IsNullOrEmpty(timestampText))
-                                {
-                                    // 改為使用發送訊息的時間。
-                                    if (DateTime.TryParse(timestampUsec, out DateTime dateTime))
-                                    {
-                                        timestampText = dateTime.ToString("HH:mm:ss");
-                                    }
-                                }
-
-                                ListViewItem lvItem = new(authorName)
-                                {
-                                    UseItemStyleForSubItems = false
-                                };
-
-                                string[] subItemContents = new string[10];
-
-                                subItemContents[0] = authorBages;
-                                subItemContents[1] = messageContent;
-                                subItemContents[2] = purchaseAmountText;
-                                subItemContents[3] = timestampUsec;
-                                subItemContents[4] = type;
-                                subItemContents[5] = backgroundColor;
-                                subItemContents[6] = timestampText;
-                                subItemContents[7] = authorPhotoUrl;
-                                subItemContents[8] = authorExternalChannelID;
-                                subItemContents[9] = id;
-
-                                if (authorBages.Contains(StringSet.BadgeOwner))
-                                {
-                                    lvItem.SubItems[0].ForeColor = Color.Orange;
-                                }
-                                else if (authorBages.Contains(StringSet.BadgeModerator))
-                                {
-                                    lvItem.SubItems[0].ForeColor = Color.Blue;
-                                }
-                                else if (authorBages.Contains(StringSet.BadgeValid))
-                                {
-                                    lvItem.SubItems[0].ForeColor = Color.Purple;
-                                }
-                                else if (authorBages.Contains(StringSet.BadgeMember))
-                                {
-                                    lvItem.SubItems[0].ForeColor = Color.Green;
-                                }
-                                else
-                                {
-                                    lvItem.SubItems[0].ForeColor = Color.Black;
-                                }
-
-                                lvItem.SubItems.AddRange(subItemContents);
-
-                                if (authorName == $"[{StringSet.YouTube}]" ||
-                                    authorName == $"[{StringSet.AppName}]")
-                                {
-                                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
-                                    {
-                                        item.ForeColor = Color.White;
-                                        item.BackColor = ColorTranslator.FromHtml("#3e3e3e");
-                                    }
-                                }
-
-                                if (!string.IsNullOrEmpty(backgroundColor))
-                                {
-                                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
-                                    {
-                                        item.BackColor = ColorTranslator.FromHtml(backgroundColor);
-                                    }
-                                }
-
-                                if (type == StringSet.ChatJoinMember ||
-                                    type == StringSet.ChatMemberUpgrade ||
-                                    type == StringSet.ChatMemberMilestone ||
-                                    type == StringSet.ChatMemberGift ||
-                                    type == StringSet.ChatReceivedMemberGift)
-                                {
-                                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
-                                    {
-                                        item.ForeColor = Color.White;
-                                        item.BackColor = Color.Green;
-                                    }
-                                }
-
-                                if (type == StringSet.ChatRedirect ||
-                                    type == StringSet.ChatPinned)
-                                {
-                                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
-                                    {
-                                        item.ForeColor = Color.White;
-                                        item.BackColor = ColorTranslator.FromHtml("#203d6c");
-                                    }
-                                }
-
-                                if (!string.IsNullOrEmpty(authorPhotoUrl))
-                                {
-                                    LVLiveChatList.InvokeIfRequired(() =>
-                                    {
-                                        string imgKey = authorName;
-
-                                        if (LVLiveChatList.SmallImageList != null &&
-                                            !LVLiveChatList.SmallImageList.Images.ContainsKey(imgKey))
-                                        {
-                                            // 以 imgKey 為鍵值，將 Image 暫存 10 分鐘。
-                                            Image? image = BetterCacheManager.GetCachableData(imgKey, () =>
-                                            {
-                                                try
-                                                {
-                                                    // 取得 HttpClient。
-                                                    using HttpClient httpClient = HttpClientUtil
-                                                        .GetHttpClient(_httpClientFactory, userAgent);
-
-                                                    byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
-
-                                                    using MemoryStream memoryStream = new(bytes);
-
-                                                    return Image.FromStream(memoryStream);
-                                                }
-                                                catch (Exception e)
-                                                {
-                                                    WriteLog($"發生錯誤：{e.Message}");
-                                                    WriteLog($"無法下載「{imgKey}」的頭像。");
-                                                    WriteLog($"頭像的網址：{authorPhotoUrl}");
-
-                                                    // 當 isLarge 的值為 true 時，建立一個 64x64 的白色 Bitmap。
-                                                    Bitmap bitmap = isLarge ? new(64, 64) : new(32, 32);
-
-                                                    using (Graphics graphics = Graphics.FromImage(bitmap))
-                                                    {
-                                                        graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                                    }
-
-                                                    return bitmap;
-                                                }
-                                            }, 10);
-
-                                            LVLiveChatList.SmallImageList.Images.Add(imgKey, image);
-
-                                            image.Dispose();
-                                            image = null;
-                                        }
-
-                                        lvItem.ImageKey = imgKey;
-                                    });
-                                }
-
-                                // 先過濾以避免加入到重複的資料。
-                                if (!listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec))
-                                {
-                                    listTempItem.Add(lvItem);
-                                }
-                            }
-
-                            LVLiveChatList.InvokeIfRequired(() =>
-                            {
-                                LVLiveChatList.BeginUpdate();
-                                LVLiveChatList.Items.AddRange(listTempItem.ToArray());
-
-                                if (LVLiveChatList.Items.Count > 0)
-                                {
-                                    LVLiveChatList.Items[^1].EnsureVisible();
-                                }
-
-                                LVLiveChatList.EndUpdate();
-                            });
-
-                            UpdateSummaryInfo();
+                            DoProcessMessage(messages, userAgent);
                         }
                         else
                         {
@@ -1746,6 +1380,386 @@ public partial class FMain
                 BtnStop_Click(null, new EventArgs());
             }
         }, SharedCancellationTokenSource.Token);
+    }
+
+    /// <summary>
+    /// 執行處裡訊息
+    /// </summary>
+    /// <param name="messages">List&lt;RendererData&gt;</param>
+    /// <param name="userAgent">字串，使用者代理字串</param>
+    private void DoProcessMessage(
+        List<RendererData> messages,
+        string userAgent)
+    {
+        try
+        {
+            List<ListViewItem> listTempItem = new();
+
+            foreach (RendererData rendererData in messages)
+            {
+                if (rendererData.Stickers != null)
+                {
+                    foreach (StickerData stickerData in rendererData.Stickers)
+                    {
+                        if (!SharedStickers.Any(n => n.ID == stickerData.ID))
+                        {
+                            if (!string.IsNullOrEmpty(stickerData.Url))
+                            {
+                                // 以 stickerData.ID 為鍵值，將 Image 暫存 10 分鐘。
+                                Image? image = BetterCacheManager.GetCachableData(stickerData.ID!, () =>
+                                {
+                                    try
+                                    {
+                                        // 取得 HttpClient。
+                                        using HttpClient httpClient = HttpClientUtil
+                                            .GetHttpClient(_httpClientFactory, userAgent);
+
+                                        byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
+
+                                        using MemoryStream memoryStream = new(bytes);
+
+                                        return Image.FromStream(memoryStream);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
+                                        WriteLog($"超級貼圖的網址：{stickerData.Url}");
+                                        WriteLog($"發生錯誤：{e.Message}");
+
+                                        // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
+                                        Bitmap bitmap = isLarge ? new(24, 24) : new(48, 48);
+
+                                        using (Graphics graphics = Graphics.FromImage(bitmap))
+                                        {
+                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                        }
+
+                                        return bitmap;
+                                    }
+                                }, 10);
+
+                                stickerData.Image = image;
+                                stickerData.Format = image.RawFormat.ToString();
+                            }
+
+                            SharedStickers.Add(stickerData);
+                        }
+                    }
+                }
+
+                if (rendererData.Emojis != null)
+                {
+                    foreach (EmojiData emojiData in rendererData.Emojis)
+                    {
+                        // 只處理自定義表情符號的資料。
+                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
+                        {
+                            if (emojiData.IsCustomEmoji)
+                            {
+                                if (!string.IsNullOrEmpty(emojiData.Url))
+                                {
+                                    // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
+                                    Image? image = BetterCacheManager.GetCachableData(emojiData.ID!, () =>
+                                    {
+                                        try
+                                        {
+                                            // 取得 HttpClient。
+                                            using HttpClient httpClient = HttpClientUtil
+                                                .GetHttpClient(_httpClientFactory, userAgent);
+
+                                            byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
+
+                                            using MemoryStream memoryStream = new(bytes);
+
+                                            return Image.FromStream(memoryStream);
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
+                                            WriteLog($"自定義表情符號的網址：{emojiData.Url}");
+                                            WriteLog($"發生錯誤：{e.Message}");
+
+                                            // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
+                                            Bitmap bitmap = isLarge ? new(24, 24) : new(48, 48);
+
+                                            using (Graphics graphics = Graphics.FromImage(bitmap))
+                                            {
+                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                            }
+
+                                            return bitmap;
+                                        }
+                                    }, 10);
+
+                                    emojiData.Image = image;
+                                    emojiData.Format = image.RawFormat.ToString();
+                                }
+
+                                SharedCustomEmojis.Add(emojiData);
+                            }
+                        }
+                    }
+                }
+
+                if (rendererData.Badges != null)
+                {
+                    foreach (BadgeData badgeData in rendererData.Badges)
+                    {
+                        // 只處理會員徽章的資料。
+                        if (badgeData.Label != null &&
+                            !SharedBadges.Any(n => n.Label == badgeData.Label) &&
+                            badgeData.Label.Contains(StringSet.Member))
+                        {
+                            if (!string.IsNullOrEmpty(badgeData.Url))
+                            {
+                                // 以 badgeData.Label 為鍵值，將 Image 暫存 10 分鐘。
+                                Image? image = BetterCacheManager.GetCachableData(badgeData.Label!, () =>
+                                {
+                                    try
+                                    {
+                                        // 取得 HttpClient。
+                                        using HttpClient httpClient = HttpClientUtil
+                                            .GetHttpClient(_httpClientFactory, userAgent);
+
+                                        byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
+
+                                        using MemoryStream memoryStream = new(bytes);
+
+                                        return Image.FromStream(memoryStream);
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        WriteLog($"無法下載會員徽章「{badgeData.Label}」。");
+                                        WriteLog($"會員徽章的網址：{badgeData.Url}");
+                                        WriteLog($"發生錯誤：{e.Message}");
+
+                                        // 當 isLarge 的值為 true 時，建立一個 32x32 的白色 Bitmap。
+                                        Bitmap bitmap = isLarge ? new(16, 16) : new(32, 32);
+
+                                        using (Graphics graphics = Graphics.FromImage(bitmap))
+                                        {
+                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                        }
+
+                                        return bitmap;
+                                    }
+                                }, 10);
+
+                                badgeData.Image = image;
+                                badgeData.Format = image.RawFormat.ToString();
+                            }
+
+                            SharedBadges.Add(badgeData);
+                        }
+                    }
+                }
+
+                string id = rendererData.ID ?? string.Empty;
+                string authorName = (rendererData.AuthorName != null &&
+                    rendererData.AuthorName != StringSet.NoAuthorName) ?
+                    rendererData.AuthorName :
+                    string.Empty;
+                string authorBages = (rendererData.AuthorBadges != null &&
+                    rendererData.AuthorBadges != StringSet.NoAuthorBadges) ?
+                    rendererData.AuthorBadges :
+                    string.Empty;
+                string authorPhotoUrl = (rendererData.AuthorPhotoUrl != null &&
+                    rendererData.AuthorPhotoUrl != StringSet.NoAuthorPhotoUrl) ?
+                    rendererData.AuthorPhotoUrl :
+                    string.Empty;
+                string messageContent = (rendererData.MessageContent != null &&
+                    rendererData.MessageContent != StringSet.NoMessageContent) ?
+                    rendererData.MessageContent :
+                    string.Empty;
+                string purchaseAmountText = (rendererData.PurchaseAmountText != null &&
+                    rendererData.PurchaseAmountText != StringSet.NoPurchaseAmountText) ?
+                    rendererData.PurchaseAmountText :
+                    string.Empty;
+                string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
+                string type = rendererData.Type ?? string.Empty;
+                string backgroundColor = (rendererData.BackgroundColor != null &&
+                    rendererData.BackgroundColor != StringSet.NoBackgroundColor) ?
+                    rendererData.BackgroundColor :
+                    string.Empty;
+                // 直播不會有，只有重播才會有。
+                string timestampText = (rendererData.TimestampText != null &&
+                    rendererData.TimestampText != StringSet.NoTimestampText) ?
+                    rendererData.TimestampText :
+                    string.Empty;
+                string authorExternalChannelID = (rendererData.AuthorExternalChannelID != null &&
+                    rendererData.AuthorExternalChannelID != StringSet.NoAuthorExternalChannelID) ?
+                    rendererData.AuthorExternalChannelID :
+                    string.Empty;
+
+                if (string.IsNullOrEmpty(timestampText))
+                {
+                    // 改為使用發送訊息的時間。
+                    if (DateTime.TryParse(timestampUsec, out DateTime dateTime))
+                    {
+                        timestampText = dateTime.ToString("HH:mm:ss");
+                    }
+                }
+
+                ListViewItem lvItem = new(authorName)
+                {
+                    UseItemStyleForSubItems = false
+                };
+
+                string[] subItemContents = new string[10];
+
+                subItemContents[0] = authorBages;
+                subItemContents[1] = messageContent;
+                subItemContents[2] = purchaseAmountText;
+                subItemContents[3] = timestampUsec;
+                subItemContents[4] = type;
+                subItemContents[5] = backgroundColor;
+                subItemContents[6] = timestampText;
+                subItemContents[7] = authorPhotoUrl;
+                subItemContents[8] = authorExternalChannelID;
+                subItemContents[9] = id;
+
+                if (authorBages.Contains(StringSet.BadgeOwner))
+                {
+                    lvItem.SubItems[0].ForeColor = Color.Orange;
+                }
+                else if (authorBages.Contains(StringSet.BadgeModerator))
+                {
+                    lvItem.SubItems[0].ForeColor = Color.Blue;
+                }
+                else if (authorBages.Contains(StringSet.BadgeValid))
+                {
+                    lvItem.SubItems[0].ForeColor = Color.Purple;
+                }
+                else if (authorBages.Contains(StringSet.BadgeMember))
+                {
+                    lvItem.SubItems[0].ForeColor = Color.Green;
+                }
+                else
+                {
+                    lvItem.SubItems[0].ForeColor = Color.Black;
+                }
+
+                lvItem.SubItems.AddRange(subItemContents);
+
+                if (authorName == $"[{StringSet.YouTube}]" ||
+                    authorName == $"[{StringSet.AppName}]")
+                {
+                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                    {
+                        item.ForeColor = Color.White;
+                        item.BackColor = ColorTranslator.FromHtml("#3e3e3e");
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(backgroundColor))
+                {
+                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                    {
+                        item.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                    }
+                }
+
+                if (type == StringSet.ChatJoinMember ||
+                    type == StringSet.ChatMemberUpgrade ||
+                    type == StringSet.ChatMemberMilestone ||
+                    type == StringSet.ChatMemberGift ||
+                    type == StringSet.ChatReceivedMemberGift)
+                {
+                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                    {
+                        item.ForeColor = Color.White;
+                        item.BackColor = Color.Green;
+                    }
+                }
+
+                if (type == StringSet.ChatRedirect ||
+                    type == StringSet.ChatPinned)
+                {
+                    foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
+                    {
+                        item.ForeColor = Color.White;
+                        item.BackColor = ColorTranslator.FromHtml("#203d6c");
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(authorPhotoUrl))
+                {
+                    LVLiveChatList.InvokeIfRequired(() =>
+                    {
+                        string imgKey = authorName;
+
+                        if (LVLiveChatList.SmallImageList != null &&
+                            !LVLiveChatList.SmallImageList.Images.ContainsKey(imgKey))
+                        {
+                            // 以 imgKey 為鍵值，將 Image 暫存 10 分鐘。
+                            Image? image = BetterCacheManager.GetCachableData(imgKey, () =>
+                            {
+                                try
+                                {
+                                    // 取得 HttpClient。
+                                    using HttpClient httpClient = HttpClientUtil
+                                        .GetHttpClient(_httpClientFactory, userAgent);
+
+                                    byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
+
+                                    using MemoryStream memoryStream = new(bytes);
+
+                                    return Image.FromStream(memoryStream);
+                                }
+                                catch (Exception e)
+                                {
+                                    WriteLog($"發生錯誤：{e.Message}");
+                                    WriteLog($"無法下載「{imgKey}」的頭像。");
+                                    WriteLog($"頭像的網址：{authorPhotoUrl}");
+
+                                    // 當 isLarge 的值為 true 時，建立一個 64x64 的白色 Bitmap。
+                                    Bitmap bitmap = isLarge ? new(64, 64) : new(32, 32);
+
+                                    using (Graphics graphics = Graphics.FromImage(bitmap))
+                                    {
+                                        graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                    }
+
+                                    return bitmap;
+                                }
+                            }, 10);
+
+                            LVLiveChatList.SmallImageList.Images.Add(imgKey, image);
+
+                            image.Dispose();
+                            image = null;
+                        }
+
+                        lvItem.ImageKey = imgKey;
+                    });
+                }
+
+                // 先過濾以避免加入到重複的資料。
+                if (!listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec))
+                {
+                    listTempItem.Add(lvItem);
+                }
+            }
+
+            LVLiveChatList.InvokeIfRequired(() =>
+            {
+                LVLiveChatList.BeginUpdate();
+                LVLiveChatList.Items.AddRange(listTempItem.ToArray());
+
+                if (LVLiveChatList.Items.Count > 0)
+                {
+                    LVLiveChatList.Items[^1].EnsureVisible();
+                }
+
+                LVLiveChatList.EndUpdate();
+            });
+
+            UpdateSummaryInfo();
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"發生錯誤：{ex}");
+        }
     }
 
     /// <summary>

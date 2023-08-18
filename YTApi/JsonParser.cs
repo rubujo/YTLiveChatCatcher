@@ -36,16 +36,47 @@ public partial class JsonParser
             JsonElement? jeDelegatedSessionID = jsonElement?.Get("DELEGATED_SESSION_ID");
             JsonElement? jeInnertubeContext = jsonElement?.Get("INNERTUBE_CONTEXT");
             JsonElement? jeClient = jeInnertubeContext?.Get("client");
-            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
+            JsonElement? jeBrowserName = jeClient?.Get("browserName");
+            JsonElement? jeBrowserVersion = jeClient?.Get("browserVersion");
+            JsonElement? jeClientFormFactor = jeClient?.Get("clientFormFactor");
             JsonElement? jeClientName = jeClient?.Get("clientName");
             JsonElement? jeClientVersion = jeClient?.Get("clientVersion");
+            JsonElement? jeDeviceMake = jeClient?.Get("deviceMake");
+            JsonElement? jeDeviceModel = jeClient?.Get("deviceModel");
+            JsonElement? jeGl = jeClient?.Get("gl");
+            JsonElement? jeHl = jeClient?.Get("hl");
+            JsonElement? jeOriginalUrl = jeClient?.Get("originalUrl");
+            JsonElement? jeOsName = jeClient?.Get("osName");
+            JsonElement? jeOsVersion = jeClient?.Get("osVersion");
+            JsonElement? jePlatform = jeClient?.Get("platform");
+            JsonElement? jeRemoteHost = jeClient?.Get("remoteHost");
+            JsonElement? jeUserAgent = jeClient?.Get("userAgent");
+            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
 
             ytConfigData.APIKey = jejeInnertubeApiKey?.GetString();
-            ytConfigData.VisitorData = jeVisitorData?.GetString();
+            ytConfigData.IDToken = jeIDToken?.GetString();
+            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
+            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
+            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
+            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
+            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
+            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
+            ytConfigData.BrowserName = jeBrowserName?.GetString();
+            ytConfigData.BrowserVersion = jeBrowserVersion?.GetString();
+            ytConfigData.ClientFormFactor = jeClientFormFactor?.GetString();
             ytConfigData.ClientName = jeClientName?.GetString();
             ytConfigData.ClientVersion = jeClientVersion?.GetString();
-            ytConfigData.IDToken = jeIDToken?.GetString();
-            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
+            ytConfigData.DeviceMake = jeDeviceMake?.GetString();
+            ytConfigData.DeviceModel = jeDeviceModel?.GetString();
+            ytConfigData.Gl = jeGl?.GetString();
+            ytConfigData.Hl = jeHl?.GetString();
+            ytConfigData.OriginalUrl = jeOriginalUrl?.GetString();
+            ytConfigData.OsName = jeOsName?.GetString();
+            ytConfigData.OsVersion = jeOsVersion?.GetString();
+            ytConfigData.Platform = jePlatform?.GetString();
+            ytConfigData.RemoteHost = jeRemoteHost?.GetString();
+            ytConfigData.UserAgent = jeUserAgent?.GetString();
+            ytConfigData.VisitorData = jeVisitorData?.GetString();
 
             // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
             string[]? arrayDataSyncID = ytConfigData.DataSyncID
@@ -60,39 +91,10 @@ public partial class JsonParser
                 useDelegatedSessionID = true;
             }
 
-            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
-
             if (useDelegatedSessionID)
             {
                 ytConfigData.DataSyncID = ytConfigData.DelegatedSessionID;
             }
-
-            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
-            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
-            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
-            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
-
-            // TODO: 2023-06-12 考慮是否擴充。
-            /*
-            "INNERTUBE_CONTEXT.clickTracking.clickTrackingParams"
-            "INNERTUBE_CONTEXT.request.useSsl"
-            "INNERTUBE_CONTEXT.client.browserName"
-            "INNERTUBE_CONTEXT.client.browserVersion"
-            "INNERTUBE_CONTEXT.client.clientFormFactor"
-            "INNERTUBE_CONTEXT.client.clientName"
-            "INNERTUBE_CONTEXT.client.clientVersion"
-            "INNERTUBE_CONTEXT.client.deviceMake"
-            "INNERTUBE_CONTEXT.client.deviceModel"
-            "INNERTUBE_CONTEXT.client.gl"
-            "INNERTUBE_CONTEXT.client.hl"
-            "INNERTUBE_CONTEXT.client.originalUrl"
-            "INNERTUBE_CONTEXT.client.osName"
-            "INNERTUBE_CONTEXT.client.osVersion"
-            "INNERTUBE_CONTEXT.client.platform"
-            "INNERTUBE_CONTEXT.client.remoteHost"
-            "INNERTUBE_CONTEXT.client.userAgent"
-            "INNERTUBE_CONTEXT.client.visitorData"
-            */
         }
 
         return ytConfigData;
@@ -428,6 +430,15 @@ public partial class JsonParser
                 ?.Get("liveChatContinuation")
                 ?.Get("actions")
                 ?.ToArrayEnumerator();
+
+            if (!actions.HasValue)
+            {
+                // 若是直播中的影片時，剛載入頁面就影片聊天室的內容，這些資料也需要處理。
+                actions = jsonElement.Value.Get("contents")
+                    ?.Get("liveChatRenderer")
+                    ?.Get("actions")
+                    ?.ToArrayEnumerator();
+            }
 
             if (actions.HasValue)
             {
