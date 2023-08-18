@@ -6,6 +6,7 @@ using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using YTApi;
@@ -410,6 +411,18 @@ public partial class FMain
 
                                 summaryIdx++;
 
+                                List<string> arrayFormula = new()
+                                {
+                                    $"SUM(COUNTIF(G:G,{{\"{StringSet.ChatGeneral}\", \"{StringSet.ChatSuperChat}\",\"{StringSet.ChatSuperSticker}\"}}))&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatSuperChat}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatSuperSticker}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatJoinMember}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatMemberUpgrade}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatMemberMilestone}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatMemberGift}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{StringSet.ChatReceivedMemberGift}\")&\" 個\""
+                                };
+
                                 string[] tpLMemberJoinCounts = SharedTooltip.GetToolTip(LMemberJoinCount)
                                     .Split(new char[] { '、' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -418,7 +431,7 @@ public partial class FMain
                                     LChatCount.Text,
                                     LSuperChatCount.Text,
                                     LSuperStickerCount.Text,
-                                    LMemberJoinCount.Text,
+                                    LMemberJoinCount.Text
                                 };
 
                                 foreach (string item in tpLMemberJoinCounts)
@@ -460,11 +473,21 @@ public partial class FMain
 
                                     summaryContentRange.StyleName = "ContentStyle";
                                     summaryContentRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
-                                    summaryContentRange.Value = arrayInfo[1];
+
+                                    if (i <= arrayFormula.Count() - 1)
+                                    {
+                                        summaryContentRange.Formula = arrayFormula[i];
+                                    }
+                                    else
+                                    {
+                                        summaryContentRange.Value = arrayInfo[1];
+                                    }
+
                                     summaryContentRange.AutoFitColumns();
 
                                     summaryIdx++;
                                 }
+
 
                                 #endregion
                             }
