@@ -508,7 +508,7 @@ public partial class FMain
                                     ExcelRange headerFirstRange2 = worksheet2.Cells[1, 1];
 
                                     headerFirstRange2.StyleName = "HeaderStyle";
-                                    headerFirstRange2.Value = "分鐘";
+                                    headerFirstRange2.Value = "影片的分鐘值";
                                     headerFirstRange2.Style.Fill.SetBackground(Color.BlanchedAlmond);
 
                                     ExcelRange headerFirstRange3 = worksheet2.Cells[1, 2];
@@ -691,6 +691,10 @@ public partial class FMain
                                             int zeroBasedRow = startIdx2 - 1;
 
                                             picture.SetPosition(zeroBasedRow, 0, 0, 0);
+                                            // 欄寬為 0.98cm。
+                                            // 1% : 0.0127cm
+                                            // 77% : 98cm
+                                            picture.SetSize(77);
 
                                             imageStream.Close();
                                             imageStream.Dispose();
@@ -900,6 +904,7 @@ public partial class FMain
                                 ExcelWorksheet worksheet5 = workbook.Worksheets.Add(sheetName);
 
                                 worksheet5.DefaultRowHeight = 28;
+                                // 5:1.12cm -> 1:0.224cm
                                 worksheet5.Column(1).Width = 5.0;
 
                                 #region 建置標題
@@ -968,6 +973,10 @@ public partial class FMain
                                             int zeroBasedRow = startIdx4 - 1;
 
                                             picture.SetPosition(zeroBasedRow, 0, 0, 0);
+                                            // 欄寬為 0.98cm。
+                                            // 20% : 2.7cm -> 1% : 0.135cm
+                                            // 7.25% : 0.98cm
+                                            picture.SetSize(7);
 
                                             imageStream.Close();
                                             imageStream.Dispose();
@@ -1022,8 +1031,8 @@ public partial class FMain
 
                             workbook.Properties.Title = fileTitle;
                             workbook.Properties.Subject = fileTitle;
-                            workbook.Properties.Category = string.Empty;
-                            workbook.Properties.Keywords = string.Empty;
+                            workbook.Properties.Category = StringSet.SheetName1;
+                            workbook.Properties.Keywords = $"{StringSet.YouTube}, {StringSet.SheetName1}";
                             workbook.Properties.Author = $"{StringSet.AppName} {version}";
                             workbook.Properties.Comments = comments;
                             workbook.Properties.Company = string.Empty;
