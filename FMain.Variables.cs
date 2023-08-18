@@ -14,6 +14,10 @@ partial class DesignerBlocker { };
 public partial class FMain
 {
     private bool IsStreaming = false;
+    /// <summary>
+    /// 是否取得大張的影像檔
+    /// </summary>
+    private bool isLarge = true;
     private int SharedTimeoutMs = 0;
     private System.Windows.Forms.Timer? SharedTimer;
     private JsonElement? SharedJsonElement = new();
@@ -26,6 +30,7 @@ public partial class FMain
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ToolTip SharedTooltip = new();
+    private readonly List<StickerData> SharedStickers = new();
     private readonly List<EmojiData> SharedCustomEmojis = new();
     private readonly List<BadgeData> SharedBadges = new();
 

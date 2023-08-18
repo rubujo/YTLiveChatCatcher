@@ -36,16 +36,47 @@ public partial class JsonParser
             JsonElement? jeDelegatedSessionID = jsonElement?.Get("DELEGATED_SESSION_ID");
             JsonElement? jeInnertubeContext = jsonElement?.Get("INNERTUBE_CONTEXT");
             JsonElement? jeClient = jeInnertubeContext?.Get("client");
-            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
+            JsonElement? jeBrowserName = jeClient?.Get("browserName");
+            JsonElement? jeBrowserVersion = jeClient?.Get("browserVersion");
+            JsonElement? jeClientFormFactor = jeClient?.Get("clientFormFactor");
             JsonElement? jeClientName = jeClient?.Get("clientName");
             JsonElement? jeClientVersion = jeClient?.Get("clientVersion");
+            JsonElement? jeDeviceMake = jeClient?.Get("deviceMake");
+            JsonElement? jeDeviceModel = jeClient?.Get("deviceModel");
+            JsonElement? jeGl = jeClient?.Get("gl");
+            JsonElement? jeHl = jeClient?.Get("hl");
+            JsonElement? jeOriginalUrl = jeClient?.Get("originalUrl");
+            JsonElement? jeOsName = jeClient?.Get("osName");
+            JsonElement? jeOsVersion = jeClient?.Get("osVersion");
+            JsonElement? jePlatform = jeClient?.Get("platform");
+            JsonElement? jeRemoteHost = jeClient?.Get("remoteHost");
+            JsonElement? jeUserAgent = jeClient?.Get("userAgent");
+            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
 
             ytConfigData.APIKey = jejeInnertubeApiKey?.GetString();
-            ytConfigData.VisitorData = jeVisitorData?.GetString();
+            ytConfigData.IDToken = jeIDToken?.GetString();
+            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
+            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
+            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
+            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
+            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
+            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
+            ytConfigData.BrowserName = jeBrowserName?.GetString();
+            ytConfigData.BrowserVersion = jeBrowserVersion?.GetString();
+            ytConfigData.ClientFormFactor = jeClientFormFactor?.GetString();
             ytConfigData.ClientName = jeClientName?.GetString();
             ytConfigData.ClientVersion = jeClientVersion?.GetString();
-            ytConfigData.IDToken = jeIDToken?.GetString();
-            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
+            ytConfigData.DeviceMake = jeDeviceMake?.GetString();
+            ytConfigData.DeviceModel = jeDeviceModel?.GetString();
+            ytConfigData.Gl = jeGl?.GetString();
+            ytConfigData.Hl = jeHl?.GetString();
+            ytConfigData.OriginalUrl = jeOriginalUrl?.GetString();
+            ytConfigData.OsName = jeOsName?.GetString();
+            ytConfigData.OsVersion = jeOsVersion?.GetString();
+            ytConfigData.Platform = jePlatform?.GetString();
+            ytConfigData.RemoteHost = jeRemoteHost?.GetString();
+            ytConfigData.UserAgent = jeUserAgent?.GetString();
+            ytConfigData.VisitorData = jeVisitorData?.GetString();
 
             // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
             string[]? arrayDataSyncID = ytConfigData.DataSyncID
@@ -60,39 +91,10 @@ public partial class JsonParser
                 useDelegatedSessionID = true;
             }
 
-            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
-
             if (useDelegatedSessionID)
             {
                 ytConfigData.DataSyncID = ytConfigData.DelegatedSessionID;
             }
-
-            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
-            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
-            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
-            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
-
-            // TODO: 2023-06-12 考慮是否擴充。
-            /*
-            "INNERTUBE_CONTEXT.clickTracking.clickTrackingParams"
-            "INNERTUBE_CONTEXT.request.useSsl"
-            "INNERTUBE_CONTEXT.client.browserName"
-            "INNERTUBE_CONTEXT.client.browserVersion"
-            "INNERTUBE_CONTEXT.client.clientFormFactor"
-            "INNERTUBE_CONTEXT.client.clientName"
-            "INNERTUBE_CONTEXT.client.clientVersion"
-            "INNERTUBE_CONTEXT.client.deviceMake"
-            "INNERTUBE_CONTEXT.client.deviceModel"
-            "INNERTUBE_CONTEXT.client.gl"
-            "INNERTUBE_CONTEXT.client.hl"
-            "INNERTUBE_CONTEXT.client.originalUrl"
-            "INNERTUBE_CONTEXT.client.osName"
-            "INNERTUBE_CONTEXT.client.osVersion"
-            "INNERTUBE_CONTEXT.client.platform"
-            "INNERTUBE_CONTEXT.client.remoteHost"
-            "INNERTUBE_CONTEXT.client.userAgent"
-            "INNERTUBE_CONTEXT.client.visitorData"
-            */
         }
 
         return ytConfigData;
@@ -428,6 +430,15 @@ public partial class JsonParser
                 ?.Get("liveChatContinuation")
                 ?.Get("actions")
                 ?.ToArrayEnumerator();
+
+            if (!actions.HasValue)
+            {
+                // 若是直播中的影片時，剛載入頁面就影片聊天室的內容，這些資料也需要處理。
+                actions = jsonElement.Value.Get("contents")
+                    ?.Get("liveChatRenderer")
+                    ?.Get("actions")
+                    ?.ToArrayEnumerator();
+            }
 
             if (actions.HasValue)
             {
@@ -800,6 +811,7 @@ public partial class JsonParser
 
         bool isBold = false;
 
+        List<StickerData> tempStickers = new();
         List<EmojiData> tempEmojis = new();
 
         JsonElement? headerPrimaryText = jsonElement.Get("headerPrimaryText");
@@ -903,15 +915,49 @@ public partial class JsonParser
             }
         }
 
-        // "sticker" 的 "label"。
-        JsonElement? label = jsonElement.Get("sticker")
-            ?.Get("accessibility")
-            ?.Get("accessibilityData")
-            ?.Get("label");
+        JsonElement? sticker = jsonElement.Get("sticker");
 
-        if (label.HasValue)
+        if (sticker.HasValue)
         {
-            tempText += label.Value.GetString();
+            if (!string.IsNullOrEmpty(sticker?.ToString()))
+            {
+                StickerData stickerData = new();
+
+                // "sticker" 的 "label"。
+                JsonElement? label = sticker
+                    ?.Get("accessibility")
+                    ?.Get("accessibilityData")
+                    ?.Get("label");
+
+                if (label.HasValue)
+                {
+                    tempText += $":{label?.GetString()}:" ?? string.Empty;
+                }
+
+                // 是第一次購買超級留言或貼圖才會有。
+                JsonElement? content = jsonElement.Get("lowerBumper")
+                    ?.Get("liveChatItemBumperViewModel")
+                    ?.Get("content")
+                    ?.Get("bumperUserEduContentViewModel")
+                    ?.Get("text")
+                    ?.Get("content");
+
+                if (content.HasValue)
+                {
+                    // 手動在前後補一個空白跟 []。
+                    tempText += $" [{content?.GetString()}] " ?? string.Empty;
+                }
+
+                stickerData.ID = label.HasValue ? label?.GetString() : string.Empty;
+                stickerData.Url = GetThumbnailUrl(sticker, isLarge);
+                stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
+                stickerData.Label = label.HasValue ? label?.GetString() : string.Empty;
+
+                _logger.Debug($"方法：GetRunData() -> sticker -> 除錯用的內容：" +
+                    $"{Environment.NewLine}{sticker?.GetRawText()}{Environment.NewLine}");
+
+                tempStickers.Add(stickerData);
+            }
         }
 
         // "purchaseAmountText" 的 "simpleText"。
@@ -972,6 +1018,7 @@ public partial class JsonParser
         output.Bold = isBold;
         output.TextColor = tempTextColor;
         output.FontFace = tempFontFace;
+        output.Stickers = tempStickers;
         output.Emojis = tempEmojis;
 
         return output;
@@ -1043,19 +1090,6 @@ public partial class JsonParser
 
                         emojiData.ID = emojiId.HasValue ? emojiId?.GetString() : string.Empty;
 
-                        // 2022-05-18 不再取 "shortcuts" 的第一個值。
-                        /*
-                        JsonElement.ArrayEnumerator? shortcuts = emoji
-                            ?.Get("shortcuts")
-                            ?.ToArrayEnumerator();
-
-                        if (shortcuts?.Any() == true)
-                        {
-                            // 只取第一個。
-                            tempText += $" {shortcuts?.ElementAtOrDefault(0).GetString()} ";
-                        }
-                        */
-
                         // "image" 的 "thumbnails"。
                         JsonElement? image = emoji?.Get("image");
 
@@ -1073,7 +1107,19 @@ public partial class JsonParser
                             tempText += $" :{label?.GetString()}: ";
                         }
 
-                        emojiData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
+                        // 取 "shortcuts" 的第一個值。
+                        JsonElement.ArrayEnumerator? shortcuts = emoji
+                            ?.Get("shortcuts")
+                            ?.ToArrayEnumerator();
+
+                        if (shortcuts?.Any() == true)
+                        {
+                            // 只取第一個。
+                            emojiData.Text = $" {shortcuts?.ElementAtOrDefault(0).GetString()} ";
+                        }
+
+                        // 2023-08-17 因為部分 "emoji" 的 "label" 也是 "emoji" 本身，所以改回取 "shortcuts" 的值。
+                        //stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
                         emojiData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
                         JsonElement? isCustomEmoji = emoji?.Get("isCustomEmoji");
@@ -1210,6 +1256,7 @@ public partial class JsonParser
             BackgroundColor = backgroundColor,
             TimestampText = timestampText,
             AuthorExternalChannelID = authorExternalChannelID,
+            Stickers = messageData?.Stickers,
             Emojis = messageData?.Emojis,
             Badges = authorBadgesData?.Badges
         });

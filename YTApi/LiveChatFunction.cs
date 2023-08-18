@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using YTApi.Models;
 using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Extensions;
+using YTLiveChatCatcher.YTApi.Models;
 
 namespace YTApi;
 
@@ -179,22 +180,27 @@ public partial class LiveChatFunction
     }
 
     /// <summary>
-    /// 取得 YTConfigData
+    /// 取得 ytcfg 資料
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
     /// <param name="videoID">字串，影片 ID</param>
     /// <param name="isStreaming">布林值，用於判斷是否為直播中的影片</param>
     /// <param name="cookies">字串，Cookies</param>
     /// <param name="control">TextBox</param>
-    /// <returns>YTConfigData</returns>
-    public static YTConfigData GetYTConfigData(
+    /// <param name="isLarge">布林值，是否取得大張的影像檔，預設值為 true</param>
+    /// <returns>InitialData</returns>
+    public static InitialData GetYTConfigData(
         HttpClient httpClient,
         string videoID,
         bool isStreaming,
         string cookies,
-        TextBox control)
+        TextBox control,
+        bool isLarge = true)
     {
-        YTConfigData ytConfigData = new();
+        InitialData initialData = new()
+        {
+            YTConfigData = new()
+        };
 
         string url = isStreaming ? $"{StringSet.Origin}/live_chat?v={videoID}" :
             $"{StringSet.Origin}/watch?v={videoID}";
@@ -250,7 +256,7 @@ public partial class LiveChatFunction
 
             JsonElement jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
 
-            ytConfigData = JsonParser.ParseYtCfg(jeYtCfg);
+            initialData.YTConfigData = JsonParser.ParseYtCfg(jeYtCfg);
 
             IElement elementYtInitialData = isStreaming ?
                 scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] ="))! :
@@ -267,9 +273,15 @@ public partial class LiveChatFunction
 
             JsonElement jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
 
-            ytConfigData.Continuation = isStreaming ?
+            initialData.YTConfigData.Continuation = isStreaming ?
                 JsonParser.ParseFirstTimeContinuation(jeYtInitialData)[0] :
                 JsonParser.ParseReplayContinuation(jeYtInitialData);
+
+            // 若是直播中的影片時，剛載入頁面就影片聊天室的內容，這些資料也需要處理。
+            if (isStreaming)
+            {
+                initialData.Messages = JsonParser.ParseActions(jeYtInitialData, isLarge);
+            }
         }
         else
         {
@@ -285,21 +297,21 @@ public partial class LiveChatFunction
             });
         }
 
-        return ytConfigData;
+        return initialData;
     }
 
     /// <summary>
     /// 取得 JsonElement
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
-    /// <param name="ytConfig">YTConfig</param>
+    /// <param name="ytConfigData">YTConfig</param>
     /// <param name="isStreaming">布林值，用於判斷是否為直播中的影片</param>
     /// <param name="cookies">字串，Cookies</param>
     /// <param name="control">TextBox</param>
     /// <returns>JsonElement</returns>
     public static JsonElement GetJsonElement(
         HttpClient httpClient,
-        YTConfigData ytConfig,
+        YTConfigData ytConfigData,
         bool isStreaming,
         string cookies,
         TextBox control)
@@ -307,26 +319,26 @@ public partial class LiveChatFunction
         JsonElement jsonElement = new();
 
         string methodName = isStreaming ? "get_live_chat" : "get_live_chat_replay";
-        string url = $"{StringSet.Origin}/youtubei/v1/live_chat/{methodName}?key={ytConfig.APIKey}";
+        string url = $"{StringSet.Origin}/youtubei/v1/live_chat/{methodName}?key={ytConfigData.APIKey}";
 
         // 當 ytConfigData.Continuation 為 null 或空值時，則表示已經抓取完成。
-        if (!string.IsNullOrEmpty(ytConfig.Continuation))
+        if (!string.IsNullOrEmpty(ytConfigData.Continuation))
         {
             // 當沒有時才指定，後續不更新。
-            if (string.IsNullOrEmpty(ytConfig.InitPage))
+            if (string.IsNullOrEmpty(ytConfigData.InitPage))
             {
                 string apiType = methodName.Replace("get_", string.Empty);
 
-                ytConfig.InitPage = $"{StringSet.Origin}/{apiType}/?continuation={ytConfig.Continuation}";
+                ytConfigData.InitPage = $"{StringSet.Origin}/{apiType}/?continuation={ytConfigData.Continuation}";
             }
 
-            string jsonContent = GetRequestPayloadData(ytConfig, httpClient.DefaultRequestHeaders.UserAgent.ToString());
+            string jsonContent = GetRequestPayloadData(ytConfigData, httpClient.DefaultRequestHeaders.UserAgent.ToString());
 
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
             if (!string.IsNullOrEmpty(cookies))
             {
-                SetHttpRequestMessageHeader(httpRequestMessage, cookies, ytConfig);
+                SetHttpRequestMessageHeader(httpRequestMessage, cookies, ytConfigData);
             }
 
             HttpContent httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
@@ -384,19 +396,23 @@ public partial class LiveChatFunction
             {
                 Client = new()
                 {
-                    // 語系會影響取得的內容，強制使用 zh-TW, TW。
-                    Hl = "zh-TW",
-                    Gl = "TW",
-                    DeviceMake = string.Empty,
-                    DeviceModel = string.Empty,
-                    VisitorData = ytConfigData.VisitorData,
-                    UserAgent = userAgent,
+                    BrowserName = ytConfigData.BrowserName ?? string.Empty,
+                    BrowserVersion = ytConfigData.BrowserVersion ?? string.Empty,
+                    ClientFormFactor = ytConfigData.ClientFormFactor ?? "UNKNOWN_FORM_FACTOR",
                     ClientName = ytConfigData.ClientName,
                     ClientVersion = ytConfigData.ClientVersion,
-                    OsName = "Windows",
-                    OsVersion = "10.0",
-                    Platform = "DESKTOP",
-                    ClientFormFactor = "UNKNOWN_FORM_FACTOR",
+                    DeviceMake = ytConfigData.DeviceMake ?? string.Empty,
+                    DeviceModel = ytConfigData.DeviceModel ?? string.Empty,
+                    // 語系會影響取得的內容，使用 zh-TW, TW。
+                    Gl = ytConfigData.Gl ?? "TW",
+                    Hl = ytConfigData.Hl ?? "zh-TW",
+                    OriginalUrl = ytConfigData.OriginalUrl ?? string.Empty,
+                    OsName = ytConfigData.OsName ?? "Windows",
+                    OsVersion = ytConfigData.OsVersion ?? "10.0",
+                    Platform = ytConfigData.Platform ?? "DESKTOP",
+                    RemoteHost = ytConfigData.RemoteHost ?? "DESKTOP",
+                    UserAgent = ytConfigData.UserAgent ?? string.Empty,
+                    VisitorData = ytConfigData.VisitorData,
                     TimeZone = "Asia/Taipei"
                 }
             },

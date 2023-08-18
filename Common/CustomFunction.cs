@@ -3,6 +3,7 @@ using OfficeOpenXml.Drawing;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Globalization;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -20,6 +21,17 @@ public class CustomFunction
     /// NLog 的 Logger
     /// </summary>
     private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+    /// <summary>
+    /// 取得應用程式的版本號
+    /// </summary>
+    /// <returns>字串</returns>
+    public static string GetAppVersion()
+    {
+        Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+
+        return version != null ? $"v{version}" : string.Empty;
+    }
 
     /// <summary>
     /// 使用 SpeechSynthesizer 說話
