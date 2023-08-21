@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Windows.Forms.VisualStyles;
 using YTApi.Extensions;
 using YTLiveChatCatcher.Common.Sets;
 

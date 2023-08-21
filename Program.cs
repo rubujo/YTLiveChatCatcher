@@ -60,8 +60,8 @@ internal static class Program
                 ConsoleTarget logConsole = new("logConsole");
 
                 // Rules for mapping loggers to targets.          
-                config.AddRule(LogLevel.Debug, LogLevel.Fatal, logConsole);
-                config.AddRule(LogLevel.Debug, LogLevel.Fatal, logFile);
+                config.AddRule(minLevel: LogLevel.Debug, maxLevel: LogLevel.Fatal, target: logConsole);
+                config.AddRule(minLevel: LogLevel.Debug, maxLevel: LogLevel.Fatal, target: logFile);
 
                 // Apply config.      
                 LogManager.Configuration = config;
