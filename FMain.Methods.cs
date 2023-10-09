@@ -474,7 +474,7 @@ public partial class FMain
                                     summaryContentRange.StyleName = "ContentStyle";
                                     summaryContentRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
 
-                                    if (i <= arrayFormula.Count() - 1)
+                                    if (i <= arrayFormula.Count - 1)
                                     {
                                         summaryContentRange.Formula = arrayFormula[i];
                                     }
