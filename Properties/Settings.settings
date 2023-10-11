@@ -6,7 +6,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="UserAgent" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36</Value>
+      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36</Value>
     </Setting>
     <Setting Name="BrowserItemIndex" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">3</Value>
@@ -29,8 +29,8 @@
     <Setting Name="UpdateSettings" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="SecChUa" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">"Chromium";v="116", "Not)A;Brand";v="24", "Google Chrome";v="116"</Value>
+    <Setting Name="SecChUa" Type="System.String" Scope="User">
+      <Value Profile="(Default)">"Chromium";v="118", "Google Chrome";v="118", "Not=A?Brand";v="99"</Value>
     </Setting>
     <Setting Name="SecChUaMobile" Type="System.String" Scope="Application">
       <Value Profile="(Default)">?0</Value>

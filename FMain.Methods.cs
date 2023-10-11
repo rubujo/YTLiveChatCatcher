@@ -6,7 +6,6 @@ using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
-using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
 using YTApi;
@@ -474,7 +473,7 @@ public partial class FMain
                                     summaryContentRange.StyleName = "ContentStyle";
                                     summaryContentRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
 
-                                    if (i <= arrayFormula.Count() - 1)
+                                    if (i <= arrayFormula.Count - 1)
                                     {
                                         summaryContentRange.Formula = arrayFormula[i];
                                     }
@@ -1253,6 +1252,12 @@ public partial class FMain
         {
             // 載入使用者代理字串。
             TBUserAgent.Text = Properties.Settings.Default.UserAgent;
+        });
+
+        TBSecChUa.InvokeIfRequired(() =>
+        {
+            // 載入 Sec-CH-UA。
+            TBSecChUa.Text = Properties.Settings.Default.SecChUa;
         });
 
         LVersion.InvokeIfRequired(() =>

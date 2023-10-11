@@ -382,15 +382,13 @@ public partial class LiveChatFunction
     /// <param name="ytConfigData">YTConfigData</param>
     /// <param name="userAgent">字串，使用者代理字串</param>
     /// <returns>字串</returns>
-    private static string GetRequestPayloadData(
-        YTConfigData ytConfigData,
-        string userAgent)
+    private static string GetRequestPayloadData(YTConfigData ytConfigData, string userAgent)
     {
         // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1764
         // 參考：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/main/yt_chat.go
 
         // 內容是精簡過的。
-        return JsonSerializer.Serialize(new RequestPayloadData()
+        RequestPayloadData requestPayloadData = new()
         {
             Context = new()
             {
@@ -417,7 +415,23 @@ public partial class LiveChatFunction
                 }
             },
             Continuation = ytConfigData.Continuation
-        });
+        };
+
+        #region 最後總檢查 gl、hl 的值
+
+        if (requestPayloadData.Context.Client.Gl != "TW")
+        {
+            requestPayloadData.Context.Client.Gl = "TW";
+        }
+
+        if (requestPayloadData.Context.Client.Hl != "zh-TW")
+        {
+            requestPayloadData.Context.Client.Hl = "zh-TW";
+        }
+
+        #endregion
+
+        return JsonSerializer.Serialize(requestPayloadData);
     }
 
     /// <summary>

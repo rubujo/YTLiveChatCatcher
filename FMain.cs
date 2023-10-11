@@ -61,9 +61,16 @@ public partial class FMain : Form
 
     private void TBChannelID_TextChanged(object sender, EventArgs e)
     {
-        TBChannelID.InvokeIfRequired(async () =>
+        TextBox? textBox = (TextBox?)sender;
+
+        if (textBox == null)
         {
-            string tempValue = TBChannelID.Text.Trim();
+            return;
+        }
+
+        textBox.InvokeIfRequired(async () =>
+        {
+            string tempValue = textBox.Text.Trim();
 
             if (tempValue.Contains($"{StringSet.Origin}/channel/"))
             {
@@ -78,15 +85,22 @@ public partial class FMain : Form
                 tempValue = await LiveChatFunction.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
             }
 
-            TBChannelID.Text = tempValue;
+            textBox.Text = tempValue;
         });
     }
 
     private void TBVideoID_TextChanged(object sender, EventArgs e)
     {
-        TBVideoID.InvokeIfRequired(() =>
+        TextBox? textBox = (TextBox?)sender;
+
+        if (textBox == null)
         {
-            string tempValue = TBVideoID.Text.Trim();
+            return;
+        }
+
+        textBox.InvokeIfRequired(() =>
+        {
+            string tempValue = textBox.Text.Trim();
 
             // 參考：https://stackoverflow.com/a/15219045
             Regex regex = RegexYouTubeUrl();
@@ -100,7 +114,7 @@ public partial class FMain : Form
                 tempValue = tempArray[0];
             }
 
-            TBVideoID.Text = tempValue;
+            textBox.Text = tempValue;
         });
     }
 
@@ -151,27 +165,41 @@ public partial class FMain : Form
 
     private void CBRandomInterval_CheckedChanged(object sender, EventArgs e)
     {
-        CBRandomInterval.InvokeIfRequired(() =>
+        CheckBox? checkBox = (CheckBox?)sender;
+
+        if (checkBox == null)
+        {
+            return;
+        }
+
+        checkBox.InvokeIfRequired(() =>
         {
             TBInterval.InvokeIfRequired(() =>
             {
-                if (CBRandomInterval.Checked)
+                if (checkBox.Checked)
                 {
                     int interval = CustomFunction.GetRandomInterval();
 
                     TBInterval.Text = (interval / 1000).ToString();
                 };
 
-                TBInterval.Enabled = !CBRandomInterval.Checked;
+                TBInterval.Enabled = !checkBox.Checked;
             });
         });
     }
 
     private void RBtnStreaming_CheckedChanged(object sender, EventArgs e)
     {
-        RBtnStreaming.InvokeIfRequired(() =>
+        RadioButton? radioButton = (RadioButton?)sender;
+
+        if (radioButton == null)
         {
-            IsStreaming = RBtnStreaming.Checked;
+            return;
+        }
+
+        radioButton.InvokeIfRequired(() =>
+        {
+            IsStreaming = radioButton.Checked;
 
             if (IsStreaming != Properties.Settings.Default.IsStreaming)
             {
@@ -183,9 +211,16 @@ public partial class FMain : Form
 
     private void RBtnReplay_CheckedChanged(object sender, EventArgs e)
     {
-        RBtnReplay.InvokeIfRequired(() =>
+        RadioButton? radioButton = (RadioButton?)sender;
+
+        if (radioButton == null)
         {
-            IsStreaming = !RBtnReplay.Checked;
+            return;
+        }
+
+        radioButton.InvokeIfRequired(() =>
+        {
+            IsStreaming = !radioButton.Checked;
 
             if (IsStreaming != Properties.Settings.Default.IsStreaming)
             {
@@ -451,11 +486,18 @@ public partial class FMain : Form
 
     private void CBExportAuthorPhoto_CheckedChanged(object sender, EventArgs e)
     {
-        CBExportAuthorPhoto.InvokeIfRequired(() =>
+        CheckBox? checkBox = (CheckBox?)sender;
+
+        if (checkBox == null)
         {
-            if (CBExportAuthorPhoto.Checked != Properties.Settings.Default.ExportAuthorPhoto)
+            return;
+        }
+
+        checkBox.InvokeIfRequired(() =>
+        {
+            if (checkBox.Checked != Properties.Settings.Default.ExportAuthorPhoto)
             {
-                Properties.Settings.Default.ExportAuthorPhoto = CBExportAuthorPhoto.Checked;
+                Properties.Settings.Default.ExportAuthorPhoto = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
         });
@@ -463,11 +505,18 @@ public partial class FMain : Form
 
     private void CBEnableTTS_CheckedChanged(object sender, EventArgs e)
     {
-        CBEnableTTS.InvokeIfRequired(() =>
+        CheckBox? checkBox = (CheckBox?)sender;
+
+        if (checkBox == null)
         {
-            if (CBEnableTTS.Checked != Properties.Settings.Default.EnableTTS)
+            return;
+        }
+
+        checkBox.InvokeIfRequired(() =>
+        {
+            if (checkBox.Checked != Properties.Settings.Default.EnableTTS)
             {
-                Properties.Settings.Default.EnableTTS = CBEnableTTS.Checked;
+                Properties.Settings.Default.EnableTTS = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
         });
@@ -475,24 +524,31 @@ public partial class FMain : Form
 
     private void TBUserAgent_TextChanged(object sender, EventArgs e)
     {
-        if (!string.IsNullOrEmpty(TBUserAgent.Text))
+        TextBox? textBox = (TextBox?)sender;
+
+        if (textBox == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(textBox.Text))
         {
             string userAgent = string.Empty;
 
-            TBUserAgent.InvokeIfRequired(() =>
+            textBox.InvokeIfRequired(() =>
             {
-                userAgent = TBUserAgent.Text;
+                userAgent = textBox.Text;
             });
 
             // 取得 HttpClient。
             using HttpClient httpClient = HttpClientUtil
                 .GetHttpClient(_httpClientFactory, userAgent);
 
-            if (HttpClientUtil.SetUserAgent(httpClient, TBUserAgent.Text))
+            if (HttpClientUtil.SetUserAgent(httpClient, textBox.Text))
             {
-                if (TBUserAgent.Text != Properties.Settings.Default.UserAgent)
+                if (textBox.Text != Properties.Settings.Default.UserAgent)
                 {
-                    Properties.Settings.Default.UserAgent = TBUserAgent.Text;
+                    Properties.Settings.Default.UserAgent = textBox.Text;
                     Properties.Settings.Default.Save();
                 }
             }
@@ -536,11 +592,18 @@ public partial class FMain : Form
 
     private void CBLoadCookies_CheckedChanged(object sender, EventArgs e)
     {
-        CBLoadCookies.InvokeIfRequired(() =>
+        CheckBox? checkBox = (CheckBox?)sender;
+
+        if (checkBox == null)
         {
-            if (CBLoadCookies.Checked != Properties.Settings.Default.LoadCookies)
+            return;
+        }
+
+        checkBox.InvokeIfRequired(() =>
+        {
+            if (checkBox.Checked != Properties.Settings.Default.LoadCookies)
             {
-                Properties.Settings.Default.LoadCookies = CBLoadCookies.Checked;
+                Properties.Settings.Default.LoadCookies = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
         });
@@ -548,11 +611,18 @@ public partial class FMain : Form
 
     private void CBBrowser_SelectedIndexChanged(object sender, EventArgs e)
     {
-        CBBrowser.InvokeIfRequired(() =>
+        ComboBox? comboBox = (ComboBox?)sender;
+
+        if (comboBox == null)
         {
-            if (CBBrowser.SelectedIndex != Properties.Settings.Default.BrowserItemIndex)
+            return;
+        }
+
+        comboBox.InvokeIfRequired(() =>
+        {
+            if (comboBox.SelectedIndex != Properties.Settings.Default.BrowserItemIndex)
             {
-                Properties.Settings.Default.BrowserItemIndex = CBBrowser.SelectedIndex;
+                Properties.Settings.Default.BrowserItemIndex = comboBox.SelectedIndex;
                 Properties.Settings.Default.Save();
             }
         });
@@ -560,17 +630,24 @@ public partial class FMain : Form
 
     private void TBProfileFolderName_TextChanged(object sender, EventArgs e)
     {
-        TBProfileFolderName.InvokeIfRequired(() =>
+        TextBox? textBox = (TextBox?)sender;
+
+        if (textBox == null)
         {
-            if (TBProfileFolderName.Text != Properties.Settings.Default.ProfileFolderName)
+            return;
+        }
+
+        textBox.InvokeIfRequired(() =>
+        {
+            if (textBox.Text != Properties.Settings.Default.ProfileFolderName)
             {
                 string path = $@"C:\Users\{Environment.UserName}\AppData\Local\" +
                     $@"{CBBrowser.SelectedItem?.ToString()!.Replace(" ", "\\")}" +
-                    $@"\User Data\{TBProfileFolderName.Text}\";
+                    $@"\User Data\{textBox.Text}\";
 
                 if (Directory.Exists(path))
                 {
-                    Properties.Settings.Default.ProfileFolderName = TBProfileFolderName.Text;
+                    Properties.Settings.Default.ProfileFolderName = textBox.Text;
                     Properties.Settings.Default.Save();
 
                     WriteLog($"設定檔資料夾名稱設定成功。{Environment.NewLine}路徑：{path}");
@@ -581,6 +658,58 @@ public partial class FMain : Form
                 }
             }
         });
+    }
+
+    private void TBSecChUa_TextChanged(object sender, EventArgs e)
+    {
+        TextBox? textBox = (TextBox?)sender;
+
+        if (textBox == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(textBox.Text))
+        {
+            string secChUa = string.Empty;
+
+            textBox.InvokeIfRequired(() =>
+            {
+                secChUa = textBox.Text;
+            });
+
+            if (textBox.Text != Properties.Settings.Default.SecChUa)
+            {
+                Properties.Settings.Default.SecChUa = textBox.Text;
+                Properties.Settings.Default.Save();
+            }
+        }
+        else
+        {
+            MessageBox.Show(
+                "請輸入 Sec-CH-UA。",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+    }
+
+    private void BtnSearch_Click(object sender, EventArgs e)
+    {
+        if (LVLiveChatList.Items.Count > 0)
+        {
+            FSearch FSearch = new(this);
+
+            FSearch.Show();
+        }
+        else
+        {
+            MessageBox.Show(
+                "請確認聊天室內容列表是否有資料。",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
     }
 
     private void BtnImport_Click(object sender, EventArgs e)
@@ -620,24 +749,6 @@ public partial class FMain : Form
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
-        }
-    }
-
-    private void BtnSearch_Click(object sender, EventArgs e)
-    {
-        if (LVLiveChatList.Items.Count > 0)
-        {
-            FSearch FSearch = new(this);
-
-            FSearch.Show();
-        }
-        else
-        {
-            MessageBox.Show(
-                "請確認聊天室內容列表是否有資料。",
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Warning);
         }
     }
 
@@ -747,11 +858,18 @@ public partial class FMain : Form
 
     private void CBEnableDebug_CheckedChanged(object sender, EventArgs e)
     {
-        CBEnableDebug.InvokeIfRequired(() =>
+        CheckBox? checkBox = (CheckBox?)sender;
+
+        if (checkBox == null)
         {
-            if (CBEnableDebug.Checked != Properties.Settings.Default.EnableDebug)
+            return;
+        }
+
+        checkBox.InvokeIfRequired(() =>
+        {
+            if (checkBox.Checked != Properties.Settings.Default.EnableDebug)
             {
-                Properties.Settings.Default.EnableDebug = CBEnableDebug.Checked;
+                Properties.Settings.Default.EnableDebug = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
         });
