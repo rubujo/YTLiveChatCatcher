@@ -69,6 +69,8 @@ namespace YTLiveChatCatcher
             BtnSearch = new Button();
             BtnImport = new Button();
             BtnOpenVideoUrl = new Button();
+            LSecChUa = new Label();
+            TBSecChUa = new TextBox();
             SuspendLayout();
             // 
             // BtnStart
@@ -88,7 +90,7 @@ namespace YTLiveChatCatcher
             TBLog.Name = "TBLog";
             TBLog.ScrollBars = ScrollBars.Vertical;
             TBLog.Size = new Size(696, 109);
-            TBLog.TabIndex = 29;
+            TBLog.TabIndex = 31;
             // 
             // TBChannelID
             // 
@@ -120,10 +122,10 @@ namespace YTLiveChatCatcher
             // 
             LLiveChat.AutoSize = true;
             LLiveChat.Font = new Font("Microsoft JhengHei UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
-            LLiveChat.Location = new Point(13, 116);
+            LLiveChat.Location = new Point(14, 149);
             LLiveChat.Name = "LLiveChat";
             LLiveChat.Size = new Size(67, 15);
-            LLiveChat.TabIndex = 20;
+            LLiveChat.TabIndex = 28;
             LLiveChat.Text = "聊天室內容";
             // 
             // LChannelID
@@ -170,10 +172,10 @@ namespace YTLiveChatCatcher
             LVLiveChatList.FullRowSelect = true;
             LVLiveChatList.GridLines = true;
             LVLiveChatList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
-            LVLiveChatList.Location = new Point(12, 137);
+            LVLiveChatList.Location = new Point(12, 169);
             LVLiveChatList.Name = "LVLiveChatList";
-            LVLiveChatList.Size = new Size(961, 305);
-            LVLiveChatList.TabIndex = 21;
+            LVLiveChatList.Size = new Size(961, 273);
+            LVLiveChatList.TabIndex = 29;
             LVLiveChatList.UseCompatibleStateImageBehavior = false;
             LVLiveChatList.View = View.Details;
             LVLiveChatList.DragDrop += LVLiveChatList_DragDrop;
@@ -188,15 +190,15 @@ namespace YTLiveChatCatcher
             LLog.Location = new Point(11, 445);
             LLog.Name = "LLog";
             LLog.Size = new Size(31, 15);
-            LLog.TabIndex = 28;
+            LLog.TabIndex = 30;
             LLog.Text = "記錄";
             // 
             // BtnExport
             // 
-            BtnExport.Location = new Point(630, 108);
+            BtnExport.Location = new Point(791, 140);
             BtnExport.Name = "BtnExport";
             BtnExport.Size = new Size(75, 23);
-            BtnExport.TabIndex = 24;
+            BtnExport.TabIndex = 26;
             BtnExport.Text = "匯出 *.xlsx";
             BtnExport.UseVisualStyleBackColor = true;
             BtnExport.Click += BtnExport_Click;
@@ -206,11 +208,11 @@ namespace YTLiveChatCatcher
             PBProgress.Location = new Point(873, 576);
             PBProgress.Name = "PBProgress";
             PBProgress.Size = new Size(100, 23);
-            PBProgress.TabIndex = 40;
+            PBProgress.TabIndex = 42;
             // 
             // BtnClear
             // 
-            BtnClear.Location = new Point(898, 108);
+            BtnClear.Location = new Point(898, 140);
             BtnClear.Name = "BtnClear";
             BtnClear.Size = new Size(75, 23);
             BtnClear.TabIndex = 27;
@@ -246,10 +248,10 @@ namespace YTLiveChatCatcher
             // CBExportAuthorPhoto
             // 
             CBExportAuthorPhoto.AutoSize = true;
-            CBExportAuthorPhoto.Location = new Point(551, 112);
+            CBExportAuthorPhoto.Location = new Point(792, 116);
             CBExportAuthorPhoto.Name = "CBExportAuthorPhoto";
             CBExportAuthorPhoto.Size = new Size(74, 19);
-            CBExportAuthorPhoto.TabIndex = 23;
+            CBExportAuthorPhoto.TabIndex = 25;
             CBExportAuthorPhoto.Text = "匯出頭像";
             CBExportAuthorPhoto.UseVisualStyleBackColor = true;
             CBExportAuthorPhoto.CheckedChanged += CBExportAuthorPhoto_CheckedChanged;
@@ -260,7 +262,7 @@ namespace YTLiveChatCatcher
             LChatCount.Location = new Point(714, 465);
             LChatCount.Name = "LChatCount";
             LChatCount.Size = new Size(89, 15);
-            LChatCount.TabIndex = 30;
+            LChatCount.TabIndex = 32;
             LChatCount.Text = "留言數量：0 個";
             // 
             // LVersion
@@ -270,7 +272,7 @@ namespace YTLiveChatCatcher
             LVersion.Margin = new Padding(2, 0, 2, 0);
             LVersion.Name = "LVersion";
             LVersion.Size = new Size(43, 15);
-            LVersion.TabIndex = 37;
+            LVersion.TabIndex = 39;
             LVersion.Text = "版本號";
             // 
             // LAuthorCount
@@ -280,7 +282,7 @@ namespace YTLiveChatCatcher
             LAuthorCount.Margin = new Padding(2, 0, 2, 0);
             LAuthorCount.Name = "LAuthorCount";
             LAuthorCount.Size = new Size(89, 15);
-            LAuthorCount.TabIndex = 35;
+            LAuthorCount.TabIndex = 37;
             LAuthorCount.Text = "留言人數：0 位";
             // 
             // LSuperChatCount
@@ -290,7 +292,7 @@ namespace YTLiveChatCatcher
             LSuperChatCount.Margin = new Padding(2, 0, 2, 0);
             LSuperChatCount.Name = "LSuperChatCount";
             LSuperChatCount.Size = new Size(89, 15);
-            LSuperChatCount.TabIndex = 31;
+            LSuperChatCount.TabIndex = 33;
             LSuperChatCount.Text = "超級留言：0 個";
             // 
             // LSuperStickerCount
@@ -300,7 +302,7 @@ namespace YTLiveChatCatcher
             LSuperStickerCount.Margin = new Padding(2, 0, 2, 0);
             LSuperStickerCount.Name = "LSuperStickerCount";
             LSuperStickerCount.Size = new Size(89, 15);
-            LSuperStickerCount.TabIndex = 32;
+            LSuperStickerCount.TabIndex = 34;
             LSuperStickerCount.Text = "超級貼圖：0 個";
             // 
             // LMemberJoinCount
@@ -310,7 +312,7 @@ namespace YTLiveChatCatcher
             LMemberJoinCount.Margin = new Padding(2, 0, 2, 0);
             LMemberJoinCount.Name = "LMemberJoinCount";
             LMemberJoinCount.Size = new Size(89, 15);
-            LMemberJoinCount.TabIndex = 33;
+            LMemberJoinCount.TabIndex = 35;
             LMemberJoinCount.Text = "加入會員：0 位";
             // 
             // LMemberInRoomCount
@@ -320,13 +322,13 @@ namespace YTLiveChatCatcher
             LMemberInRoomCount.Margin = new Padding(2, 0, 2, 0);
             LMemberInRoomCount.Name = "LMemberInRoomCount";
             LMemberInRoomCount.Size = new Size(89, 15);
-            LMemberInRoomCount.TabIndex = 34;
+            LMemberInRoomCount.TabIndex = 36;
             LMemberInRoomCount.Text = "會員人數：0 位";
             // 
             // CBEnableTTS
             // 
             CBEnableTTS.AutoSize = true;
-            CBEnableTTS.Location = new Point(86, 112);
+            CBEnableTTS.Location = new Point(630, 116);
             CBEnableTTS.Name = "CBEnableTTS";
             CBEnableTTS.Size = new Size(74, 19);
             CBEnableTTS.TabIndex = 22;
@@ -340,7 +342,7 @@ namespace YTLiveChatCatcher
             LTempIncome.Location = new Point(713, 555);
             LTempIncome.Name = "LTempIncome";
             LTempIncome.Size = new Size(116, 15);
-            LTempIncome.TabIndex = 36;
+            LTempIncome.TabIndex = 38;
             LTempIncome.Text = "預計收益：共 0 元整";
             // 
             // LUserAgent
@@ -421,7 +423,7 @@ namespace YTLiveChatCatcher
             LNotice.Location = new Point(606, 582);
             LNotice.Name = "LNotice";
             LNotice.Size = new Size(101, 15);
-            LNotice.TabIndex = 38;
+            LNotice.TabIndex = 40;
             LNotice.Text = "※資訊僅供參考。";
             // 
             // CBEnableDebug
@@ -430,7 +432,7 @@ namespace YTLiveChatCatcher
             CBEnableDebug.Location = new Point(716, 580);
             CBEnableDebug.Name = "CBEnableDebug";
             CBEnableDebug.Size = new Size(122, 19);
-            CBEnableDebug.TabIndex = 39;
+            CBEnableDebug.TabIndex = 41;
             CBEnableDebug.Text = "啟用輸出除錯資訊";
             CBEnableDebug.UseVisualStyleBackColor = true;
             CBEnableDebug.CheckedChanged += CBEnableDebug_CheckedChanged;
@@ -447,21 +449,21 @@ namespace YTLiveChatCatcher
             // 
             // BtnSearch
             // 
-            BtnSearch.Location = new Point(791, 108);
+            BtnSearch.Location = new Point(630, 140);
             BtnSearch.Margin = new Padding(2);
             BtnSearch.Name = "BtnSearch";
             BtnSearch.Size = new Size(73, 23);
-            BtnSearch.TabIndex = 26;
+            BtnSearch.TabIndex = 23;
             BtnSearch.Text = "搜尋";
             BtnSearch.UseVisualStyleBackColor = true;
             BtnSearch.Click += BtnSearch_Click;
             // 
             // BtnImport
             // 
-            BtnImport.Location = new Point(711, 108);
+            BtnImport.Location = new Point(711, 140);
             BtnImport.Name = "BtnImport";
             BtnImport.Size = new Size(75, 23);
-            BtnImport.TabIndex = 25;
+            BtnImport.TabIndex = 24;
             BtnImport.Text = "匯入 *.xlsx";
             BtnImport.UseVisualStyleBackColor = true;
             BtnImport.Click += BtnImport_Click;
@@ -476,11 +478,31 @@ namespace YTLiveChatCatcher
             BtnOpenVideoUrl.UseVisualStyleBackColor = true;
             BtnOpenVideoUrl.Click += BtnOpenVideoUrl_Click;
             // 
+            // LSecChUa
+            // 
+            LSecChUa.AutoSize = true;
+            LSecChUa.Font = new Font("Microsoft JhengHei UI", 9F, FontStyle.Bold, GraphicsUnit.Point);
+            LSecChUa.Location = new Point(12, 105);
+            LSecChUa.Name = "LSecChUa";
+            LSecChUa.Size = new Size(72, 15);
+            LSecChUa.TabIndex = 20;
+            LSecChUa.Text = "Sec-CH-UA";
+            // 
+            // TBSecChUa
+            // 
+            TBSecChUa.Location = new Point(12, 123);
+            TBSecChUa.Name = "TBSecChUa";
+            TBSecChUa.Size = new Size(613, 23);
+            TBSecChUa.TabIndex = 21;
+            TBSecChUa.TextChanged += TBSecChUa_TextChanged;
+            // 
             // FMain
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(994, 611);
+            Controls.Add(TBSecChUa);
+            Controls.Add(LSecChUa);
             Controls.Add(BtnOpenVideoUrl);
             Controls.Add(BtnImport);
             Controls.Add(BtnSearch);
@@ -572,6 +594,8 @@ namespace YTLiveChatCatcher
         private Button BtnSearch;
         private Button BtnImport;
         private Button BtnOpenVideoUrl;
+        private Label LSecChUa;
+        private TextBox TBSecChUa;
     }
 }
 
