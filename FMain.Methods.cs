@@ -2566,6 +2566,7 @@ public partial class FMain
             TBUserAgent.Enabled = enable;
         });
 
+
         CBLoadCookies.InvokeIfRequired(() =>
         {
             CBLoadCookies.Enabled = enable;
@@ -2579,6 +2580,11 @@ public partial class FMain
         TBProfileFolderName.InvokeIfRequired(() =>
         {
             TBProfileFolderName.Enabled = enable;
+        });
+
+        TBSecChUa.InvokeIfRequired(() =>
+        {
+            TBSecChUa.Enabled = enable;
         });
 
         BtnImport.InvokeIfRequired(() =>
