@@ -108,7 +108,7 @@ public partial class FSearch : Form
 
                         LVFilteredList.BeginUpdate();
                         LVFilteredList.Items.Clear();
-                        LVFilteredList.Items.AddRange(dataSet);
+                        LVFilteredList.Items.AddRange(dataSet!);
                         LVFilteredList.EndUpdate();
                     }
 

@@ -124,7 +124,7 @@ public class WebBrowserUtil
             isCustomProfilePath = true;
         }
 
-        List<CookieData> outputData = new();
+        List<CookieData> outputData = [];
 
         string cookieFilePath = string.Empty;
 
@@ -228,7 +228,7 @@ public class WebBrowserUtil
         string cookieFilePath,
         string hostKey)
     {
-        List<CookieData> outputData = new();
+        List<CookieData> outputData = [];
 
         try
         {
@@ -261,7 +261,7 @@ public class WebBrowserUtil
             {
                 byte[] key = browserType switch
                 {
-                    BrowserType.MozillaFirefox => Array.Empty<byte>(),
+                    BrowserType.MozillaFirefox => [],
                     _ => AesGcm256.GetKey(browserType)
                 };
 
