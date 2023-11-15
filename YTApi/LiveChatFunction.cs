@@ -266,7 +266,7 @@ public partial class LiveChatFunction
                 elementYtInitialData.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty) :
                 elementYtInitialData.InnerHtml.Replace("var ytInitialData = ", string.Empty);
 
-            if (jsonYtInitialData.EndsWith(";"))
+            if (jsonYtInitialData.EndsWith(';'))
             {
                 jsonYtInitialData = jsonYtInitialData[0..^1];
             }
@@ -453,8 +453,10 @@ public partial class LiveChatFunction
         {
             httpRequestMessage.Headers.Add("Cookie", cookies);
 
+            char[] separators1 = [';'], separators2 = ['='];
+
             string[] cookiesArray = cookies.Split(
-                new char[] { ';' },
+                separators1,
                 StringSplitOptions.RemoveEmptyEntries);
 
             string? sapiSid = cookiesArray.FirstOrDefault(n => n.Contains("SAPISID"));
@@ -462,7 +464,7 @@ public partial class LiveChatFunction
             if (!string.IsNullOrEmpty(sapiSid))
             {
                 string[] tempArray = sapiSid.Split(
-                    new char[] { '=' },
+                    separators2,
                     StringSplitOptions.RemoveEmptyEntries);
 
                 if (tempArray.Length == 2)

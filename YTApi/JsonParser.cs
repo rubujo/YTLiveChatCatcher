@@ -422,7 +422,7 @@ public partial class JsonParser
     /// <returns>List&lt;RendererData&gt;</returns>
     public static List<RendererData> ParseActions(JsonElement? jsonElement, bool isLarge = true)
     {
-        List<RendererData> output = new();
+        List<RendererData> output = [];
 
         if (jsonElement.HasValue)
         {
@@ -545,7 +545,7 @@ public partial class JsonParser
     /// <returns>List&lt;RendererData&gt;</returns>
     public static List<RendererData> ParseRenderer(JsonElement jsonElement, bool isLarge = true)
     {
-        List<RendererData> output = new();
+        List<RendererData> output = [];
 
         // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L969
         if (jsonElement.TryGetProperty(
@@ -739,7 +739,7 @@ public partial class JsonParser
 
         if (authorBadges.HasValue)
         {
-            List<BadgeData> tempBadges = new();
+            List<BadgeData> tempBadges = [];
 
             foreach (JsonElement singleAuthorBadge in authorBadges)
             {
@@ -811,8 +811,8 @@ public partial class JsonParser
 
         bool isBold = false;
 
-        List<StickerData> tempStickers = new();
-        List<EmojiData> tempEmojis = new();
+        List<StickerData> tempStickers = [];
+        List<EmojiData> tempEmojis = [];
 
         JsonElement? headerPrimaryText = jsonElement.Get("headerPrimaryText");
 
@@ -1046,7 +1046,7 @@ public partial class JsonParser
 
             bool isBold = false;
 
-            List<EmojiData> tempEmojis = new();
+            List<EmojiData> tempEmojis = [];
 
             foreach (JsonElement singleRun in runs)
             {
