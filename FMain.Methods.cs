@@ -32,8 +32,8 @@ public partial class FMain
     public static void InitListView(ListView listview)
     {
         ColumnHeader[] columnHeaders =
-        {
-            new ColumnHeader()
+        [
+            new()
             {
                 Name = "AuthorName",
                 Text = "作者名稱",
@@ -41,7 +41,7 @@ public partial class FMain
                 Width = 140,
                 DisplayIndex = 0
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "AuthorBages",
                 Text = "徽章",
@@ -49,7 +49,7 @@ public partial class FMain
                 Width = 100,
                 DisplayIndex = 1
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "Message",
                 Text = "訊息",
@@ -57,7 +57,7 @@ public partial class FMain
                 Width = 320,
                 DisplayIndex = 2
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "PurchaseAmount",
                 Text = "金額",
@@ -65,7 +65,7 @@ public partial class FMain
                 Width = 80,
                 DisplayIndex = 3
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "TimestampUsec",
                 Text = "時間",
@@ -73,7 +73,7 @@ public partial class FMain
                 Width = 150,
                 DisplayIndex = 4
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "Type",
                 Text = "類型",
@@ -81,7 +81,7 @@ public partial class FMain
                 Width = 100,
                 DisplayIndex = 5
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "BackgroundColor",
                 Text = "背景顏色",
@@ -90,7 +90,7 @@ public partial class FMain
                 Width = 0,
                 DisplayIndex = 6
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "TimestampText",
                 Text = "時間標記文字",
@@ -99,7 +99,7 @@ public partial class FMain
                 Width = 0,
                 DisplayIndex = 7
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "AuthorPhotoUrl",
                 Text = "頭像網址",
@@ -108,7 +108,7 @@ public partial class FMain
                 Width = 0,
                 DisplayIndex = 8
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "AuthorExternalChannelID",
                 Text = "外部頻道 ID",
@@ -117,7 +117,7 @@ public partial class FMain
                 Width = 0,
                 DisplayIndex = 9
             },
-            new ColumnHeader()
+            new()
             {
                 Name = "MessageID",
                 Text = "訊息 ID 值",
@@ -126,7 +126,7 @@ public partial class FMain
                 Width = 0,
                 DisplayIndex = 10
             }
-        };
+        ];
 
         listview.Columns.AddRange(columnHeaders);
 
@@ -256,7 +256,7 @@ public partial class FMain
 
                             using ExcelPackage package = new();
 
-                            double[] widthSet = { 5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 0.0 };
+                            double[] widthSet = [5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 0.0];
 
                             ExcelWorkbook workbook = package.Workbook;
                             ExcelWorksheet worksheet1 = workbook.Worksheets.Add(StringSet.SheetName1);
@@ -410,8 +410,8 @@ public partial class FMain
 
                                 summaryIdx++;
 
-                                List<string> arrayFormula = new()
-                                {
+                                List<string> arrayFormula =
+                                [
                                     $"SUM(COUNTIF(G:G,{{\"{StringSet.ChatGeneral}\", \"{StringSet.ChatSuperChat}\",\"{StringSet.ChatSuperSticker}\"}}))&\" 個\"",
                                     $"COUNTIF(G:G,\"{StringSet.ChatSuperChat}\")&\" 個\"",
                                     $"COUNTIF(G:G,\"{StringSet.ChatSuperSticker}\")&\" 個\"",
@@ -420,32 +420,29 @@ public partial class FMain
                                     $"COUNTIF(G:G,\"{StringSet.ChatMemberMilestone}\")&\" 個\"",
                                     $"COUNTIF(G:G,\"{StringSet.ChatMemberGift}\")&\" 個\"",
                                     $"COUNTIF(G:G,\"{StringSet.ChatReceivedMemberGift}\")&\" 個\""
-                                };
+                                ];
 
-                                string[] tpLMemberJoinCounts = SharedTooltip.GetToolTip(LMemberJoinCount)
-                                    .Split(new char[] { '、' }, StringSplitOptions.RemoveEmptyEntries);
+                                char[] separators1 = ['、'];
 
-                                List<string> arraySummaryInfo = new()
-                                {
+                                string[] tpLMemberJoinCounts = SharedTooltip?.GetToolTip(LMemberJoinCount)
+                                    ?.Split(separators1, StringSplitOptions.RemoveEmptyEntries) ?? [];
+
+                                List<string> arraySummaryInfo =
+                                [
                                     LChatCount.Text,
                                     LSuperChatCount.Text,
                                     LSuperStickerCount.Text,
-                                    LMemberJoinCount.Text
-                                };
+                                    LMemberJoinCount.Text,
+                                    .. tpLMemberJoinCounts,
+                                    .. new List<string>
+                                    {
+                                        LMemberInRoomCount.Text,
+                                        LAuthorCount.Text,
+                                        LTempIncome.Text,
+                                    }
+                                ];
 
-                                foreach (string item in tpLMemberJoinCounts)
-                                {
-                                    arraySummaryInfo.Add(item);
-                                }
-
-                                arraySummaryInfo.AddRange(new List<string>
-                                {
-                                    LMemberInRoomCount.Text,
-                                    LAuthorCount.Text,
-                                    LTempIncome.Text,
-                                });
-
-                                string tpLTempIncome = SharedTooltip.GetToolTip(LTempIncome);
+                                string tpLTempIncome = SharedTooltip?.GetToolTip(LTempIncome) ?? string.Empty;
 
                                 if (!string.IsNullOrEmpty(tpLTempIncome))
                                 {
@@ -455,9 +452,11 @@ public partial class FMain
                                 // 設定預設寬度。
                                 worksheet1.Column(14).Width = 15.0;
 
+                                char[] separators2 = ['：'];
+
                                 for (int i = 0; i < arraySummaryInfo.Count; i++)
                                 {
-                                    string[] arrayInfo = arraySummaryInfo[i].Split(new char[] { '：' },
+                                    string[] arrayInfo = arraySummaryInfo[i].Split(separators2,
                                         StringSplitOptions.RemoveEmptyEntries);
 
                                     ExcelRange summaryTitleRange = worksheet1.Cells[summaryIdx, 14];
@@ -919,7 +918,7 @@ public partial class FMain
 
                             #region 超級貼圖
 
-                            if (SharedStickers.Any())
+                            if (SharedStickers.Count != 0)
                             {
                                 string sheetName = StringSet.SheetName6;
 
@@ -1430,7 +1429,7 @@ public partial class FMain
     {
         try
         {
-            List<ListViewItem> listTempItem = new();
+            List<ListViewItem> listTempItem = [];
 
             foreach (RendererData rendererData in messages)
             {
@@ -1642,19 +1641,6 @@ public partial class FMain
                     UseItemStyleForSubItems = false
                 };
 
-                string[] subItemContents = new string[10];
-
-                subItemContents[0] = authorBages;
-                subItemContents[1] = messageContent;
-                subItemContents[2] = purchaseAmountText;
-                subItemContents[3] = timestampUsec;
-                subItemContents[4] = type;
-                subItemContents[5] = backgroundColor;
-                subItemContents[6] = timestampText;
-                subItemContents[7] = authorPhotoUrl;
-                subItemContents[8] = authorExternalChannelID;
-                subItemContents[9] = id;
-
                 if (authorBages.Contains(StringSet.BadgeOwner))
                 {
                     lvItem.SubItems[0].ForeColor = Color.Orange;
@@ -1675,6 +1661,20 @@ public partial class FMain
                 {
                     lvItem.SubItems[0].ForeColor = Color.Black;
                 }
+
+                string[] subItemContents =
+                [
+                    authorBages,
+                    messageContent,
+                    purchaseAmountText,
+                    timestampUsec,
+                    type,
+                    backgroundColor,
+                    timestampText,
+                    authorPhotoUrl,
+                    authorExternalChannelID,
+                    id,
+                ];
 
                 lvItem.SubItems.AddRange(subItemContents);
 
@@ -1842,7 +1842,7 @@ public partial class FMain
 
                 if (sheet1 != null)
                 {
-                    List<ListViewItem> listTempItem = new();
+                    List<ListViewItem> listTempItem = [];
 
                     int rowIdx1 = 2;
 
@@ -1871,19 +1871,6 @@ public partial class FMain
                             UseItemStyleForSubItems = false
                         };
 
-                        string[] subItemContents = new string[10];
-
-                        subItemContents[0] = authorBages;
-                        subItemContents[1] = messageContent;
-                        subItemContents[2] = purchaseAmmount;
-                        subItemContents[3] = timestampUsec;
-                        subItemContents[4] = type;
-                        subItemContents[5] = backgroundColor;
-                        subItemContents[6] = timestampText;
-                        subItemContents[7] = authorPhotoUrl;
-                        subItemContents[8] = authorExternalChannelID;
-                        subItemContents[9] = id;
-
                         if (authorBages.Contains(StringSet.BadgeOwner))
                         {
                             lvItem.SubItems[0].ForeColor = Color.Orange;
@@ -1904,6 +1891,20 @@ public partial class FMain
                         {
                             lvItem.SubItems[0].ForeColor = Color.Black;
                         }
+
+                        string[] subItemContents =
+                        [
+                            authorBages,
+                            messageContent,
+                            purchaseAmmount,
+                            timestampUsec,
+                            type,
+                            backgroundColor,
+                            timestampText,
+                            authorPhotoUrl,
+                            authorExternalChannelID,
+                            id,
+                        ];
 
                         lvItem.SubItems.AddRange(subItemContents);
 
@@ -2390,7 +2391,7 @@ public partial class FMain
             IEnumerable<ListViewItem> tempDataSet = dataSet.Where(n =>
                 (n.SubItems[5].Text == StringSet.ChatSuperChat ||
                 n.SubItems[5].Text == StringSet.ChatSuperSticker) &&
-                n.SubItems[3].Text.StartsWith("$"));
+                n.SubItems[3].Text.StartsWith('$'));
 
             double totalIncome = 0.0;
 
@@ -2566,6 +2567,7 @@ public partial class FMain
             TBUserAgent.Enabled = enable;
         });
 
+
         CBLoadCookies.InvokeIfRequired(() =>
         {
             CBLoadCookies.Enabled = enable;
@@ -2579,6 +2581,11 @@ public partial class FMain
         TBProfileFolderName.InvokeIfRequired(() =>
         {
             TBProfileFolderName.Enabled = enable;
+        });
+
+        TBSecChUa.InvokeIfRequired(() =>
+        {
+            TBSecChUa.Enabled = enable;
         });
 
         BtnImport.InvokeIfRequired(() =>
@@ -2608,7 +2615,7 @@ public partial class FMain
 
                 CBBrowser.InvokeIfRequired(() =>
                 {
-                    List<WebBrowserUtil.CookieData> cookies = CBBrowser.SelectedItem.ToString() switch
+                    List<WebBrowserUtil.CookieData> cookies = CBBrowser.SelectedItem?.ToString() switch
                     {
                         "Brave" => WebBrowserUtil.GetCookies(
                             WebBrowserUtil.BrowserType.Brave,
