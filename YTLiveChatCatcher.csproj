@@ -7,10 +7,12 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UseWindowsForms>true</UseWindowsForms>
 		<RootNamespace>YTLiveChatCatcher</RootNamespace>
-		<Version>1.5.0</Version>
+		<Version>1.5.1</Version>
 		<AssemblyName>YTLiveChatCatcher</AssemblyName>
 		<ApplicationIcon>Resources\app_icon_large.ico</ApplicationIcon>
 		<DebugType>embedded</DebugType>
+		<Authors>perditavojo</Authors>
+		<Company>DD們的避難所</Company>
 	</PropertyGroup>
 
 	<ItemGroup>

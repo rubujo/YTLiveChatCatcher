@@ -1066,7 +1066,7 @@ public partial class FMain
                         }
                     }).ContinueWith(task =>
                     {
-                        TerminateLongTask(isImport: false);
+                        TerminateLongTask(listView, isImport: false);
                     });
                 }
                 else
@@ -2333,46 +2333,50 @@ public partial class FMain
     }
 
     /// <summary>
-    /// 終止匯入/匯出任務
+    /// 終止匯入／匯出任務
     /// </summary>
+    /// <param name="listView">ListView，預設值為 null</param>
     /// <param name="isImport">布林值，判斷是否為匯入，預設值為 false</param>
-    private void TerminateLongTask(bool isImport = false)
+    private void TerminateLongTask(ListView? listView = null, bool isImport = false)
     {
-
-        CBExportAuthorPhoto.InvokeIfRequired(() =>
+        // 判斷 listView 是不是 LVLiveChatList。
+        if (listView?.Name == LVLiveChatList.Name)
         {
-            CBExportAuthorPhoto.Enabled = true;
-        });
+            CBExportAuthorPhoto.InvokeIfRequired(() =>
+            {
+                CBExportAuthorPhoto.Enabled = true;
+            });
 
-        BtnStart.InvokeIfRequired(() =>
-        {
-            BtnStart.Enabled = true;
-        });
+            BtnStart.InvokeIfRequired(() =>
+            {
+                BtnStart.Enabled = true;
+            });
 
-        BtnExport.InvokeIfRequired(() =>
-        {
-            BtnExport.Enabled = true;
-        });
+            BtnExport.InvokeIfRequired(() =>
+            {
+                BtnExport.Enabled = true;
+            });
 
-        BtnClear.InvokeIfRequired(() =>
-        {
-            BtnClear.Enabled = true;
-        });
+            BtnClear.InvokeIfRequired(() =>
+            {
+                BtnClear.Enabled = true;
+            });
 
-        TBUserAgent.InvokeIfRequired(() =>
-        {
-            TBUserAgent.Enabled = true;
-        });
+            TBUserAgent.InvokeIfRequired(() =>
+            {
+                TBUserAgent.Enabled = true;
+            });
 
-        BtnImport.InvokeIfRequired(() =>
-        {
-            BtnImport.Enabled = true;
-        });
+            BtnImport.InvokeIfRequired(() =>
+            {
+                BtnImport.Enabled = true;
+            });
 
-        PBProgress.InvokeIfRequired(() =>
-        {
-            PBProgress.Style = ProgressBarStyle.Blocks;
-        });
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Style = ProgressBarStyle.Blocks;
+            });
+        }
 
         string taskWord = isImport ? "匯入" : "匯出";
 
