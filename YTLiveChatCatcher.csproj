@@ -18,13 +18,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AngleSharp" Version="1.0.6" />
+		<PackageReference Include="AngleSharp" Version="1.0.7" />
 		<PackageReference Include="EPPlus" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
-		<PackageReference Include="NLog" Version="5.2.5" />
+		<PackageReference Include="NLog" Version="5.2.6" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.5" />
 		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
 	</ItemGroup>
