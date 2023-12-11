@@ -38,7 +38,7 @@ namespace YTLiveChatCatcher.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/119.0.0.0 Safari/537.36")]
+            "Chrome/120.0.0.0 Safari/537.36")]
         public string UserAgent {
             get {
                 return ((string)(this["UserAgent"]));
@@ -134,7 +134,7 @@ namespace YTLiveChatCatcher.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \"Not?A_Brand\";v=\"24\"")]
+        [global::System.Configuration.DefaultSettingValueAttribute("\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"")]
         public string SecChUa {
             get {
                 return ((string)(this["SecChUa"]));

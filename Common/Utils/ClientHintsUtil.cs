@@ -27,7 +27,7 @@ public class ClientHintsUtil
         { "Sec-CH-UA-Platform-Version", string.Empty },
         { "Sec-Fetch-Site", Properties.Settings.Default.SecFetchSite },
         { "Sec-Fetch-Mode", Properties.Settings.Default.SecFetchMode },
-        // TODO: 2023-03-28 目前未使用 Sec-Fetch-User。
+        // TODO: 2023/3/28 目前未使用 Sec-Fetch-User。
         //{ "Sec-Fetch-User", Properties.Settings.Default.SecFetchUser },
         { "Sec-Fetch-Dest", Properties.Settings.Default.SecFetchDest }
     };

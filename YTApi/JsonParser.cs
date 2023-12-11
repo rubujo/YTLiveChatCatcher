@@ -444,7 +444,7 @@ public partial class JsonParser
             {
                 foreach (JsonElement singleAction in actions)
                 {
-                    // TODO: 2023-05-29 測試如何解析 addBannerToLiveChatCommand。
+                    // TODO: 2023/5/29 測試如何解析 addBannerToLiveChatCommand。
                     _logger.Debug("singleAction");
                     _logger.Debug(singleAction);
 
@@ -455,7 +455,7 @@ public partial class JsonParser
                         output.AddRange(ParseRenderer(item.Value, isLarge));
                     }
 
-                    // TODO: 2023-05-29 未測試，不確定是否有效。。
+                    // TODO: 2023/5/29 未測試，不確定是否有效。
                     JsonElement? singleBannerRenderer = singleAction
                         .Get("addBannerToLiveChatCommand")
                         ?.Get("bannerRenderer");
@@ -521,7 +521,7 @@ public partial class JsonParser
                         }
                     }
 
-                    // TODO: 2023-05-29 用於取得 replaceChatItemAction 使用。
+                    // TODO: 2023/5/29 用於取得 replaceChatItemAction 使用。
                     JsonElement? replaceAction = singleAction
                         .Get("replaceChatItemAction");
 
@@ -643,7 +643,7 @@ public partial class JsonParser
             _logger.Debug("liveChatBannerRenderer");
             _logger.Debug(liveChatBannerRenderer);
 
-            // TODO: 2023-05-29 有插入時間順序的問題。
+            // TODO: 2023/5/29 有插入時間順序的問題。
             if (liveChatBannerRenderer.TryGetProperty(
                 "header",
                 out JsonElement header))

@@ -224,7 +224,7 @@ public partial class LiveChatFunction
             IElement elementYtCfg = scriptElements
                 .FirstOrDefault(n => n.InnerHtml.Contains("ytcfg.set({"))!;
 
-            // TODO: 2023-06-13 考慮是否待修改。
+            // TODO: 2023/6/13 考慮是否待修改。
             // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v1.0.5/yt_chat.go#L140
             // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
             string jsonYtCfg = elementYtCfg.InnerHtml;
