@@ -3,7 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YTLiveChatCatcher", "YTLiveChatCatcher.csproj", "{F2CD9378-5A10-459F-84CB-13B7D600EB64}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YTLiveChatCatcher", "YTLiveChatCatcher\YTLiveChatCatcher.csproj", "{F2CD9378-5A10-459F-84CB-13B7D600EB64}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiveChatCatcher", "LiveChatCatcher\LiveChatCatcher.csproj", "{CEABA311-AEA0-4323-ACA6-F2CA914A36F4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "方案項目", "方案項目", "{E1D426D8-1C1D-48B5-83F4-06D4433A55A7}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +24,10 @@ Global
 		{F2CD9378-5A10-459F-84CB-13B7D600EB64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2CD9378-5A10-459F-84CB-13B7D600EB64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2CD9378-5A10-459F-84CB-13B7D600EB64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEABA311-AEA0-4323-ACA6-F2CA914A36F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEABA311-AEA0-4323-ACA6-F2CA914A36F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEABA311-AEA0-4323-ACA6-F2CA914A36F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEABA311-AEA0-4323-ACA6-F2CA914A36F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
