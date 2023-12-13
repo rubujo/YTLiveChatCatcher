@@ -8,6 +8,7 @@
     <Authors>perditavojo</Authors>
     <Version>1.0.0</Version>
     <Description>用於取得 YouTube 即時聊天資料的函式庫。</Description>
+    <RootNamespace>Rubujo.YouTube.Utility</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -20,7 +21,12 @@
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.0.7" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.3" />
+    <PackageReference Include="Microsoft.Maui.Graphics.Skia" Version="8.0.3" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+    <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

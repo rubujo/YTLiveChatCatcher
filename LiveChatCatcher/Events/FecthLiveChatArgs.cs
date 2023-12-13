@@ -1,6 +1,6 @@
-﻿using LiveChatCatcher.Models;
+﻿using Rubujo.YouTube.Utility.Models;
 
-namespace LiveChatCatcher.Events;
+namespace Rubujo.YouTube.Utility.Events;
 
 /// <summary>
 /// 即時聊天獲取事件參數

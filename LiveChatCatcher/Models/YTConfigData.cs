@@ -1,4 +1,4 @@
-﻿namespace LiveChatCatcher.Models;
+﻿namespace Rubujo.YouTube.Utility.Models;
 
 /// <summary>
 /// ytcfg 資料

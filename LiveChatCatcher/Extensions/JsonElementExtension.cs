@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
-using LiveChatCatcher.Sets;
+using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher.Extensions;
+namespace Rubujo.YouTube.Utility.Extensions;
 
 /// <summary>
 /// JsonElement 的擴充方法

@@ -2,17 +2,19 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
-using LiveChatCatcher.Sets;
+using Rubujo.YouTube.Utility.Sets;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
+using YTLiveChatCatcher.Common.Utils;
 
-namespace LiveChatCatcher;
+namespace Rubujo.YouTube.Utility;
 
 /// <summary>
-/// Catcher 的公開方法
+/// LiveChatCatcher 的公開方法
 /// </summary>
-public partial class Catcher
+public partial class LiveChatCatcher
 {
     /// <summary>
     /// 取得 Task
@@ -49,77 +51,100 @@ public partial class Catcher
     /// </summary>
     /// <returns>字串，Cookies</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public string? GetCookkise()
+    public string? GetCookies()
     {
         return SharedCookies;
     }
 
     /// <summary>
-    /// 設定 Cookies
-    /// </summary>
-    /// <param name="value">字串，Cookies/param>
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public void SetCookkise(string value)
-    {
-        SharedCookies = value;
-    }
-
-    /// <summary>
-    /// 取得 IsStreaming
+    /// 取得使用 Cookies
     /// </summary>
     /// <returns>布林值</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public bool GetIsStreaming()
+    public bool UseCookies()
+    {
+        return !string.IsNullOrEmpty(SharedCookies);
+    }
+
+    /// <summary>
+    /// 設定使用 Cookies
+    /// </summary>
+    /// <param name="enable">布林值，啟用，預設值為 false</param>
+    /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
+    /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
+    [SupportedOSPlatform("windows")]
+    public void UseCookies(
+        bool enable = false,
+        WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
+        string profileFolderName = "")
+    {
+        if (enable)
+        {
+            SharedCookies = GetYouTubeCookies(browserType, profileFolderName);
+        }
+        else
+        {
+            SharedCookies = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 取得是否為直播
+    /// </summary>
+    /// <returns>布林值</returns>
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public bool IsStreaming()
     {
         return SharedIsStreaming;
     }
 
     /// <summary>
-    /// 設定 IsStreaming
+    /// 設定是否為直播
     /// </summary>
     /// <param name="value">布林值</param>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public void SetIsStreaming(bool value)
+    public void IsStreaming(bool value)
     {
         SharedIsStreaming = value;
     }
 
     /// <summary>
-    /// 取得 FetchLargePicture
+    /// 取得是否獲取大張圖片
     /// </summary>
     /// <returns>布林值</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public bool GetFetchLargePicture()
+    public bool FetchLargePicture()
     {
-        return SharedFetchLargePicture;
+        return SharedIsFetchLargePicture;
     }
 
     /// <summary>
-    /// 設定 FetchLargePicture
+    /// 設定是否獲取大張圖片
     /// </summary>
     /// <param name="value">布林值</param>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public void SetFetchLargePicture(bool value)
+    public void FetchLargePicture(bool value)
     {
-        SharedFetchLargePicture = value;
+        SharedIsFetchLargePicture = value;
     }
 
     /// <summary>
-    /// 取得 TimeoutMs
+    /// 取得逾時毫秒值
     /// </summary>
     /// <returns>數值</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public int GetTimeoutMs()
+    public int TimeoutMs()
     {
         return SharedTimeoutMs;
     }
 
     /// <summary>
-    /// 設定 TimeoutMs
+    /// 設定逾時毫秒值
+    /// <para>※極其不建議將值設太低，尤其是有呼叫 LiveChatCatcher.UseCookies() 方法時。</para>
     /// </summary>
     /// <param name="value">數值，值</param>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public void SetTimeoutMs(int value)
+    public void TimeoutMs(int value)
     {
         SharedTimeoutMs = value;
     }
@@ -281,5 +306,49 @@ public partial class Catcher
         }
 
         return videoTitle;
+    }
+
+    /// <summary>
+    /// 取得 YouTube 的 Coookies
+    /// </summary>
+    /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
+    /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
+    /// <returns>字串</returns>
+    [SupportedOSPlatform("windows")]
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public string GetYouTubeCookies(
+        WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
+        string profileFolderName = "")
+    {
+        List<WebBrowserUtil.CookieData> cookies = WebBrowserUtil
+            .GetCookies(
+                browserType,
+                profileFolderName,
+                ".youtube.com");
+
+        return string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
+    }
+
+    /// <summary>
+    /// 取得特定 Host 的 Coookies
+    /// </summary>
+    /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
+    /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
+    /// <param name="host">字串，Host，預設值為空白</param>
+    /// <returns>字串</returns>
+    [SupportedOSPlatform("windows")]
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public string GetHostCookies(
+        WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
+        string profileFolderName = "",
+        string host = "")
+    {
+        List<WebBrowserUtil.CookieData> cookies = WebBrowserUtil
+            .GetCookies(
+                browserType,
+                profileFolderName,
+                host);
+
+        return string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
     }
 }

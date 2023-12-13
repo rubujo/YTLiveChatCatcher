@@ -27,14 +27,12 @@
 
 	<ItemGroup>
 		<PackageReference Include="EPPlus" Version="7.0.3" />
-		<PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.3" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
 		<PackageReference Include="NLog" Version="5.2.7" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.7" />
-		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
 	</ItemGroup>
 
 	<ItemGroup>

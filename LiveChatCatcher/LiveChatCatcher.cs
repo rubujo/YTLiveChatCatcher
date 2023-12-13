@@ -1,36 +1,33 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using LiveChatCatcher.Models;
-using LiveChatCatcher.Sets;
+using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher;
+namespace Rubujo.YouTube.Utility;
 
 /// <summary>
-/// Catcher
+/// LiveChatCatcher
 /// </summary>
-public partial class Catcher
+public partial class LiveChatCatcher
 {
     /// <summary>
     /// 初始化
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
-    /// <param name="cookies">字串，Cookies 字串</param>
     /// <param name="timeoutMs">數值，逾時的毫秒值，預設值 3000</param>
     /// <param name="isStreaming">布林值，是否為直播，預設值為 false</param>
-    /// <param name="fetchLargePicture">布林值，是否取得大張圖片，預設值為 true</param>
+    /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片，預設值為 true</param>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
     public void Init(
         HttpClient httpClient,
-        string cookies,
         int timeoutMs = 3000,
         bool isStreaming = false,
-        bool fetchLargePicture = true)
+        bool isFetchLargePicture = true)
     {
         SharedHttpClient = httpClient;
-        SharedCookies = cookies;
         SharedTimeoutMs = timeoutMs;
         SharedIsStreaming = isStreaming;
-        SharedFetchLargePicture = fetchLargePicture;
+        SharedIsFetchLargePicture = isFetchLargePicture;
     }
 
     /// <summary>

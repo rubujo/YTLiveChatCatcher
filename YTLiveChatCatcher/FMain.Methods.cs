@@ -2,9 +2,8 @@
 using HorizontalAlignment = System.Windows.Forms.HorizontalAlignment;
 using GetCachable;
 using ImageFormat = System.Drawing.Imaging.ImageFormat;
-using LiveChatCatcher.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Graphics.Platform;
 using NLog;
 using OfficeOpenXml;
 using OfficeOpenXml.Drawing;
@@ -12,12 +11,16 @@ using OfficeOpenXml.Drawing.Chart;
 using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
+using Rubujo.YouTube.Utility.Events;
+using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Sets;
 using Size = System.Drawing.Size;
+using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using System.Runtime.Versioning;
 using YTLiveChatCatcher.Common;
-using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
+using Rubujo.YouTube.Utility.Extensions;
 
 namespace YTLiveChatCatcher;
 
@@ -163,15 +166,15 @@ public partial class FMain
 
                 string speakText = string.Empty;
 
-                if (type == LiveChatCatcher.Sets.StringSet.ChatGeneral ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatSuperChat ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatSuperSticker)
+                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatGeneral ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker)
                 {
                     speakText = $"{authorName}說{message}";
                 }
                 else
                 {
-                    if (type != LiveChatCatcher.Sets.StringSet.YouTube)
+                    if (type != Rubujo.YouTube.Utility.Sets.StringSet.YouTube)
                     {
                         speakText = $"{authorName}";
                     }
@@ -198,18 +201,6 @@ public partial class FMain
                 FileName = $"{StringSet.SheetName1}_{DateTime.Now:yyyyMMdd}"
             };
 
-            string userAgent = string.Empty;
-
-            TBUserAgent.InvokeIfRequired(() =>
-            {
-                userAgent = TBUserAgent.Text;
-            });
-
-            // 取得 HttpClient。
-            using HttpClient httpClient = HttpClientUtil.GetHttpClient(
-                _httpClientFactory,
-                userAgent);
-
             string videoID = string.Empty;
 
             TBVideoID.InvokeIfRequired(() =>
@@ -218,7 +209,7 @@ public partial class FMain
             });
 
             // 取得影片的標題。
-            string videoTitle = SharedCatcher.GetVideoTitle(videoID);
+            string videoTitle = SharedLiveChatCatcher.GetVideoTitle(videoID);
 
             if (!string.IsNullOrEmpty(videoTitle))
             {
@@ -329,7 +320,7 @@ public partial class FMain
                             {
                                 IEnumerable<ListViewItem> dataSet = listView.GetListViewItems()
                                     .Where(n => n.SubItems[5].Text != StringSet.AppName &&
-                                        n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.YouTube);
+                                        n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube);
 
                                 foreach (ListViewItem listViewItem in dataSet)
                                 {
@@ -350,7 +341,7 @@ public partial class FMain
 
                                             if (imageStream != null)
                                             {
-                                                // 2021-04-01
+                                                // 2021/4/1
                                                 // 對名稱加料，以免造成例外。
                                                 // 還沒找到方法可以重複利用 ExcelPicture。
                                                 ExcelPicture picture = worksheet1.Drawings
@@ -412,16 +403,16 @@ public partial class FMain
 
                                 List<string> arrayFormula =
                                 [
-                                    $"SUM(COUNTIF(G:G,{{\"{LiveChatCatcher.Sets.StringSet.ChatGeneral}\", " +
-                                    $"\"{LiveChatCatcher.Sets.StringSet.ChatSuperChat}\"," +
-                                    $"\"{LiveChatCatcher.Sets.StringSet.ChatSuperSticker}\"}}))&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatSuperChat}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatSuperSticker}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatJoinMember}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatMemberMilestone}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatMemberGift}\")&\" 個\"",
-                                    $"COUNTIF(G:G,\"{LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift}\")&\" 個\""
+                                    $"SUM(COUNTIF(G:G,{{\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatGeneral}\", " +
+                                    $"\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}\"," +
+                                    $"\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}\"}}))&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift}\")&\" 個\"",
+                                    $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift}\")&\" 個\""
                                 ];
 
                                 char[] separators1 = ['、'];
@@ -505,13 +496,13 @@ public partial class FMain
                                 Dictionary<string, int> sourceList = listView
                                     .GetListViewItems()
                                     .Where(n => n.SubItems[5].Text != StringSet.AppName &&
-                                        n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.YouTube &&
+                                        n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
                                         // 2022-10-25 因不容易轉換成影片對應時間點，故而直接排除
-                                        // LiveChatCatcher.Sets.StringSet.ChatMemberGift、
-                                        // LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift 等類型的資料，
+                                        // Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift、
+                                        // Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift 等類型的資料，
                                         // 以免在時間熱點活頁簿內出現奇怪的時間點。
-                                        n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberGift &&
-                                        n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift &&
+                                        n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift &&
+                                        n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift &&
                                         !string.IsNullOrEmpty(n.SubItems[7].Text) &&
                                         !n.SubItems[7].Text.Contains('-'))
                                     .Select(n => n.SubItems[7].Text.Length > 3 ?
@@ -1056,7 +1047,7 @@ public partial class FMain
                             workbook.Properties.Title = fileTitle;
                             workbook.Properties.Subject = fileTitle;
                             workbook.Properties.Category = StringSet.SheetName1;
-                            workbook.Properties.Keywords = $"{LiveChatCatcher.Sets.StringSet.YouTube}, {StringSet.SheetName1}";
+                            workbook.Properties.Keywords = $"{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}, {StringSet.SheetName1}";
                             workbook.Properties.Author = $"{StringSet.AppName} {version}";
                             workbook.Properties.Comments = comments;
                             workbook.Properties.Company = string.Empty;
@@ -1155,7 +1146,7 @@ public partial class FMain
 
                     if (!string.IsNullOrEmpty(authorExternalChannelId))
                     {
-                        string channelUrl = $"{LiveChatCatcher.Sets.StringSet.Origin}/channel/{authorExternalChannelId}";
+                        string channelUrl = $"{Rubujo.YouTube.Utility.Sets.StringSet.Origin}/channel/{authorExternalChannelId}";
 
                         CustomFunction.OpenBrowser(channelUrl);
                     }
@@ -1290,7 +1281,7 @@ public partial class FMain
     /// </summary>
     /// <param name="messages">List&lt;RendererData&gt;</param>
     /// <param name="userAgent">字串，使用者代理字串</param>
-    private void DoProcessMessage(List<RendererData> messages, string userAgent)
+    private async void DoProcessMessage(List<RendererData> messages, string userAgent)
     {
         try
         {
@@ -1304,45 +1295,12 @@ public partial class FMain
                     {
                         if (!SharedStickers.Any(n => n.ID == stickerData.ID))
                         {
-                            if (!string.IsNullOrEmpty(stickerData.Url))
+                            string errorMessage = await stickerData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                            if (!string.IsNullOrEmpty(errorMessage))
                             {
-                                // 以 stickerData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                IImage? image = BetterCacheManager.GetCachableData<IImage>(stickerData.ID!, () =>
-                                {
-                                    try
-                                    {
-                                        // 取得 HttpClient。
-                                        using HttpClient httpClient = HttpClientUtil
-                                            .GetHttpClient(_httpClientFactory, userAgent);
-
-                                        byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
-
-                                        using MemoryStream memoryStream = new(bytes);
-
-                                        return PlatformImage.FromStream(memoryStream);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
-                                        WriteLog($"超級貼圖的網址：{stickerData.Url}");
-                                        WriteLog($"發生錯誤：{e.Message}");
-
-                                        // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
-                                        Bitmap bitmap = FetchLargePicture ? new(24, 24) : new(48, 48);
-
-                                        using (Graphics graphics = Graphics.FromImage(bitmap))
-                                        {
-                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                        }
-
-                                        return PlatformImage.FromStream(bitmap.ToStream());
-                                    }
-                                }, 10);
-
-                                stickerData.Image = image;
-                                // TODO: 2023/12/12 待調整。
-                                //stickerData.Format = image.RawFormat.ToString();
-                            }
+                                WriteLog(errorMessage);
+                            };
 
                             SharedStickers.Add(stickerData);
                         }
@@ -1358,45 +1316,12 @@ public partial class FMain
                         {
                             if (emojiData.IsCustomEmoji)
                             {
-                                if (!string.IsNullOrEmpty(emojiData.Url))
+                                string errorMessage = await emojiData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                                if (!string.IsNullOrEmpty(errorMessage))
                                 {
-                                    // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                    IImage? image = BetterCacheManager.GetCachableData<IImage>(emojiData.ID!, () =>
-                                    {
-                                        try
-                                        {
-                                            // 取得 HttpClient。
-                                            using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                            byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
-
-                                            using MemoryStream memoryStream = new(bytes);
-
-                                            return PlatformImage.FromStream(memoryStream);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
-                                            WriteLog($"自定義表情符號的網址：{emojiData.Url}");
-                                            WriteLog($"發生錯誤：{e.Message}");
-
-                                            // 當 isLarge 的值為 true 時，建立一個 48x48 的白色 Bitmap。
-                                            Bitmap bitmap = FetchLargePicture ? new(24, 24) : new(48, 48);
-
-                                            using (Graphics graphics = Graphics.FromImage(bitmap))
-                                            {
-                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                            }
-
-                                            return PlatformImage.FromStream(bitmap.ToStream());
-                                        }
-                                    }, 10);
-
-                                    emojiData.Image = image;
-                                    // TODO: 2023/12/12 待調整。
-                                    //emojiData.Format = image.RawFormat.ToString();
-                                }
+                                    WriteLog(errorMessage);
+                                };
 
                                 SharedCustomEmojis.Add(emojiData);
                             }
@@ -1413,45 +1338,12 @@ public partial class FMain
                             !SharedBadges.Any(n => n.Label == badgeData.Label) &&
                             badgeData.Label.Contains(StringSet.Member))
                         {
-                            if (!string.IsNullOrEmpty(badgeData.Url))
+                            string errorMessage = await badgeData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                            if (!string.IsNullOrEmpty(errorMessage))
                             {
-                                // 以 badgeData.Label 為鍵值，將 Image 暫存 10 分鐘。
-                                IImage? image = BetterCacheManager.GetCachableData<IImage>(badgeData.Label!, () =>
-                                {
-                                    try
-                                    {
-                                        // 取得 HttpClient。
-                                        using HttpClient httpClient = HttpClientUtil
-                                            .GetHttpClient(_httpClientFactory, userAgent);
-
-                                        byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
-
-                                        using MemoryStream memoryStream = new(bytes);
-
-                                        return PlatformImage.FromStream(memoryStream);
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        WriteLog($"無法下載會員徽章「{badgeData.Label}」。");
-                                        WriteLog($"會員徽章的網址：{badgeData.Url}");
-                                        WriteLog($"發生錯誤：{e.Message}");
-
-                                        // 當 isLarge 的值為 true 時，建立一個 32x32 的白色 Bitmap。
-                                        Bitmap bitmap = FetchLargePicture ? new(16, 16) : new(32, 32);
-
-                                        using (Graphics graphics = Graphics.FromImage(bitmap))
-                                        {
-                                            graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                        }
-
-                                        return PlatformImage.FromStream(bitmap.ToStream());
-                                    }
-                                }, 10);
-
-                                badgeData.Image = image;
-                                // TODO: 2023/12/12 待調整。
-                                //badgeData.Format = image.RawFormat.ToString();
-                            }
+                                WriteLog(errorMessage);
+                            };
 
                             SharedBadges.Add(badgeData);
                         }
@@ -1460,38 +1352,38 @@ public partial class FMain
 
                 string id = rendererData.ID ?? string.Empty;
                 string authorName = (rendererData.AuthorName != null &&
-                    rendererData.AuthorName != LiveChatCatcher.Sets.StringSet.NoAuthorName) ?
+                    rendererData.AuthorName != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorName) ?
                     rendererData.AuthorName :
                     string.Empty;
                 string authorBages = (rendererData.AuthorBadges != null &&
-                    rendererData.AuthorBadges != LiveChatCatcher.Sets.StringSet.NoAuthorBadges) ?
+                    rendererData.AuthorBadges != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorBadges) ?
                     rendererData.AuthorBadges :
                     string.Empty;
                 string authorPhotoUrl = (rendererData.AuthorPhotoUrl != null &&
-                    rendererData.AuthorPhotoUrl != LiveChatCatcher.Sets.StringSet.NoAuthorPhotoUrl) ?
+                    rendererData.AuthorPhotoUrl != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorPhotoUrl) ?
                     rendererData.AuthorPhotoUrl :
                     string.Empty;
                 string messageContent = (rendererData.MessageContent != null &&
-                    rendererData.MessageContent != LiveChatCatcher.Sets.StringSet.NoMessageContent) ?
+                    rendererData.MessageContent != Rubujo.YouTube.Utility.Sets.StringSet.NoMessageContent) ?
                     rendererData.MessageContent :
                     string.Empty;
                 string purchaseAmountText = (rendererData.PurchaseAmountText != null &&
-                    rendererData.PurchaseAmountText != LiveChatCatcher.Sets.StringSet.NoPurchaseAmountText) ?
+                    rendererData.PurchaseAmountText != Rubujo.YouTube.Utility.Sets.StringSet.NoPurchaseAmountText) ?
                     rendererData.PurchaseAmountText :
                     string.Empty;
                 string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
                 string type = rendererData.Type ?? string.Empty;
                 string backgroundColor = (rendererData.BackgroundColor != null &&
-                    rendererData.BackgroundColor != LiveChatCatcher.Sets.StringSet.NoBackgroundColor) ?
+                    rendererData.BackgroundColor != Rubujo.YouTube.Utility.Sets.StringSet.NoBackgroundColor) ?
                     rendererData.BackgroundColor :
                     string.Empty;
                 // 直播不會有，只有重播才會有。
                 string timestampText = (rendererData.TimestampText != null &&
-                    rendererData.TimestampText != LiveChatCatcher.Sets.StringSet.NoTimestampText) ?
+                    rendererData.TimestampText != Rubujo.YouTube.Utility.Sets.StringSet.NoTimestampText) ?
                     rendererData.TimestampText :
                     string.Empty;
                 string authorExternalChannelID = (rendererData.AuthorExternalChannelID != null &&
-                    rendererData.AuthorExternalChannelID != LiveChatCatcher.Sets.StringSet.NoAuthorExternalChannelID) ?
+                    rendererData.AuthorExternalChannelID != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorExternalChannelID) ?
                     rendererData.AuthorExternalChannelID :
                     string.Empty;
 
@@ -1546,7 +1438,7 @@ public partial class FMain
 
                 lvItem.SubItems.AddRange(subItemContents);
 
-                if (authorName == $"[{LiveChatCatcher.Sets.StringSet.YouTube}]" ||
+                if (authorName == $"[{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}]" ||
                     authorName == $"[{StringSet.AppName}]")
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
@@ -1564,11 +1456,11 @@ public partial class FMain
                     }
                 }
 
-                if (type == LiveChatCatcher.Sets.StringSet.ChatJoinMember ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatMemberMilestone ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatMemberGift ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift)
+                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift)
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -1577,8 +1469,8 @@ public partial class FMain
                     }
                 }
 
-                if (type == LiveChatCatcher.Sets.StringSet.ChatRedirect ||
-                    type == LiveChatCatcher.Sets.StringSet.ChatPinned)
+                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect ||
+                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -1601,11 +1493,12 @@ public partial class FMain
                             {
                                 try
                                 {
-                                    // 取得 HttpClient。
-                                    using HttpClient httpClient = HttpClientUtil
-                                        .GetHttpClient(_httpClientFactory, userAgent);
+                                    if (SharedHttpClient == null)
+                                    {
+                                        throw new Exception("變數 \"SharedHttpClient\" 是 null！");
+                                    }
 
-                                    byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
+                                    byte[] bytes = SharedHttpClient.GetByteArrayAsync(authorPhotoUrl).Result;
 
                                     using MemoryStream memoryStream = new(bytes);
 
@@ -1617,7 +1510,7 @@ public partial class FMain
                                     WriteLog($"無法下載「{imgKey}」的頭像。");
                                     WriteLog($"頭像的網址：{authorPhotoUrl}");
 
-                                    // 當 isLarge 的值為 true 時，建立一個 64x64 的白色 Bitmap。
+                                    // 當 FetchLargePicture 的值為 true 時，建立一個 64x64 的白色 Bitmap。
                                     Bitmap bitmap = FetchLargePicture ? new(64, 64) : new(32, 32);
 
                                     using (Graphics graphics = Graphics.FromImage(bitmap))
@@ -1673,7 +1566,7 @@ public partial class FMain
     /// <param name="filePath">字串，欲匯入檔案的路徑</param>
     private void DoImportData(string filePath)
     {
-        Task.Run(() =>
+        Task.Run(async () =>
         {
             try
             {
@@ -1776,7 +1669,7 @@ public partial class FMain
 
                         lvItem.SubItems.AddRange(subItemContents);
 
-                        if (authorName == $"[{LiveChatCatcher.Sets.StringSet.YouTube}]" ||
+                        if (authorName == $"[{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}]" ||
                             authorName == $"[{StringSet.AppName}]")
                         {
                             foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
@@ -1794,11 +1687,11 @@ public partial class FMain
                             }
                         }
 
-                        if (type == LiveChatCatcher.Sets.StringSet.ChatJoinMember ||
-                           type == LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade ||
-                           type == LiveChatCatcher.Sets.StringSet.ChatMemberMilestone ||
-                           type == LiveChatCatcher.Sets.StringSet.ChatMemberGift ||
-                           type == LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift)
+                        if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember ||
+                           type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade ||
+                           type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone ||
+                           type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift ||
+                           type == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift)
                         {
                             foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                             {
@@ -1807,8 +1700,8 @@ public partial class FMain
                             }
                         }
 
-                        if (type == LiveChatCatcher.Sets.StringSet.ChatRedirect ||
-                            type == LiveChatCatcher.Sets.StringSet.ChatPinned)
+                        if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect ||
+                            type == Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
                         {
                             foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                             {
@@ -1819,50 +1712,62 @@ public partial class FMain
 
                         if (!string.IsNullOrEmpty(authorPhotoUrl))
                         {
-                            LVLiveChatList.InvokeIfRequired(() =>
+                            LVLiveChatList.InvokeIfRequired(async () =>
                             {
                                 string imgKey = authorName;
 
                                 if (LVLiveChatList.SmallImageList != null &&
                                     !LVLiveChatList.SmallImageList.Images.ContainsKey(imgKey))
                                 {
-                                    // 以 imgKey 為鍵值，將 Image 暫存 10 分鐘。
-                                    Image? image = BetterCacheManager.GetCachableData(imgKey, () =>
+                                    // TODO: 2023/12/13 待確認問題點。
+                                    // 疑似是在 BetterCacheManager 使用 async 取得暫存的 Image 會造成錯誤。
+                                    try
                                     {
-                                        try
+                                        // 以 imgKey 為鍵值，將 Image 暫存 10 分鐘。
+                                        Image? image = await BetterCacheManager.GetCachableData(imgKey, async () =>
                                         {
-                                            // 取得 HttpClient。
-                                            using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                            byte[] bytes = httpClient.GetByteArrayAsync(authorPhotoUrl).Result;
-
-                                            using MemoryStream memoryStream = new(bytes);
-
-                                            return Image.FromStream(memoryStream);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            WriteLog($"發生錯誤：{e.Message}");
-                                            WriteLog($"無法下載「{imgKey}」的頭像。");
-                                            WriteLog($"頭像的網址：{authorPhotoUrl}");
-
-                                            // 建立一個 64x64 的白色 Bitmap。
-                                            Bitmap bitmap = new(64, 64);
-
-                                            using (Graphics graphics = Graphics.FromImage(bitmap))
+                                            try
                                             {
-                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                                if (SharedHttpClient == null)
+                                                {
+                                                    throw new Exception("變數 \"SharedHttpClient\" 是 null！");
+                                                }
+
+                                                byte[] bytes = await SharedHttpClient.GetByteArrayAsync(authorPhotoUrl);
+
+                                                using MemoryStream memoryStream = new(bytes);
+
+                                                return Image.FromStream(memoryStream);
                                             }
+                                            catch (Exception e)
+                                            {
+                                                WriteLog($"發生錯誤：{e.Message}");
+                                                WriteLog($"無法下載「{imgKey}」的頭像。");
+                                                WriteLog($"頭像的網址：{authorPhotoUrl}");
 
-                                            return bitmap;
-                                        }
-                                    }, 10);
+                                                // 建立一個 64x64 的白色 Bitmap。
+                                                Bitmap bitmap = new(64, 64);
 
-                                    LVLiveChatList.SmallImageList.Images.Add(imgKey, image);
+                                                using (Graphics graphics = Graphics.FromImage(bitmap))
+                                                {
+                                                    graphics.Clear(Color.FromKnownColor(KnownColor.White));
+                                                }
 
-                                    image.Dispose();
-                                    image = null;
+                                                return bitmap;
+                                            }
+                                        }, 10);
+
+                                        LVLiveChatList.SmallImageList.Images.Add(imgKey, image);
+
+                                        image.Dispose();
+                                        image = null;
+                                    }
+                                    catch (Exception eex)
+                                    {
+                                        WriteLog($"imgKey: {imgKey}");
+                                        WriteLog($"authorPhotoUrl: {authorPhotoUrl}");
+                                        WriteLog(eex.ToString());
+                                    }
                                 }
 
                                 lvItem.ImageKey = imgKey;
@@ -1934,45 +1839,12 @@ public partial class FMain
                             {
                                 if (emojiData.IsCustomEmoji)
                                 {
-                                    if (!string.IsNullOrEmpty(emojiData.Url))
+                                    string errorMessage = await emojiData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                                    if (!string.IsNullOrEmpty(errorMessage))
                                     {
-                                        // 以 emojiData.ID 為鍵值，將 Image 暫存 10 分鐘。
-                                        IImage? image = BetterCacheManager.GetCachableData<IImage>(emojiData.ID, () =>
-                                        {
-                                            try
-                                            {
-                                                // 取得 HttpClient。
-                                                using HttpClient httpClient = HttpClientUtil
-                                                    .GetHttpClient(_httpClientFactory, userAgent);
-
-                                                byte[] bytes = httpClient.GetByteArrayAsync(emojiData.Url).Result;
-
-                                                using MemoryStream memoryStream = new(bytes);
-
-                                                return PlatformImage.FromStream(memoryStream);
-                                            }
-                                            catch (Exception e)
-                                            {
-                                                WriteLog($"無法下載自定義表情符號「{emojiData.Label}」。");
-                                                WriteLog($"自定義表情符號的網址：{emojiData.Url}");
-                                                WriteLog($"發生錯誤：{e.Message}");
-
-                                                // 建立一個 48x48 的白色 Bitmap。
-                                                Bitmap bitmap = new(48, 48);
-
-                                                using (Graphics graphics = Graphics.FromImage(bitmap))
-                                                {
-                                                    graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                                }
-
-                                                return PlatformImage.FromStream(bitmap.ToStream());
-                                            }
-                                        }, 10);
-
-                                        emojiData.Image = image;
-                                        // TODO: 2023/12/12 待調整。
-                                        //emojiData.Format = image.RawFormat.ToString();
-                                    }
+                                        WriteLog(errorMessage);
+                                    };
 
                                     SharedCustomEmojis.Add(emojiData);
                                 }
@@ -2022,45 +1894,12 @@ public partial class FMain
                             if (!SharedBadges.Any(n => n.Label == badgeData.Label) &&
                                 badgeData.Label.Contains(StringSet.Member))
                             {
-                                if (!string.IsNullOrEmpty(badgeData.Url))
+                                string errorMessage = await badgeData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                                if (!string.IsNullOrEmpty(errorMessage))
                                 {
-                                    // 以 badgeData.Label 為鍵值，將 Image 暫存 10 分鐘。
-                                    IImage? image = BetterCacheManager.GetCachableData<IImage>(badgeData.Label, () =>
-                                    {
-                                        try
-                                        {
-                                            // 取得 HttpClient。
-                                            using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                            byte[] bytes = httpClient.GetByteArrayAsync(badgeData.Url).Result;
-
-                                            using MemoryStream memoryStream = new(bytes);
-
-                                            return PlatformImage.FromStream(memoryStream);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            WriteLog($"無法下載會員徽章「{badgeData.Label}」。");
-                                            WriteLog($"會員徽章的網址：{badgeData.Url}");
-                                            WriteLog($"發生錯誤：{e.Message}");
-
-                                            // 建立一個 32x32 的白色 Bitmap。
-                                            Bitmap bitmap = new(32, 32);
-
-                                            using (Graphics graphics = Graphics.FromImage(bitmap))
-                                            {
-                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                            }
-
-                                            return PlatformImage.FromStream(bitmap.ToStream());
-                                        }
-                                    }, 10);
-
-                                    badgeData.Image = image;
-                                    // TODO: 2023/12/12 待調整。
-                                    //badgeData.Format = image.RawFormat.ToString();
-                                }
+                                    WriteLog(errorMessage);
+                                };
 
                                 SharedBadges.Add(badgeData);
                             }
@@ -2100,45 +1939,12 @@ public partial class FMain
 
                             if (!SharedStickers.Any(n => n.Url == stickerData.Url))
                             {
-                                if (!string.IsNullOrEmpty(stickerData.Url))
+                                string errorMessage = await stickerData.SetImage(SharedHttpClient, FetchLargePicture);
+
+                                if (!string.IsNullOrEmpty(errorMessage))
                                 {
-                                    // 以 stickerData.Label 為鍵值，將 Image 暫存 10 分鐘。
-                                    IImage? image = BetterCacheManager.GetCachableData<IImage>(stickerData.Label, () =>
-                                    {
-                                        try
-                                        {
-                                            // 取得 HttpClient。
-                                            using HttpClient httpClient = HttpClientUtil
-                                                .GetHttpClient(_httpClientFactory, userAgent);
-
-                                            byte[] bytes = httpClient.GetByteArrayAsync(stickerData.Url).Result;
-
-                                            using MemoryStream memoryStream = new(bytes);
-
-                                            return PlatformImage.FromStream(memoryStream);
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            WriteLog($"無法下載超級貼圖「{stickerData.Label}」。");
-                                            WriteLog($"超級貼圖的網址：{stickerData.Url}");
-                                            WriteLog($"發生錯誤：{e.Message}");
-
-                                            // 建立一個 32x32 的白色 Bitmap。
-                                            Bitmap bitmap = new(32, 32);
-
-                                            using (Graphics graphics = Graphics.FromImage(bitmap))
-                                            {
-                                                graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                                            }
-
-                                            return PlatformImage.FromStream(bitmap.ToStream());
-                                        }
-                                    }, 10);
-
-                                    stickerData.Image = image;
-                                    // TODO: 2023/12/12 待調整。
-                                    //stickerData.Format = image.RawFormat.ToString();
-                                }
+                                    WriteLog(errorMessage);
+                                };
 
                                 SharedStickers.Add(stickerData);
                             }
@@ -2158,7 +1964,7 @@ public partial class FMain
             }
         }).ContinueWith(task =>
         {
-            TerminateLongTask(isImport: true);
+            TerminateLongTask(listView: LVLiveChatList, isImport: true);
         });
     }
 
@@ -2190,6 +1996,11 @@ public partial class FMain
         TBUserAgent.InvokeIfRequired(() =>
         {
             TBUserAgent.Enabled = false;
+        });
+
+        TBSecChUa.InvokeIfRequired(() =>
+        {
+            TBSecChUa.Enabled = false;
         });
 
         BtnImport.InvokeIfRequired(() =>
@@ -2238,6 +2049,11 @@ public partial class FMain
                 TBUserAgent.Enabled = true;
             });
 
+            TBSecChUa.InvokeIfRequired(() =>
+            {
+                TBSecChUa.Enabled = true;
+            });
+
             BtnImport.InvokeIfRequired(() =>
             {
                 BtnImport.Enabled = true;
@@ -2264,8 +2080,8 @@ public partial class FMain
         TBLog.InvokeIfRequired(() =>
         {
             IEnumerable<ListViewItem> tempDataSet = dataSet.Where(n =>
-                (n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatSuperChat ||
-                n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatSuperSticker) &&
+                (n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat ||
+                n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker) &&
                 n.SubItems[3].Text.StartsWith('$'));
 
             double totalIncome = 0.0;
@@ -2298,14 +2114,14 @@ public partial class FMain
 
         LChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.YouTube &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatJoinMember &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberMilestone &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberGift &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatRedirect &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatPinned)
+            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
                 .Count();
 
             LChatCount.Text = $"留言數量：{count} 個";
@@ -2313,41 +2129,41 @@ public partial class FMain
 
         LSuperChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatSuperChat).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat).Count();
 
-            LSuperChatCount.Text = $"{LiveChatCatcher.Sets.StringSet.ChatSuperChat}：{count} 個";
+            LSuperChatCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}：{count} 個";
         });
 
         LSuperStickerCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatSuperSticker).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker).Count();
 
-            LSuperStickerCount.Text = $"{LiveChatCatcher.Sets.StringSet.ChatSuperSticker}：{count} 個";
+            LSuperStickerCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}：{count} 個";
         });
 
         LMemberJoinCount.InvokeIfRequired(() =>
         {
-            int joinCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatJoinMember).Count();
-            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade).Count();
-            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatMemberMilestone).Count();
-            int giftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatMemberGift).Count();
-            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift).Count();
+            int joinCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember).Count();
+            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade).Count();
+            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone).Count();
+            int giftCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift).Count();
+            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift).Count();
 
-            LMemberJoinCount.Text = $"{LiveChatCatcher.Sets.StringSet.ChatJoinMember}：{joinCount} 位";
+            LMemberJoinCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember}：{joinCount} 位";
 
-            string tooltip = $"{LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade}：{upgradeCount} 位、" +
-                $"{LiveChatCatcher.Sets.StringSet.ChatMemberMilestone}：{milestoneCount} 位、" +
-                $"{LiveChatCatcher.Sets.StringSet.ChatMemberGift}：{giftCount} 位、" +
-                $"{LiveChatCatcher.Sets.StringSet.ChatReceivedMemberGift}：{receivedGiftCount} 位";
+            string tooltip = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade}：{upgradeCount} 位、" +
+                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone}：{milestoneCount} 位、" +
+                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift}：{giftCount} 位、" +
+                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift}：{receivedGiftCount} 位";
 
             SharedTooltip.SetToolTip(LMemberJoinCount, tooltip);
         });
 
         LMemberInRoomCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatJoinMember &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberUpgrade &&
-                n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.ChatMemberMilestone &&
+            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade &&
+                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone &&
                 n.SubItems[1].Text.Contains(StringSet.Member))
                 .Select(n => n.SubItems[0].Text)
                 .Distinct()
@@ -2358,7 +2174,7 @@ public partial class FMain
 
         LAuthorCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != LiveChatCatcher.Sets.StringSet.YouTube &&
+            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
                 !n.SubItems[5].Text.Contains(StringSet.Member))
                 .Select(n => n.SubItems[0].Text)
                 .Distinct()
@@ -2384,7 +2200,7 @@ public partial class FMain
             RBtnReplay.Enabled = enable;
         });
 
-        // 2022-05-30 暫時先不要鎖。
+        // 2022/5/30 暫時先不要鎖。
         /*
         BtnOpenVideoUrl.InvokeIfRequired(() =>
         {
@@ -2475,6 +2291,7 @@ public partial class FMain
     /// <returns>字串</returns>
     private string GetCookies()
     {
+        // TODO: 2023/12/13 待修改。
         string cookiesStr = string.Empty;
 
         CBLoadCookies.InvokeIfRequired(() =>
@@ -2594,13 +2411,109 @@ public partial class FMain
     }
 
     /// <summary>
+    /// 初始化 HttpCleint
+    /// </summary>
+    private void InitHttpCleint()
+    {
+        string userAgent = string.Empty;
+
+        TBUserAgent.InvokeIfRequired(() =>
+        {
+            userAgent = TBUserAgent.Text;
+        });
+
+        // 取得 HttpClient。
+        SharedHttpClient = HttpClientUtil.GetHttpClient(
+            SharedHttpClientFactory,
+            userAgent);
+    }
+
+    /// <summary>
+    /// 初始化 LiveChatCather
+    /// </summary>
+    private void InitLiveChatCather(HttpClient? httpClient)
+    {
+        if (httpClient == null)
+        {
+            WriteLog("[InitLiveChatCather()] 變數 \"httpClient\" 為 null！");
+
+            return;
+        }
+
+        SharedLiveChatCatcher.Init(
+            httpClient: httpClient,
+            isStreaming: IsStreaming);
+        SharedLiveChatCatcher.FetchLargePicture(true);
+        SharedLiveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
+        {
+            TBUserAgent.InvokeIfRequired(() =>
+            {
+                DoProcessMessage(e.Data, TBUserAgent.Text);
+            });
+        };
+        SharedLiveChatCatcher.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
+        {
+            EnumSet.RunningStatus runningStatus = e.RunningStatus;
+
+            switch (runningStatus)
+            {
+                default:
+                case EnumSet.RunningStatus.Running:
+                case EnumSet.RunningStatus.Stopped:
+                    WriteLog(runningStatus.ToString());
+
+                    break;
+                case EnumSet.RunningStatus.ErrorOccured:
+                    BtnStop_Click(this, new EventArgs());
+                    break;
+            }
+        };
+        SharedLiveChatCatcher.OnLogOutput += (object? sender, LogOutputArgs e) =>
+        {
+            EnumSet.LogType logType = e.LogType;
+
+            switch (logType)
+            {
+                case EnumSet.LogType.Info:
+                    _logger.LogInformation("{Message}", e.Message);
+
+                    WriteLog(e.Message);
+
+                    break;
+                case EnumSet.LogType.Warn:
+                    _logger.LogWarning("{WarningMessage}", e.Message);
+
+                    WriteLog(e.Message);
+
+                    break;
+                case EnumSet.LogType.Error:
+                    _logger.LogError("{ErrorMessage}", e.Message);
+
+                    WriteLog(e.Message);
+
+                    break;
+                case EnumSet.LogType.Debug:
+                    _logger.LogDebug("{DebugMessage}", e.Message);
+
+                    break;
+                default:
+                    break;
+            }
+        };
+    }
+
+    /// <summary>
     /// 檢查應用程式的版本
     /// </summary>
-    private async void CheckAppVersion()
+    /// <param name="httpClient">HttpClient</param>
+    private async void CheckAppVersion(HttpClient? httpClient)
     {
-        // 取得 HttpClient。
-        using HttpClient httpClient = HttpClientUtil.GetHttpClient(
-            _httpClientFactory);
+        if (httpClient == null)
+        {
+            WriteLog("[CheckAppVersion()] 變數 \"httpClient\" 為 null！");
+
+            return;
+        }
 
         UpdateNotifier.CheckResult checkResult = await UpdateNotifier.CheckVersion(httpClient);
 

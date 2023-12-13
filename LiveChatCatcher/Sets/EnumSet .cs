@@ -1,4 +1,4 @@
-﻿namespace LiveChatCatcher.Sets;
+﻿namespace Rubujo.YouTube.Utility.Sets;
 
 /// <summary>
 /// 列舉組

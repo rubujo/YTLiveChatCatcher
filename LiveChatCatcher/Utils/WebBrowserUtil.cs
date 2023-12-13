@@ -1,8 +1,8 @@
 ﻿using Microsoft.Data.Sqlite;
-using NLog;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -19,9 +19,9 @@ namespace YTLiveChatCatcher.Common.Utils;
 public class WebBrowserUtil
 {
     /// <summary>
-    /// NLog 的 Logger
+    /// 錯誤訊息
     /// </summary>
-    private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+    private static string ErrorMessage = string.Empty;
 
     /// <summary>
     /// 列舉：網頁瀏覽器類型
@@ -105,17 +105,68 @@ public class WebBrowserUtil
     };
 
     /// <summary>
+    /// Cookie 資料類別
+    /// </summary>
+    public class CookieData
+    {
+        /// <summary>
+        /// 名稱
+        /// </summary>
+        public string? Name { get; set; }
+
+        /// <summary>
+        /// 主機鍵值
+        /// </summary>
+        public string? HostKey { get; set; }
+
+        /// <summary>
+        /// 值
+        /// </summary>
+        public string? Value { get; set; }
+    }
+
+    /// <summary>
+    /// 取得錯誤訊息
+    /// </summary>
+    /// <returns>字串，錯誤訊息</returns>
+    public static string GetErrorMessage()
+    {
+        return ErrorMessage;
+    }
+
+    /// <summary>
+    /// 設定錯誤訊息
+    /// </summary>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    public static void SetErrorMessage(string value)
+    {
+        if (string.IsNullOrEmpty(value) || string.IsNullOrEmpty(ErrorMessage))
+        {
+            ErrorMessage = value;
+        }
+        else
+        {
+            ErrorMessage += $"{value}{Environment.NewLine}";
+        }
+    }
+
+    /// <summary>
     /// 取得 Cookies
     /// </summary>
     /// <param name="browserType">BrowserType</param>
     /// <param name="profileName">字串，設定檔名稱</param>
     /// <param name="hostKey">字串，主機鍵值</param>
     /// <returns>List&lt;Cookie&gt;</returns>
+    [SupportedOSPlatform("windows")]
     public static List<CookieData> GetCookies(
         BrowserType browserType,
         string profileName,
         string hostKey)
     {
+        // 先清除舊的錯誤訊息。
+        SetErrorMessage(string.Empty);
+
         bool isCustomProfilePath = false;
 
         // 判斷是否為自定義設定檔路徑。
@@ -175,7 +226,8 @@ public class WebBrowserUtil
                     $@"{profileName}\Network\Cookies");
         }
 
-        _logger.Debug("Cookie 檔案的路徑：{Path}", cookieFilePath);
+        // 僅供除錯使用。
+        SetErrorMessage($"[WebBrowserUtil.GetCookies()] Cookie 檔案的路徑：{cookieFilePath}");
 
         if (File.Exists(cookieFilePath))
         {
@@ -223,6 +275,7 @@ public class WebBrowserUtil
     /// <param name="cookieFilePath">字串，Cookie 檔案的位置</param>
     /// <param name="hostKey">字串，主機鍵值</param>
     /// <returns>List&lt;Cookie&gt;</returns>
+    [SupportedOSPlatform("windows")]
     private static List<CookieData> QuerySQLiteDB(
         BrowserType browserType,
         string cookieFilePath,
@@ -302,7 +355,7 @@ public class WebBrowserUtil
         }
         catch (Exception ex)
         {
-            _logger.Debug(ex.ToString());
+            SetErrorMessage($"[WebBrowserUtil.QuerySQLiteDB()] {ex}");
         }
 
         return outputData;
@@ -336,27 +389,6 @@ public class WebBrowserUtil
     }
 
     /// <summary>
-    /// Cookie 資料類別
-    /// </summary>
-    public class CookieData
-    {
-        /// <summary>
-        /// 名稱
-        /// </summary>
-        public string? Name { get; set; }
-
-        /// <summary>
-        /// 主機鍵值
-        /// </summary>
-        public string? HostKey { get; set; }
-
-        /// <summary>
-        /// 值
-        /// </summary>
-        public string? Value { get; set; }
-    }
-
-    /// <summary>
     /// AesGcm256
     /// </summary>
     public class AesGcm256
@@ -366,6 +398,7 @@ public class WebBrowserUtil
         /// </summary>
         /// <param name="browserType">BrowserType</param>
         /// <returns>字串</returns>
+        [SupportedOSPlatform("windows")]
         public static byte[] GetKey(BrowserType browserType)
         {
             //string sR = string.Empty;
@@ -374,13 +407,15 @@ public class WebBrowserUtil
             string path = $@"C:\Users\{Environment.UserName}\AppData\Local\{GetPartialPath(browserType)}\User Data\Local State";
             string v = File.ReadAllText(path);
 
-            JsonElement json = JsonSerializer.Deserialize<JsonElement>(v);
+            JsonElement jsonElement = JsonSerializer.Deserialize<JsonElement>(v);
 
-            string key = json.GetProperty("os_crypt")
+            string encrypted_key = jsonElement
+                .GetProperty("os_crypt")
                 .GetProperty("encrypted_key")
-                .GetString() ?? string.Empty;
+                .GetString() ??
+                string.Empty;
 
-            byte[] src = Convert.FromBase64String(key!);
+            byte[] src = Convert.FromBase64String(encrypted_key);
             byte[] encryptedKey = src.Skip(5).ToArray();
             byte[] decryptedKey = ProtectedData.Unprotect(encryptedKey, null, DataProtectionScope.CurrentUser);
 
@@ -400,22 +435,22 @@ public class WebBrowserUtil
 
             try
             {
-                GcmBlockCipher cipher = new(new AesEngine());
-                AeadParameters parameters = new(new KeyParameter(key), 128, iv, null);
+                GcmBlockCipher gcmBlockCipher = new(new AesEngine());
+                AeadParameters aeadParameters = new(new KeyParameter(key), 128, iv, null);
 
-                cipher.Init(false, parameters);
+                gcmBlockCipher.Init(false, aeadParameters);
 
-                byte[] plainBytes = new byte[cipher.GetOutputSize(encryptedBytes.Length)];
+                byte[] plainBytes = new byte[gcmBlockCipher.GetOutputSize(encryptedBytes.Length)];
 
-                int retLen = cipher.ProcessBytes(encryptedBytes, 0, encryptedBytes.Length, plainBytes, 0);
+                int retLen = gcmBlockCipher.ProcessBytes(encryptedBytes, 0, encryptedBytes.Length, plainBytes, 0);
 
-                cipher.DoFinal(plainBytes, retLen);
+                gcmBlockCipher.DoFinal(plainBytes, retLen);
 
                 sR = Encoding.UTF8.GetString(plainBytes).TrimEnd("\r\n\0".ToCharArray());
             }
             catch (Exception ex)
             {
-                _logger.Debug(ex.ToString());
+                SetErrorMessage($"[WebBrowserUtil.AesGcm256.Decrypt()] {ex}");
             }
 
             return sR;

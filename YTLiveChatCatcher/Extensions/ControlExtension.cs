@@ -14,7 +14,7 @@ public static class ControlExtension
     /// </summary>
     /// <param name="control">Control</param>
     /// <param name="action">MethodInvoker</param>
-    [SupportedOSPlatform("windows7.0")]
+    [SupportedOSPlatform("windows")]
     public static void InvokeIfRequired(this Control control, MethodInvoker action)
     {
         // 在非當前執行緒內，使用委派。

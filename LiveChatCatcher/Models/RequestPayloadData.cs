@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace LiveChatCatcher.Models;
+namespace Rubujo.YouTube.Utility.Models;
 
 /// <summary>
 /// RequestPayloadData

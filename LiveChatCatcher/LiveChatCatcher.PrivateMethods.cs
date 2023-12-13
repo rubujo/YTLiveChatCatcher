@@ -7,18 +7,18 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using LiveChatCatcher.Extensions;
-using LiveChatCatcher.Models;
-using LiveChatCatcher.Sets;
+using Rubujo.YouTube.Utility.Extensions;
+using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher;
+namespace Rubujo.YouTube.Utility;
 
 /// <summary>
-/// Catcher 的方法
+/// LiveChatCatcher 的私人方法
 /// <para>參考 1：https://takikomiprogramming.hateblo.jp/entry/2020/07/21/114851</para>
 /// <para>參考 2：https://yasulab-pg.com/%E3%80%90python%E3%80%91youtube-live%E3%81%AE%E3%82%A2%E3%83%BC%E3%82%AB%E3%82%A4%E3%83%96%E3%81%8B%E3%82%89%E3%83%81%E3%83%A3%E3%83%83%E3%83%88%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B/</para>
 /// </summary>
-public partial class Catcher
+public partial class LiveChatCatcher
 {
     /// <summary>
     /// 取得 ytcfg 資料
@@ -880,7 +880,7 @@ public partial class Catcher
                         .Get("addChatItemAction")
                         ?.Get("videoOffsetTimeMsec");
 
-                    string videoOffsetTimeText = videoOffsetTimeMsec?.GetVideoOffsetTimeMsec() ?? string.Empty;
+                    string videoOffsetTimeText = GetVideoOffsetTimeMsec(videoOffsetTimeMsec) ?? string.Empty;
 
                     JsonElement.ArrayEnumerator? replayActions = singleAction
                         .Get("replayChatItemAction")
@@ -1150,7 +1150,7 @@ public partial class Catcher
 
                 if (customThumbnail.HasValue)
                 {
-                    badgeData.Url = customThumbnail.Value.GetThumbnailUrl(SharedFetchLargePicture);
+                    badgeData.Url = GetThumbnailUrl(customThumbnail.Value);
                 }
 
                 // 圖示類型。
@@ -1346,7 +1346,7 @@ public partial class Catcher
                 }
 
                 stickerData.ID = label.HasValue ? label?.GetString() : string.Empty;
-                stickerData.Url = sticker?.GetThumbnailUrl(SharedFetchLargePicture);
+                stickerData.Url = GetThumbnailUrl(sticker);
                 stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
                 stickerData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
@@ -1493,7 +1493,7 @@ public partial class Catcher
                         // "image" 的 "thumbnails"。
                         JsonElement? image = emoji?.Get("image");
 
-                        emojiData.Url = image?.GetThumbnailUrl(SharedFetchLargePicture);
+                        emojiData.Url = GetThumbnailUrl(image);
 
                         // "image" 的 "label"。
                         JsonElement? label = image
@@ -1587,18 +1587,18 @@ public partial class Catcher
         AuthorBadgesData authorBadgesData = ParseAuthorBadges(jsonElement);
         MessageData messageData = ParseMessageData(jsonElement);
 
-        string id = jsonElement.GetID(),
+        string id = GetID(jsonElement),
             type = GetRendererDataType(rendererName),
-            timestampUsec = jsonElement.GetTimestampUsec(),
-            authorName = jsonElement.GetAuthorName(),
-            authorPhoto = jsonElement.GetAuthorPhoto(SharedFetchLargePicture),
+            timestampUsec = GetTimestampUsec(jsonElement),
+            authorName = GetAuthorName(jsonElement),
+            authorPhoto = GetAuthorPhoto(jsonElement),
             authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges,
             message = messageData.Text ?? StringSet.NoMessageContent,
-            purchaseAmountText = jsonElement.GetPurchaseAmountText(),
+            purchaseAmountText = GetPurchaseAmountText(jsonElement),
             forgroundColor = messageData?.TextColor ?? string.Empty,
-            backgroundColor = jsonElement.GetBackgroundColor(),
-            timestampText = jsonElement.GetTimestampText(),
-            authorExternalChannelID = jsonElement.GetAuthorExternalChannelId();
+            backgroundColor = GetBackgroundColor(jsonElement),
+            timestampText = GetTimestampText(jsonElement),
+            authorExternalChannelID = GetAuthorExternalChannelId(jsonElement);
 
         #region 處理特例
 
@@ -1634,8 +1634,8 @@ public partial class Catcher
                 authorBadgesData = ParseAuthorBadges(liveChatSponsorshipsHeaderRenderer.Value);
                 messageData = ParseMessageData(liveChatSponsorshipsHeaderRenderer.Value);
 
-                authorName = liveChatSponsorshipsHeaderRenderer.Value.GetAuthorName();
-                authorPhoto = liveChatSponsorshipsHeaderRenderer.Value.GetAuthorPhoto(SharedFetchLargePicture);
+                authorName = GetAuthorName(liveChatSponsorshipsHeaderRenderer.Value);
+                authorPhoto = GetAuthorPhoto(liveChatSponsorshipsHeaderRenderer.Value);
                 authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
                 // 此處 message 為 primaryText。
                 message = messageData.Text ?? StringSet.NoMessageContent;
@@ -1666,6 +1666,279 @@ public partial class Catcher
             Emojis = messageData?.Emojis,
             Badges = authorBadgesData?.Badges
         });
+    }
+
+    /// <summary>
+    /// 取得 id
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetID(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? id = jsonElement?.Get("id");
+
+        if (id.HasValue)
+        {
+            output = id.Value.GetString() ?? string.Empty;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 authorName
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetAuthorName(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? simpleText = jsonElement
+            ?.Get("authorName")
+            ?.Get("simpleText");
+
+        if (simpleText.HasValue)
+        {
+            output = simpleText.Value.GetString() ?? string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            output = StringSet.NoAuthorName;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 authorPhoto
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetAuthorPhoto(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? authorPhoto = jsonElement?.Get("authorPhoto");
+
+        if (authorPhoto.HasValue)
+        {
+            output = GetThumbnailUrl(authorPhoto.Value);
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            output = StringSet.NoAuthorPhotoUrl;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 authorExternalChannelId
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetAuthorExternalChannelId(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? authorExternalChannelId = jsonElement?.Get("authorExternalChannelId");
+
+        if (authorExternalChannelId.HasValue)
+        {
+            output = authorExternalChannelId.Value.GetString() ?? string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            output = StringSet.NoAuthorExternalChannelID;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 timestampUsec
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetTimestampUsec(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? timestampUsec = jsonElement?.Get("timestampUsec");
+
+        if (timestampUsec.HasValue)
+        {
+            // 將 Microseconds 轉換成 Miliseconds。
+            long timestamp = Convert.ToInt64(timestampUsec.Value.GetString()) / 1000L;
+
+            output = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime.ToString();
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 timestampText
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetTimestampText(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? simpleText = jsonElement
+            ?.Get("timestampText")
+            ?.Get("simpleText");
+
+        if (simpleText.HasValue)
+        {
+            output = simpleText.Value.GetString() ?? string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            output = StringSet.NoTimestampText;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 purchaseAmountText
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetPurchaseAmountText(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? simpleText = jsonElement
+            ?.Get("purchaseAmountText")
+            ?.Get("simpleText");
+
+        if (simpleText.HasValue)
+        {
+            output = simpleText.Value.GetString() ?? string.Empty;
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            return StringSet.NoPurchaseAmountText;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得背景顏色
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetBackgroundColor(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? backgroundColor = jsonElement?.Get("backgroundColor");
+
+        if (backgroundColor.HasValue)
+        {
+            output = GetColorHexCode(backgroundColor.Value.GetInt64());
+        }
+
+        JsonElement? bodyBackgroundColor = jsonElement?.Get("bodyBackgroundColor");
+
+        if (bodyBackgroundColor.HasValue)
+        {
+            output = GetColorHexCode(bodyBackgroundColor.Value.GetInt64());
+        }
+
+        if (string.IsNullOrEmpty(output))
+        {
+            output = StringSet.NoBackgroundColor;
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得 videoOffsetTimeMsec
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetVideoOffsetTimeMsec(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement? videoOffsetTimeMsec = jsonElement?.Get("videoOffsetTimeMsec");
+
+        if (videoOffsetTimeMsec.HasValue)
+        {
+            long milliseconds = videoOffsetTimeMsec.Value.GetInt64();
+
+            output = DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).ToString("HH:mm:ss");
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 取得預覽圖網址
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string GetThumbnailUrl(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        JsonElement.ArrayEnumerator? thumbnails = jsonElement
+            ?.Get("thumbnails")
+            ?.ToArrayEnumerator();
+
+        if (thumbnails.HasValue && thumbnails?.Any() == true)
+        {
+            int index = SharedIsFetchLargePicture ? 1 : 0;
+
+            if (thumbnails?.Count() == 1)
+            {
+                index = 0;
+            }
+
+            // badge -> 0：16x16、1：32x32
+            // image -> 0：24x24、1：48x48
+            // authorPhoto -> 0：32x32、1：64x64
+            // sticker -> 0：72x72、1：144x144
+            JsonElement? url = thumbnails?.Get(index)?.Get("url");
+
+            if (url.HasValue)
+            {
+                output = url?.GetString() ?? string.Empty;
+
+                // 貼圖的網址會沒有 Protocol，需要手動再補上。
+                if (!string.IsNullOrEmpty(output) && output.StartsWith("//"))
+                {
+                    output = $"https:{output}";
+
+                    // 移除尾端的 =s144-rwa 以取得非 WebP 格式的圖檔網址。
+                    // 疑似 System.Drawing 的 Image 不支援動畫的 WebP。 
+                    string[] tempArray = output.Split("=");
+
+                    // 當陣列數量大於 1 時才執行後續的操作。
+                    if (tempArray.Length > 1)
+                    {
+                        // 取得 "=" 之前的網址部分。
+                        output = tempArray[0];
+                    }
+                }
+            }
+        }
+
+        return output;
     }
 
     #endregion

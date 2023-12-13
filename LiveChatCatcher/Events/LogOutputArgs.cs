@@ -1,6 +1,6 @@
-﻿using LiveChatCatcher.Sets;
+﻿using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher.Events;
+namespace Rubujo.YouTube.Utility.Events;
 
 /// <summary>
 /// 紀錄事件參數

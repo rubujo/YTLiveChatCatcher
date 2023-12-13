@@ -1,7 +1,7 @@
-﻿using LiveChatCatcher.Models;
-using LiveChatCatcher.Sets;
+﻿using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher.Extensions;
+namespace Rubujo.YouTube.Utility.Extensions;
 
 /// <summary>
 /// List 的擴充方法

@@ -22,16 +22,16 @@ public class BetterCacheManager
     /// <returns>object</returns>
     static object GetAsyncLock(string key)
     {
-        ObjectCache cache = MemoryCache.Default;
+        ObjectCache objectCache = MemoryCache.Default;
 
         // 取得每個 Key 專屬的鎖定對象（object）。
         string asyncLockKey = AsyncLockPrefix + key;
 
-        lock (cache)
+        lock (objectCache)
         {
-            if (cache[asyncLockKey] == null)
+            if (objectCache[asyncLockKey] == null)
             {
-                cache.Add(asyncLockKey,
+                objectCache.Add(asyncLockKey,
                     new object(),
                     new CacheItemPolicy()
                     {
@@ -40,7 +40,7 @@ public class BetterCacheManager
             }
         }
 
-        return cache[asyncLockKey];
+        return objectCache[asyncLockKey];
     }
 
     /// <summary>
@@ -54,19 +54,19 @@ public class BetterCacheManager
     /// <returns>T</returns>
     public static T GetCachableData<T>(string key, Func<T> callback, int cacheMins, bool forceRefresh = false) where T : class
     {
-        ObjectCache cache = MemoryCache.Default;
+        ObjectCache objectCache = MemoryCache.Default;
 
         string cacheKey = key;
 
         // 取得每個 Key 專屬的鎖定對象。
         lock (GetAsyncLock(key))
         {
-            T? res = cache[cacheKey] as T;
+            T? res = objectCache[cacheKey] as T;
 
             // 是否清除 Cache，強制重查。
             if (res != null && forceRefresh)
             {
-                cache.Remove(cacheKey);
+                objectCache.Remove(cacheKey);
 
                 res = null;
             }
@@ -75,7 +75,7 @@ public class BetterCacheManager
             {
                 res = callback();
 
-                cache.Add(cacheKey, res,
+                objectCache.Add(cacheKey, res,
                     new CacheItemPolicy()
                     {
                         SlidingExpiration = new TimeSpan(0, cacheMins, 0)
@@ -97,19 +97,19 @@ public class BetterCacheManager
     /// <returns>T</returns>
     public static T GetCachableData<T>(string key, Func<T> callback, DateTimeOffset absExpire, bool forceRefresh = false) where T : class
     {
-        ObjectCache cache = MemoryCache.Default;
+        ObjectCache objectCache = MemoryCache.Default;
 
         string cacheKey = key;
 
         // 取得每個 Key 專屬的鎖定對象。
         lock (GetAsyncLock(key))
         {
-            T? res = cache[cacheKey] as T;
+            T? res = objectCache[cacheKey] as T;
 
             // 是否清除 Cache，強制重查。
             if (res != null && forceRefresh)
             {
-                cache.Remove(cacheKey);
+                objectCache.Remove(cacheKey);
 
                 res = null;
             }
@@ -118,7 +118,7 @@ public class BetterCacheManager
             {
                 res = callback();
 
-                cache.Add(cacheKey, res, new CacheItemPolicy()
+                objectCache.Add(cacheKey, res, new CacheItemPolicy()
                 {
                     AbsoluteExpiration = absExpire
                 });

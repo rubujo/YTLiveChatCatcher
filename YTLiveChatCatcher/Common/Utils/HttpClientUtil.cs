@@ -45,16 +45,16 @@ public class HttpClientUtil
     /// <param name="httpClient">HttpClient</param>
     /// <param name="userAgent">字串，使用者代理字串</param>
     /// <returns>布林值</returns>
-    public static bool SetUserAgent(HttpClient httpClient, string userAgent)
+    public static bool SetUserAgent(HttpClient? httpClient, string userAgent)
     {
         if (string.IsNullOrEmpty(userAgent))
         {
             return false;
         }
 
-        httpClient.DefaultRequestHeaders.UserAgent.Clear();
+        httpClient?.DefaultRequestHeaders.UserAgent.Clear();
 
-        return httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
+        return httpClient?.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent) ?? false;
     }
 
     /// <summary>

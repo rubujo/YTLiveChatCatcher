@@ -1,4 +1,4 @@
-﻿namespace LiveChatCatcher.Models;
+﻿namespace Rubujo.YouTube.Utility.Models;
 
 /// <summary>
 /// runs 資料

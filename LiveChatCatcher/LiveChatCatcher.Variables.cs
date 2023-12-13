@@ -1,11 +1,11 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace LiveChatCatcher;
+namespace Rubujo.YouTube.Utility;
 
 /// <summary>
-/// Catcher 的變數
+/// LiveChatCatcher 的變數
 /// </summary>
-public partial class Catcher
+public partial class LiveChatCatcher
 {
     /// <summary>
     /// 共用的 Task
@@ -33,9 +33,9 @@ public partial class Catcher
     private static bool SharedIsStreaming;
 
     /// <summary>
-    /// 共用的布林值（是否獲取大圖片）
+    /// 共用的布林值（是否獲取大張圖片）
     /// </summary>
-    private static bool SharedFetchLargePicture;
+    private static bool SharedIsFetchLargePicture;
 
     /// <summary>
     /// 共用的逾時毫秒值

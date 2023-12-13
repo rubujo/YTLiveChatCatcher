@@ -1,13 +1,13 @@
-﻿using LiveChatCatcher.Events;
-using LiveChatCatcher.Models;
-using LiveChatCatcher.Sets;
+﻿using Rubujo.YouTube.Utility.Events;
+using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Sets;
 
-namespace LiveChatCatcher;
+namespace Rubujo.YouTube.Utility;
 
 /// <summary>
-/// Catcher 的事件
+/// LiveChatCatcher 的事件
 /// </summary>
-public partial class Catcher
+public partial class LiveChatCatcher
 {
     /// <summary>
     /// 紀錄輸出事件

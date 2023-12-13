@@ -1,7 +1,6 @@
-﻿using LiveChatCatcher.Events;
-using LiveChatCatcher.Sets;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NLog;
+using Rubujo.YouTube.Utility.Sets;
 using System.Text.RegularExpressions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
@@ -15,7 +14,7 @@ public partial class FMain : Form
     {
         InitializeComponent();
 
-        _httpClientFactory = httpClientFactory;
+        SharedHttpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -23,85 +22,12 @@ public partial class FMain : Form
     {
         try
         {
+            InitHttpCleint();
             InitControls();
             InitListView(LVLiveChatList);
-            CheckAppVersion();
+            InitLiveChatCather(SharedHttpClient);
 
-            // TODO: 2023/12/12 待完成。
-
-            #region 初始化 SharedCatcher
-
-            TBUserAgent.InvokeIfRequired(() =>
-            {
-                // 取得 HttpClient。
-                HttpClient httpClient = HttpClientUtil.GetHttpClient(
-                    _httpClientFactory,
-                    TBUserAgent.Text);
-
-                SharedCatcher.Init(
-                    httpClient: httpClient,
-                    cookies: GetCookies(),
-                    timeoutMs: 3000,
-                    isStreaming: false,
-                    fetchLargePicture: false);
-
-                SharedCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) => 
-                {
-                    // TODO: 2023/12/12 使用者代理字串。
-                    DoProcessMessage(e.Data, string.Empty);
-                };
-                SharedCatcher.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
-                {
-                    EnumSet.RunningStatus runningStatus = e.RunningStatus;
-
-                    switch (runningStatus)
-                    {
-                        default:
-                        case EnumSet.RunningStatus.Running:
-                        case EnumSet.RunningStatus.Stopped:
-                            WriteLog(runningStatus.ToString());
-
-                            break;
-                        case EnumSet.RunningStatus.ErrorOccured:
-                            BtnStop_Click(this, new EventArgs());
-                            break;
-                    }
-                };
-                SharedCatcher.OnLogOutput += (object? sender, LogOutputArgs e) =>
-                {
-                    EnumSet.LogType logType = e.LogType;
-
-                    switch (logType)
-                    {
-                        case EnumSet.LogType.Info:
-                            _logger.LogInformation("{Message}", e.Message);
-
-                            WriteLog(e.Message);
-
-                            break;
-                        case EnumSet.LogType.Warn:
-                            _logger.LogWarning("{WarningMessage}", e.Message);
-
-                            WriteLog(e.Message);
-
-                            break;
-                        case EnumSet.LogType.Error:
-                            _logger.LogError("{ErrorMessage}", e.Message);
-
-                            WriteLog(e.Message);
-
-                            break;
-                        case EnumSet.LogType.Debug:
-                            _logger.LogDebug("{DebugMessage}", e.Message);
-
-                            break;
-                        default:
-                            break;
-                    }
-                };
-            });
-
-            #endregion
+            CheckAppVersion(SharedHttpClient);
         }
         catch (Exception ex)
         {
@@ -146,17 +72,17 @@ public partial class FMain : Form
         {
             string tempValue = textBox.Text.Trim();
 
-            if (tempValue.Contains($"{LiveChatCatcher.Sets.StringSet.Origin}/channel/"))
+            if (tempValue.Contains($"{StringSet.Origin}/channel/"))
             {
-                tempValue = tempValue.Replace($"{LiveChatCatcher.Sets.StringSet.Origin}/channel/", string.Empty);
+                tempValue = tempValue.Replace($"{StringSet.Origin}/channel/", string.Empty);
             }
-            else if (tempValue.Contains($"{LiveChatCatcher.Sets.StringSet.Origin}/c/"))
+            else if (tempValue.Contains($"{StringSet.Origin}/c/"))
             {
-                tempValue = await SharedCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
+                tempValue = await SharedLiveChatCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
             }
             else if (tempValue.Contains('@'))
             {
-                tempValue = await SharedCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
+                tempValue = await SharedLiveChatCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
             }
 
             textBox.Text = tempValue;
@@ -280,6 +206,9 @@ public partial class FMain : Form
                 Properties.Settings.Default.IsStreaming = IsStreaming;
                 Properties.Settings.Default.Save();
             }
+
+            // 更新 LiveChatCatcher 的是否為直播。
+            SharedLiveChatCatcher.IsStreaming(IsStreaming);
         });
     }
 
@@ -301,6 +230,9 @@ public partial class FMain : Form
                 Properties.Settings.Default.IsStreaming = IsStreaming;
                 Properties.Settings.Default.Save();
             }
+
+            // 更新 LiveChatCatcher 的是否為直播。
+            SharedLiveChatCatcher.IsStreaming(IsStreaming);
         });
     }
 
@@ -308,103 +240,92 @@ public partial class FMain : Form
     {
         try
         {
-            string videoID = TBVideoID.Text.Trim();
+            string videoID = string.Empty;
 
-            if (string.IsNullOrEmpty(videoID))
+            TBVideoID.InvokeIfRequired(() =>
             {
-                TBVideoID.InvokeIfRequired(() =>
-                {
-                    string userAgent = string.Empty;
+                videoID = TBVideoID.Text;
 
-                    TBUserAgent.InvokeIfRequired(() =>
+                if (string.IsNullOrEmpty(videoID))
+                {
+                    videoID = SharedLiveChatCatcher.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
+
+                    TBVideoID.Text = videoID;
+
+                    if (!string.IsNullOrEmpty(videoID))
                     {
-                        userAgent = TBUserAgent.Text;
-                    });
-
-                    // 取得 HttpClient。
-                    using HttpClient httpClient = HttpClientUtil.GetHttpClient(
-                        _httpClientFactory,
-                        userAgent);
-
-                    TBVideoID.Text = SharedCatcher.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
-                });
-
-                videoID = TBVideoID.Text.Trim();
-
-                if (!string.IsNullOrEmpty(videoID))
-                {
-                    WriteLog($"透過頻道 ID 取得的影片 ID：{videoID}");
-                }
-                else
-                {
-                    WriteLog("透過頻道 ID 取得影片 ID 失敗。");
-                }
-            }
-
-            if (!string.IsNullOrEmpty(videoID))
-            {
-                CBRandomInterval.InvokeIfRequired(() =>
-                {
-                    bool isIntervalSet = false;
-
-                    if (CBRandomInterval.Checked)
-                    {
-                        SharedCatcher.SetTimeoutMs(CustomFunction.GetRandomInterval());
-
-                        isIntervalSet = true;
+                        WriteLog($"透過頻道 ID 取得的影片 ID：{videoID}");
                     }
                     else
                     {
-                        if (int.TryParse(TBInterval.Text.Trim(), out int interval))
-                        {
-                            if (interval >= 3)
-                            {
-                                SharedCatcher.SetTimeoutMs(interval * 1000);
-
-                                isIntervalSet = true;
-                            }
-                            else
-                            {
-                                isIntervalSet = false;
-
-                                MessageBox.Show(
-                                    "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
-                                    Text,
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Warning);
-                            }
-                        }
-                        else
-                        {
-                            isIntervalSet = false;
-
-                            MessageBox.Show(
-                                "請在間隔欄位輸入數值。",
-                                Text,
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
-                        }
+                        WriteLog("透過頻道 ID 取得影片 ID 失敗。");
                     }
+                }
+            });
 
-                    if (isIntervalSet)
-                    {
-                        // 設定控制項的狀態。
-                        SetControlsState(false);
-
-                        SharedCatcher.Start(videoID);
-
-                        WriteLog("開始取得聊天室的內容。");
-                    }
-                });
-            }
-            else
+            if (string.IsNullOrEmpty(videoID))
             {
                 MessageBox.Show(
                     "請輸入頻道 ID 或是影片 ID。",
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
+                
+                BtnStop_Click(null, new EventArgs());
+
+                return;
             }
+
+            CBRandomInterval.InvokeIfRequired(() =>
+            {
+                if (CBRandomInterval.Checked)
+                {
+                    // 設定 LiveChatCatcher 的逾時毫秒值。
+                    SharedLiveChatCatcher.TimeoutMs(CustomFunction.GetRandomInterval());
+                }
+                else
+                {
+                    if (int.TryParse(TBInterval.Text.Trim(), out int interval))
+                    {
+                        if (interval >= 3)
+                        {
+                            // 設定 LiveChatCatcher 的逾時毫秒值。
+                            SharedLiveChatCatcher.TimeoutMs(interval * 1000);
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
+                                Text,
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                            
+                            BtnStop_Click(null, new EventArgs());
+
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            "請在間隔欄位輸入數值。",
+                            Text,
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        
+                        BtnStop_Click(null, new EventArgs());
+
+                        return;
+                    }
+                }
+            });
+
+            // 設定控制項的狀態。
+            SetControlsState(false);
+
+            SharedLiveChatCatcher.Start(videoID);
+
+            WriteLog("開始取得聊天室的內容。");
         }
         catch (Exception ex)
         {
@@ -424,7 +345,7 @@ public partial class FMain : Form
     {
         try
         {
-            SharedCatcher.Stop();
+            SharedLiveChatCatcher.Stop();
 
             // 設定控制項的狀態。
             SetControlsState(true);
@@ -555,43 +476,39 @@ public partial class FMain : Form
             return;
         }
 
-        if (!string.IsNullOrEmpty(textBox.Text))
-        {
-            string userAgent = string.Empty;
-
-            textBox.InvokeIfRequired(() =>
-            {
-                userAgent = textBox.Text;
-            });
-
-            // 取得 HttpClient。
-            using HttpClient httpClient = HttpClientUtil
-                .GetHttpClient(_httpClientFactory, userAgent);
-
-            if (HttpClientUtil.SetUserAgent(httpClient, textBox.Text))
-            {
-                if (textBox.Text != Properties.Settings.Default.UserAgent)
-                {
-                    Properties.Settings.Default.UserAgent = textBox.Text;
-                    Properties.Settings.Default.Save();
-                }
-            }
-            else
-            {
-                MessageBox.Show(
-                    "請輸入有效的使用者代理字串。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-            }
-        }
-        else
+        if (string.IsNullOrEmpty(textBox.Text))
         {
             MessageBox.Show(
                 "請輸入使用者代理字串。",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
+
+            return;
+        }
+
+        string userAgent = string.Empty;
+
+        textBox.InvokeIfRequired(() =>
+        {
+            userAgent = textBox.Text;
+        });
+
+        if (!HttpClientUtil.SetUserAgent(SharedHttpClient, textBox.Text))
+        {
+            MessageBox.Show(
+                "請輸入有效的使用者代理字串。",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+
+            return;
+        }
+
+        if (textBox.Text != Properties.Settings.Default.UserAgent)
+        {
+            Properties.Settings.Default.UserAgent = textBox.Text;
+            Properties.Settings.Default.Save();
         }
     }
 
@@ -693,28 +610,28 @@ public partial class FMain : Form
             return;
         }
 
-        if (!string.IsNullOrEmpty(textBox.Text))
-        {
-            string secChUa = string.Empty;
-
-            textBox.InvokeIfRequired(() =>
-            {
-                secChUa = textBox.Text;
-            });
-
-            if (textBox.Text != Properties.Settings.Default.SecChUa)
-            {
-                Properties.Settings.Default.SecChUa = textBox.Text;
-                Properties.Settings.Default.Save();
-            }
-        }
-        else
+        if (string.IsNullOrEmpty(textBox.Text))
         {
             MessageBox.Show(
                 "請輸入 Sec-CH-UA。",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
+
+            return;
+        }
+
+        string secChUa = string.Empty;
+
+        textBox.InvokeIfRequired(() =>
+        {
+            secChUa = textBox.Text;
+        });
+
+        if (textBox.Text != Properties.Settings.Default.SecChUa)
+        {
+            Properties.Settings.Default.SecChUa = textBox.Text;
+            Properties.Settings.Default.Save();
         }
     }
 
