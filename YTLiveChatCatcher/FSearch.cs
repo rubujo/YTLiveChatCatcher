@@ -38,7 +38,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -59,7 +59,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -129,7 +129,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -160,7 +160,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -323,7 +323,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain._logger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",

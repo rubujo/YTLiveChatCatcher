@@ -8,6 +8,9 @@ using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
 
+/// <summary>
+/// FMain
+/// </summary>
 public partial class FMain : Form
 {
     public FMain(IHttpClientFactory httpClientFactory, ILogger<FMain> logger)
@@ -15,7 +18,7 @@ public partial class FMain : Form
         InitializeComponent();
 
         SharedHttpClientFactory = httpClientFactory;
-        _logger = logger;
+        SharedLogger = logger;
     }
 
     private void FMain_Load(object sender, EventArgs e)
@@ -31,7 +34,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -46,10 +49,14 @@ public partial class FMain : Form
         try
         {
             LogManager.Shutdown();
+
+            // 釋放以及清除 SharedHttpClient。
+            SharedHttpClient?.Dispose();
+            SharedHttpClient = null;
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -144,7 +151,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -250,8 +257,6 @@ public partial class FMain : Form
                 {
                     videoID = SharedLiveChatCatcher.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
 
-                    TBVideoID.Text = videoID;
-
                     if (!string.IsNullOrEmpty(videoID))
                     {
                         WriteLog($"透過頻道 ID 取得的影片 ID：{videoID}");
@@ -260,6 +265,8 @@ public partial class FMain : Form
                     {
                         WriteLog("透過頻道 ID 取得影片 ID 失敗。");
                     }
+
+                    TBVideoID.Text = videoID;
                 }
             });
 
@@ -270,7 +277,7 @@ public partial class FMain : Form
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
-                
+
                 BtnStop_Click(null, new EventArgs());
 
                 return;
@@ -299,7 +306,7 @@ public partial class FMain : Form
                                 Text,
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Warning);
-                            
+
                             BtnStop_Click(null, new EventArgs());
 
                             return;
@@ -312,7 +319,7 @@ public partial class FMain : Form
                             Text,
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
-                        
+
                         BtnStop_Click(null, new EventArgs());
 
                         return;
@@ -329,7 +336,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             BtnStop_Click(null, new EventArgs());
 
@@ -354,7 +361,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -388,7 +395,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -419,7 +426,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -487,13 +494,6 @@ public partial class FMain : Form
             return;
         }
 
-        string userAgent = string.Empty;
-
-        textBox.InvokeIfRequired(() =>
-        {
-            userAgent = textBox.Text;
-        });
-
         if (!HttpClientUtil.SetUserAgent(SharedHttpClient, textBox.Text))
         {
             MessageBox.Show(
@@ -521,7 +521,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -547,6 +547,8 @@ public partial class FMain : Form
                 Properties.Settings.Default.LoadCookies = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
+
+            SetUseCookies();
         });
     }
 
@@ -566,6 +568,8 @@ public partial class FMain : Form
                 Properties.Settings.Default.BrowserItemIndex = comboBox.SelectedIndex;
                 Properties.Settings.Default.Save();
             }
+
+            SetUseCookies();
         });
     }
 
@@ -586,23 +590,26 @@ public partial class FMain : Form
                     $@"{CBBrowser.SelectedItem?.ToString()!.Replace(" ", "\\")}" +
                     $@"\User Data\{textBox.Text}\";
 
-                if (Directory.Exists(path))
-                {
-                    Properties.Settings.Default.ProfileFolderName = textBox.Text;
-                    Properties.Settings.Default.Save();
-
-                    WriteLog($"設定檔資料夾名稱設定成功。{Environment.NewLine}路徑：{path}");
-                }
-                else
+                if (!Directory.Exists(path))
                 {
                     WriteLog($"請輸入有效的設定檔資料夾名稱。{Environment.NewLine}路徑：{path}");
+
+                    return;
                 }
+
+                WriteLog($"設定檔資料夾名稱設定成功。{Environment.NewLine}路徑：{path}");
+
+                Properties.Settings.Default.ProfileFolderName = textBox.Text;
+                Properties.Settings.Default.Save();
+
+                SetUseCookies();
             }
         });
     }
 
     private void TBSecChUa_TextChanged(object sender, EventArgs e)
     {
+        // TODO: 2023/12/14 待調整。
         TextBox? textBox = (TextBox?)sender;
 
         if (textBox == null)
@@ -620,13 +627,6 @@ public partial class FMain : Form
 
             return;
         }
-
-        string secChUa = string.Empty;
-
-        textBox.InvokeIfRequired(() =>
-        {
-            secChUa = textBox.Text;
-        });
 
         if (textBox.Text != Properties.Settings.Default.SecChUa)
         {
@@ -762,7 +762,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",
@@ -787,7 +787,7 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            _logger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
 
             MessageBox.Show(
                 $"發生錯誤：{ex}",

@@ -28,6 +28,7 @@ public partial class LiveChatCatcher
         SharedTimeoutMs = timeoutMs;
         SharedIsStreaming = isStreaming;
         SharedIsFetchLargePicture = isFetchLargePicture;
+        SharedCookies = string.Empty;
     }
 
     /// <summary>

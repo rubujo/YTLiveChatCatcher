@@ -309,6 +309,16 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
+    /// 取得 YouTube 頻道網址
+    /// </summary>
+    /// <param name="channelID">字串，頻道的 ID</param>
+    /// <returns>字串</returns>
+    public string GetYouTubeChannelUrl(string channelID)
+    {
+        return $"{StringSet.Origin}/channel/{channelID}";
+    }
+
+    /// <summary>
     /// 取得 YouTube 的 Coookies
     /// </summary>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>

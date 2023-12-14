@@ -9,7 +9,7 @@ namespace YTLiveChatCatcher;
 partial class DesignerBlocker { };
 
 /// <summary>
-/// FMain 變數
+/// FMain 的變數
 /// </summary>
 public partial class FMain
 {
@@ -36,7 +36,7 @@ public partial class FMain
     /// <summary>
     /// 共用的 ILogger&lt;FMain&gt;
     /// </summary>
-    public readonly ILogger<FMain> _logger;
+    public readonly ILogger<FMain> SharedLogger;
 
     /// <summary>
     /// 共用的 IHttpClientFactory
