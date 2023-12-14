@@ -40,6 +40,26 @@ public class HttpClientUtil
     }
 
     /// <summary>
+    /// 更新 HttpClient
+    /// </summary>
+    /// <param name="httpClient">HttpClient</param>
+    /// <param name="userAgent">字串，使用者代理字串，預設值為空白</param>
+    /// <returns>HttpClient</returns>
+    public static void UpdateHttpClient(HttpClient? httpClient, string userAgent = "")
+    {
+        bool canTryParseAdd = SetUserAgent(httpClient, userAgent);
+
+        // 當可以設定使用者代理字串時，才設定 Client Hints。
+        if (canTryParseAdd)
+        {
+            // 設定 Client Hints。
+            ClientHintsUtil.SetClientHints(httpClient);
+        }
+
+        LogHeaders(httpClient);
+    }
+
+    /// <summary>
     /// 為 HttpClient 設定指定的使用者代理字串
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
@@ -61,8 +81,15 @@ public class HttpClientUtil
     /// 記錄 HttpClient 的標頭資訊
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
-    public static void LogHeaders(HttpClient httpClient)
+    public static void LogHeaders(HttpClient? httpClient)
     {
+        if (httpClient == null)
+        {
+            _logger.Error("[HttpClientUtil.LogHeaders()]　{ErrorMessage}", "變數 \"httpClient\"為 null！");
+
+            return;
+        }
+
         StringBuilder stringBuilder = new();
 
         foreach (KeyValuePair<string, IEnumerable<string>> defaultRequestHeader in httpClient.DefaultRequestHeaders)

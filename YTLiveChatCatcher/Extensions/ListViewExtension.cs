@@ -1,4 +1,5 @@
 ﻿using GetCachable;
+using Rubujo.YouTube.Utility.Extensions;
 
 namespace YTLiveChatCatcher.Extensions;
 
@@ -71,7 +72,7 @@ public static class ListViewExtension
             }
             catch (Exception ex)
             {
-                errorMessage = $"發生錯誤：{ex.Message}{Environment.NewLine}" +
+                errorMessage = $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}" +
                     $"無法下載「{key}」的頭像。{Environment.NewLine}" +
                     $"頭像的網址：{imageUrl}";
 

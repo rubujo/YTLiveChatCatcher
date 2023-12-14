@@ -2,6 +2,7 @@
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
+using Rubujo.YouTube.Utility.Extensions;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
@@ -355,7 +356,7 @@ public class WebBrowserUtil
         }
         catch (Exception ex)
         {
-            SetErrorMessage($"[WebBrowserUtil.QuerySQLiteDB()] {ex}");
+            SetErrorMessage($"[WebBrowserUtil.QuerySQLiteDB()] {ex.GetExceptionMessage()}");
         }
 
         return outputData;
@@ -450,7 +451,7 @@ public class WebBrowserUtil
             }
             catch (Exception ex)
             {
-                SetErrorMessage($"[WebBrowserUtil.AesGcm256.Decrypt()] {ex}");
+                SetErrorMessage($"[WebBrowserUtil.AesGcm256.Decrypt()] {ex.GetExceptionMessage()}");
             }
 
             return sR;

@@ -19,6 +19,7 @@ using System.Runtime.Versioning;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
+using Rubujo.YouTube.Utility.Extensions;
 
 namespace YTLiveChatCatcher;
 
@@ -698,7 +699,7 @@ public partial class FMain
                                     {
                                         WriteLog($"無法將自定義表情符號「{emojiData.Label}」轉換成 Stream。");
                                         WriteLog($"自定義表情符號的網址：{emojiData.Url}");
-                                        WriteLog($"發生錯誤：{ex}");
+                                        WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
                                     }
 
                                     if (imageStream != null)
@@ -849,7 +850,7 @@ public partial class FMain
                                     {
                                         WriteLog($"無法將會員徽章「{badgeData.Label}」轉換成 Stream。");
                                         WriteLog($"會員徽章的網址：{badgeData.Url}");
-                                        WriteLog($"發生錯誤：{ex}");
+                                        WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
                                     }
 
                                     if (imageStream != null)
@@ -980,7 +981,7 @@ public partial class FMain
                                     {
                                         WriteLog($"無法將超級貼圖「{stickerData.Label}」轉換成 Stream。");
                                         WriteLog($"超級貼圖的網址：{stickerData.Url}");
-                                        WriteLog($"發生錯誤：{ex}");
+                                        WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
                                     }
 
                                     if (imageStream != null)
@@ -1063,7 +1064,7 @@ public partial class FMain
                     }
                     catch (Exception ex)
                     {
-                        WriteLog($"發生錯誤：{ex}");
+                        WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
                     }
                 }).ContinueWith(task =>
                 {
@@ -1526,7 +1527,7 @@ public partial class FMain
         }
         catch (Exception ex)
         {
-            WriteLog($"發生錯誤：{ex}");
+            WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
         }
     }
 
@@ -1884,7 +1885,7 @@ public partial class FMain
             }
             catch (Exception ex)
             {
-                WriteLog($"發生錯誤：{ex}");
+                WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
             }
         }).ContinueWith(task =>
         {

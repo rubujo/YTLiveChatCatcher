@@ -150,7 +150,7 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 從 YouTube 頻道自定義網址取得頻道 ID 值
+    /// 從 YouTube 頻道網址取得頻道 ID 值
     /// </summary>
     /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
     /// <returns>字串</returns>
@@ -188,7 +188,7 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 解析 YouTube 頻道的 ID 值
+    /// 解析 YouTube 頻道網址取得頻道 ID 值
     /// </summary>
     /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
     /// <returns>Task&lt;string&gt;</returns>
@@ -249,7 +249,7 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 透過頻道的 ID 取得該頻道最新的直播影片的影片 ID 值
+    /// 透過 YouTube 頻道的 ID 值取得該頻道最新的直播影片的影片 ID 值
     /// </summary>
     /// <param name="channelID">字串，頻道的 ID 值</param>
     /// <returns>字串</returns>
@@ -322,7 +322,7 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 透過影片的 ID 值取得該影片的標題
+    /// 透過 YouTube 影片的 ID 值取得該影片的標題
     /// </summary>
     /// <param name="videoID">字串，影片 ID 值</param>
     /// <param name="cookies">字串，Cookies</param>

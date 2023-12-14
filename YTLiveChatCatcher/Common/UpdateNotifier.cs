@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using Rubujo.YouTube.Utility.Extensions;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -116,7 +117,7 @@ public class UpdateNotifier
             return new CheckResult()
             {
                 IsException = true,
-                MessageText = ex.Message
+                MessageText = ex.GetExceptionMessage()
             };
         }
     }

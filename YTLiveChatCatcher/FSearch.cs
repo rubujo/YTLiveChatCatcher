@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Rubujo.YouTube.Utility.Extensions;
 using System.Data;
 using YTLiveChatCatcher.Extensions;
 
@@ -38,10 +39,10 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -59,10 +60,10 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -129,10 +130,10 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -160,10 +161,10 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -323,10 +324,10 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);

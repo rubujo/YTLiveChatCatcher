@@ -85,7 +85,7 @@ public class EmojiData
             {
                 errorMessage = $"無法下載自定義表情符號「「{Label}」。{Environment.NewLine}" +
                     $"自定義表情符號「的網址：{Url}{Environment.NewLine}" +
-                    $"發生錯誤：{ex.Message}{Environment.NewLine}";
+                    $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
 
                 // 當 isFetchLargePicture 的值為 true 時，建立一個 48x48 的白色 SkiaBitmapExportContext。
                 SkiaBitmapExportContext skiaBitmapExportContext = isFetchLargePicture ?

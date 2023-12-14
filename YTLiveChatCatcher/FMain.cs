@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NLog;
+using Rubujo.YouTube.Utility.Extensions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
@@ -25,6 +26,22 @@ public partial class FMain : Form
         {
             InitHttpCleint();
             InitControls();
+
+            #region 更新 SharedHttpClient 的標頭資訊
+
+            string userAgent = string.Empty;
+
+            TBUserAgent.InvokeIfRequired(() =>
+            {
+                userAgent = TBUserAgent.Text;
+            });
+
+
+            // 更新 SharedHttpClient 的標頭資訊。
+            HttpClientUtil.UpdateHttpClient(SharedHttpClient, userAgent);
+
+            #endregion;
+
             InitListView(LVLiveChatList);
             InitLiveChatCather(SharedHttpClient);
 
@@ -32,10 +49,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -54,10 +71,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -122,10 +139,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -254,8 +271,11 @@ public partial class FMain : Form
                 return;
             }
 
-            // TODO: 2023/12/14 待修正。
+            #region 設定間隔時間
 
+            bool isIntervalSet = false;
+
+            // 判斷是否為隨機間隔時間。
             CBRandomInterval.InvokeIfRequired(() =>
             {
                 if (CBRandomInterval.Checked)
@@ -265,56 +285,75 @@ public partial class FMain : Form
                 }
                 else
                 {
-                    if (int.TryParse(TBInterval.Text.Trim(), out int interval))
-                    {
-                        if (interval >= 3)
-                        {
-                            // 設定 LiveChatCatcher 的逾時毫秒值。
-                            SharedLiveChatCatcher.TimeoutMs(interval * 1000);
-                        }
-                        else
-                        {
-                            MessageBox.Show(
-                                "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
-                                Text,
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
-
-                            BtnStop_Click(null, new EventArgs());
-
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show(
-                            "請在間隔欄位輸入數值。",
-                            Text,
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-
-                        BtnStop_Click(null, new EventArgs());
-
-                        return;
-                    }
+                    // 重設 LiveChatCatcher 的逾時毫秒值。
+                    SharedLiveChatCatcher.TimeoutMs(3000);
                 }
+
+                isIntervalSet = CBRandomInterval.Checked;
             });
 
-            // 設定控制項的狀態。
-            SetControlsState(false);
+            // 判斷是否已經成功設定間隔值。
+            if (!isIntervalSet)
+            {
+                // 解析失敗。
+                if (!int.TryParse(TBInterval.Text.Trim(), out int interval))
+                {
+                    isIntervalSet = false;
 
-            SharedLiveChatCatcher.Start(videoID);
+                    MessageBox.Show(
+                        "請在間隔欄位輸入數值。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
 
-            WriteLog("開始取得聊天室的內容。");
+                    BtnStop_Click(null, new EventArgs());
+
+                    return;
+                }
+
+                // 最低不可以低於 3 秒。
+                if (interval < 3)
+                {
+                    isIntervalSet = false;
+
+                    MessageBox.Show(
+                        "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    BtnStop_Click(null, new EventArgs());
+
+                    return;
+                }
+
+                // 設定 LiveChatCatcher 的逾時毫秒值。
+                SharedLiveChatCatcher.TimeoutMs(interval * 1000);
+
+                isIntervalSet = true;
+            }
+
+            #endregion
+
+            // 當成功設定間隔值後才可以執行。
+            if (isIntervalSet)
+            {
+                // 設定控制項的狀態。
+                SetControlsState(false);
+
+                SharedLiveChatCatcher.Start(videoID);
+
+                WriteLog("開始取得聊天室的內容。");
+            }
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             BtnStop_Click(null, new EventArgs());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -334,10 +373,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -368,10 +407,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -399,10 +438,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -483,6 +522,9 @@ public partial class FMain : Form
             Properties.Settings.Default.UserAgent = textBox.Text;
             Properties.Settings.Default.Save();
         }
+
+        // 更新 SharedHttpClient 的標頭資訊。
+        HttpClientUtil.UpdateHttpClient(SharedHttpClient, textBox.Text);
     }
 
     private void BtnSearchUserAgent_Click(object sender, EventArgs e)
@@ -494,10 +536,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -582,7 +624,6 @@ public partial class FMain : Form
 
     private void TBSecChUa_TextChanged(object sender, EventArgs e)
     {
-        // TODO: 2023/12/14 待調整。
         TextBox? textBox = (TextBox?)sender;
 
         if (textBox == null)
@@ -606,6 +647,20 @@ public partial class FMain : Form
             Properties.Settings.Default.SecChUa = textBox.Text;
             Properties.Settings.Default.Save();
         }
+
+        #region 更新 SharedHttpClient 的標頭資訊
+
+        string userAgent = string.Empty;
+
+        TBUserAgent.InvokeIfRequired(() =>
+        {
+            userAgent = TBUserAgent.Text;
+        });
+
+        // 更新 SharedHttpClient 的標頭資訊。
+        HttpClientUtil.UpdateHttpClient(SharedHttpClient, userAgent);
+
+        #endregion
     }
 
     private void BtnSearch_Click(object sender, EventArgs e)
@@ -735,10 +790,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -760,10 +815,10 @@ public partial class FMain : Form
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.ToString());
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
-                $"發生錯誤：{ex}",
+                $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);

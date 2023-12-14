@@ -80,7 +80,7 @@ public class StickerData
             {
                 errorMessage = $"無法下載超級貼圖「{Label}」。{Environment.NewLine}" +
                     $"超級貼圖的網址：{Url}{Environment.NewLine}" +
-                    $"發生錯誤：{ex.Message}{Environment.NewLine}";
+                    $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
 
                 // 當 isFetchLargePicture 的值為 true 時，建立一個 48x48 的白色 SkiaBitmapExportContext。
                 SkiaBitmapExportContext skiaBitmapExportContext = isFetchLargePicture ?

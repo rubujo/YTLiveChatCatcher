@@ -80,7 +80,7 @@ public class BadgeData
             {
                 errorMessage = $"無法下載會員徽章「{Label}」。{Environment.NewLine}" +
                     $"會員徽章的網址：{Url}{Environment.NewLine}" +
-                    $"發生錯誤：{ex.Message}{Environment.NewLine}";
+                    $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
 
                 // 當 isFetchLargePicture 的值為 true 時，建立一個 48x48 的白色 SkiaBitmapExportContext。
                 SkiaBitmapExportContext skiaBitmapExportContext = isFetchLargePicture ?

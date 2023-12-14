@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
 
@@ -125,11 +126,12 @@ public partial class LiveChatCatcher
 
             if (int.TryParse(continuationData[1], out int timeoutMs))
             {
+                // 更新 SharedTimeoutMs。
                 SharedTimeoutMs = timeoutMs;
 
                 RaiseOnLogOutput(
                     EnumSet.LogType.Info,
-                    $"接收到的 timeoutMs：{timeoutMs}");
+                    $"接收到的 timeoutMs：{SharedTimeoutMs}");
             }
 
             List<RendererData> messages = ParseActions(jsonElement);
@@ -141,7 +143,7 @@ public partial class LiveChatCatcher
 
             RaiseOnLogOutput(
                 EnumSet.LogType.Info,
-                $"於 {timeoutMs / 1000} 秒後，獲取下一批次的即時聊天資料。");
+                $"於 {SharedTimeoutMs / 1000} 秒後，獲取下一批次的即時聊天資料。");
 
             SpinWait.SpinUntil(() => false, SharedTimeoutMs);
         }
@@ -160,7 +162,7 @@ public partial class LiveChatCatcher
 
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
-                task.Exception.ToString());
+                task.Exception.GetExceptionMessage());
 
             return;
         }
