@@ -150,39 +150,108 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 從 YouTube 頻道自定義網址取得頻道 ID
+    /// 從 YouTube 頻道自定義網址取得頻道 ID 值
     /// </summary>
-    /// <param name="url">字串，YouTube 頻道自定義網址</param>
+    /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
     /// <returns>字串</returns>
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public async Task<string?> GetYtChIdByYtChCustomUrl(string url)
+    public async Task<string> GetYouTubeChannelID(string channelUrl)
     {
-        string? ytChId = string.Empty;
+        string channelID = string.Empty;
+
+        if (channelUrl.Contains($"{StringSet.Origin}/channel/"))
+        {
+            // 頻道網址。
+            channelID = channelUrl.Replace($"{StringSet.Origin}/channel/", string.Empty);
+        }
+        else if (channelUrl.Contains($"{StringSet.Origin}/c/"))
+        {
+            // 自訂網址。
+            channelID = await ParseYouTubeChannelID(channelUrl);
+        }
+        else if (channelUrl.Contains($"{StringSet.Origin}/user/"))
+        {
+            // 舊有使用者名稱網址。
+            channelID = await ParseYouTubeChannelID(channelUrl);
+        }
+        else if (channelUrl.Contains('@'))
+        {
+            // 帳號代碼網址。
+            channelID = await ParseYouTubeChannelID(channelUrl);
+        }
+
+        if (string.IsNullOrEmpty(channelID))
+        {
+            channelID = channelUrl;
+        }
+
+        return channelID;
+    }
+
+    /// <summary>
+    /// 解析 YouTube 頻道的 ID 值
+    /// </summary>
+    /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
+    /// <returns>Task&lt;string&gt;</returns>
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public async Task<string> ParseYouTubeChannelID(string channelUrl)
+    {
+        string channelID = string.Empty;
 
         IConfiguration configuration = Configuration.Default.WithDefaultLoader();
         IBrowsingContext browsingContext = BrowsingContext.New(configuration);
-        IDocument document = await browsingContext.OpenAsync(url);
+        IDocument document = await browsingContext.OpenAsync(channelUrl);
         IElement? element = document?.Body?.Children
             .FirstOrDefault(n => n.LocalName == "meta" &&
                 n.GetAttribute("property") == "og:url");
 
         if (element != null)
         {
-            ytChId = element.GetAttribute("content");
+            channelID = element.GetAttribute("content") ?? string.Empty;
         }
 
-        if (!string.IsNullOrEmpty(ytChId))
+        if (!string.IsNullOrEmpty(channelID))
         {
-            ytChId = ytChId.Replace("https://www.youtube.com/channel/", string.Empty);
+            channelID = channelID.Replace($"{StringSet.Origin}/channel/", string.Empty);
         }
 
-        return ytChId;
+        return channelID;
     }
 
     /// <summary>
-    /// 透過頻道的 ID 取得該頻道最新的直播影片的影片 ID
+    /// 從 YouTube 影片的網址取得影片的 ID 值
+    /// <para>來源：https://stackoverflow.com/a/15219045</para>
+    /// <para>原作者：rvalvik</para>
+    /// <para>原授權：CC BY-SA 3.0</para>
+    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
-    /// <param name="channelID">字串，頻道的 ID</param>
+    /// <param name="videoUrl">字串，影片的網址</param>
+    /// <returns>字串</returns>
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public string GetYouTubeVideoID(string videoUrl)
+    {
+        Regex regex = RegexYouTubeUrl();
+
+        string videoID = regex.Replace(videoUrl, string.Empty);
+
+        if (videoID.Contains("&list="))
+        {
+            string[] tempArray = videoID.Split("&list=");
+
+            videoID = tempArray[0];
+        }
+
+        if (string.IsNullOrEmpty(videoID))
+        {
+            videoID = videoUrl;
+        }
+
+        return videoID;
+    }
+
+    /// <summary>
+    /// 透過頻道的 ID 取得該頻道最新的直播影片的影片 ID 值
+    /// </summary>
+    /// <param name="channelID">字串，頻道的 ID 值</param>
     /// <returns>字串</returns>
     public string GetLatestStreamingVideoID(string channelID)
     {
@@ -205,7 +274,7 @@ public partial class LiveChatCatcher
         {
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
-                "[GetLatestStreamingVideoID()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
+                "[LiveChatCatcher.GetLatestStreamingVideoID()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
 
             return videoID;
         }
@@ -253,9 +322,9 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 透過影片的 ID 取得該影片的標題
+    /// 透過影片的 ID 值取得該影片的標題
     /// </summary>
-    /// <param name="videoID">字串，影片 ID</param>
+    /// <param name="videoID">字串，影片 ID 值</param>
     /// <param name="cookies">字串，Cookies</param>
     /// <returns>字串</returns>
     public string GetVideoTitle(string videoID)
@@ -279,7 +348,7 @@ public partial class LiveChatCatcher
         {
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
-                "[GetVideoTitle()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
+                "[LiveChatCatcher.GetVideoTitle()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
 
             return videoTitle;
         }
@@ -313,6 +382,7 @@ public partial class LiveChatCatcher
     /// </summary>
     /// <param name="channelID">字串，頻道的 ID</param>
     /// <returns>字串</returns>
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
     public string GetYouTubeChannelUrl(string channelID)
     {
         return $"{StringSet.Origin}/channel/{channelID}";
@@ -344,7 +414,7 @@ public partial class LiveChatCatcher
     /// </summary>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
     /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
-    /// <param name="host">字串，Host，預設值為空白</param>
+    /// <param name="host">字串，目標 Host 的字串值，預設值為空白</param>
     /// <returns>字串</returns>
     [SupportedOSPlatform("windows")]
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]

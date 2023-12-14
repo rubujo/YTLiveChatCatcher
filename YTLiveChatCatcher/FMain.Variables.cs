@@ -62,11 +62,4 @@ public partial class FMain
     /// 共用的 List&lt;BadgeData&gt;
     /// </summary>
     private readonly List<BadgeData> SharedBadges = [];
-
-    /// <summary>
-    /// 正規表示式（YouTube 影片的網址）
-    /// </summary>
-    /// <returns>Regex</returns>
-    [GeneratedRegex("(?:(http|https):\\/\\/(?:www\\.)?youtu\\.?be(?:\\.com)?\\/(?:embed\\/|watch\\?v=|\\?v=|v\\/|e\\/|[^\\[]+\\/|watch.*v=)?)")]
-    private static partial Regex RegexYouTubeUrl();
 }

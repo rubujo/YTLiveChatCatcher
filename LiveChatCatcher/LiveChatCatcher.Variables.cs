@@ -48,4 +48,15 @@ public partial class LiveChatCatcher
     /// <returns>Regex</returns>
     [GeneratedRegex("v=(.+)")]
     private static partial Regex RegexVideoID();
+
+    /// <summary>
+    /// 正規表示式（YouTube 影片的網址）
+    /// <para>來源：https://stackoverflow.com/a/15219045</para>
+    /// <para>原作者：rvalvik</para>
+    /// <para>原授權：CC BY-SA 3.0</para>
+    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
+    /// </summary>
+    /// <returns>Regex</returns>
+    [GeneratedRegex("(?:(http|https):\\/\\/(?:www\\.)?youtu\\.?be(?:\\.com)?\\/(?:embed\\/|watch\\?v=|\\?v=|v\\/|e\\/|[^\\[]+\\/|watch.*v=)?)")]
+    private static partial Regex RegexYouTubeUrl();
 }

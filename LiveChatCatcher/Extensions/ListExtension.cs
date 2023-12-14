@@ -1,5 +1,8 @@
 ﻿using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
 
 namespace Rubujo.YouTube.Utility.Extensions;
 
@@ -23,5 +26,33 @@ public static class ListExtension
         }
 
         return StringSet.NoAuthorBadges;
+    }
+
+    /// <summary>
+    /// 轉換成 JSON 字串
+    /// </summary>
+    /// <param name="list">List&lt;RendererData&gt;</param>
+    /// <returns>字串</returns>
+    public static string ToJson(this List<RendererData> list)
+    {
+        return JsonSerializer.Serialize(list, GetJsonSerializerOptions());
+    }
+
+    /// <summary>
+    /// 取得 JsonSerializerOptions
+    /// </summary>
+    /// <returns>JsonSerializerOptions</returns>
+    private static JsonSerializerOptions GetJsonSerializerOptions()
+    {
+        TextEncoderSettings textEncoderSettings = new();
+
+        textEncoderSettings.AllowRanges(UnicodeRanges.All);
+
+        return new JsonSerializerOptions()
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Encoder = JavaScriptEncoder.Create(textEncoderSettings)
+        };
     }
 }

@@ -425,11 +425,11 @@ public class WebBrowserUtil
         /// <summary>
         /// 解密
         /// </summary>
-        /// <param name="encryptedBytes">byte[]</param>
+        /// <param name="bytesEncrypted">byte[]</param>
         /// <param name="key">byte[]</param>
         /// <param name="iv">byte[]</param>
         /// <returns>字串</returns>
-        public static string Decrypt(byte[] encryptedBytes, byte[] key, byte[] iv)
+        public static string Decrypt(byte[] bytesEncrypted, byte[] key, byte[] iv)
         {
             string sR = string.Empty;
 
@@ -440,13 +440,13 @@ public class WebBrowserUtil
 
                 gcmBlockCipher.Init(false, aeadParameters);
 
-                byte[] plainBytes = new byte[gcmBlockCipher.GetOutputSize(encryptedBytes.Length)];
+                byte[] bytesPlain = new byte[gcmBlockCipher.GetOutputSize(bytesEncrypted.Length)];
 
-                int retLen = gcmBlockCipher.ProcessBytes(encryptedBytes, 0, encryptedBytes.Length, plainBytes, 0);
+                int retLen = gcmBlockCipher.ProcessBytes(bytesEncrypted, 0, bytesEncrypted.Length, bytesPlain, 0);
 
-                gcmBlockCipher.DoFinal(plainBytes, retLen);
+                gcmBlockCipher.DoFinal(bytesPlain, retLen);
 
-                sR = Encoding.UTF8.GetString(plainBytes).TrimEnd("\r\n\0".ToCharArray());
+                sR = Encoding.UTF8.GetString(bytesPlain).TrimEnd("\r\n\0".ToCharArray());
             }
             catch (Exception ex)
             {

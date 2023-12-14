@@ -34,14 +34,14 @@ public partial class LiveChatCatcher
     /// <summary>
     /// 開始
     /// </summary>
-    /// <param name="videoID">字串，YouTube 影片的 ID 值</param>
-    public void Start(string videoID)
+    /// <param name="videoUrlOrID">字串，YouTube 影片網址或是 ID 值</param>
+    public void Start(string videoUrlOrID)
     {
         if (SharedTask != null && !SharedTask.IsCompleted)
         {
             RaiseOnLogOutput(
                 EnumSet.LogType.Warn,
-                "[Start()] Task 正在執行中。");
+                "[LiveChatCatcher.Start()] Task 正在執行中。");
 
             return;
         }
@@ -51,7 +51,7 @@ public partial class LiveChatCatcher
             RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
-                "[Start()] 發生錯誤，變數 \"SharedHttpClient\" 是 null！");
+                "[LiveChatCatcher.Start()] 發生錯誤，變數 \"SharedHttpClient\" 是 null！");
 
             return;
         }
@@ -60,7 +60,7 @@ public partial class LiveChatCatcher
         SharedCancellationTokenSource = new CancellationTokenSource();
 
         SharedTask = Task.Run(() =>
-            FetchLiveChatData(videoID),
+            FetchLiveChatData(GetYouTubeVideoID(videoUrlOrID)),
             SharedCancellationTokenSource.Token);
 
         SharedTask.ContinueWith((task) =>
@@ -94,7 +94,7 @@ public partial class LiveChatCatcher
             RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
-                "[FetchLiveChatData()] 發生錯誤，變數 \"ytConfigData\" 是 null！");
+                "[LiveChatCatcher.FetchLiveChatData()] 發生錯誤，變數 \"ytConfigData\" 是 null！");
 
             return;
         }
@@ -139,6 +139,10 @@ public partial class LiveChatCatcher
                 RaiseOnFecthLiveChat(messages);
             }
 
+            RaiseOnLogOutput(
+                EnumSet.LogType.Info,
+                $"於 {timeoutMs / 1000} 秒後，獲取下一批次的即時聊天資料。");
+
             SpinWait.SpinUntil(() => false, SharedTimeoutMs);
         }
     }
@@ -153,6 +157,7 @@ public partial class LiveChatCatcher
         if (task.IsFaulted)
         {
             RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
+
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
                 task.Exception.ToString());

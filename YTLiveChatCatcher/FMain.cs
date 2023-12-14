@@ -1,7 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using NLog;
-using Rubujo.YouTube.Utility.Sets;
-using System.Text.RegularExpressions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
@@ -77,22 +75,8 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(async () =>
         {
-            string tempValue = textBox.Text.Trim();
-
-            if (tempValue.Contains($"{StringSet.Origin}/channel/"))
-            {
-                tempValue = tempValue.Replace($"{StringSet.Origin}/channel/", string.Empty);
-            }
-            else if (tempValue.Contains($"{StringSet.Origin}/c/"))
-            {
-                tempValue = await SharedLiveChatCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
-            }
-            else if (tempValue.Contains('@'))
-            {
-                tempValue = await SharedLiveChatCatcher.GetYtChIdByYtChCustomUrl(tempValue) ?? string.Empty;
-            }
-
-            textBox.Text = tempValue;
+            textBox.Text = await SharedLiveChatCatcher
+                .GetYouTubeChannelID(textBox.Text.Trim());
         });
     }
 
@@ -107,21 +91,8 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(() =>
         {
-            string tempValue = textBox.Text.Trim();
-
-            // 參考：https://stackoverflow.com/a/15219045
-            Regex regex = RegexYouTubeUrl();
-
-            tempValue = regex.Replace(tempValue, string.Empty);
-
-            if (tempValue.Contains("&list="))
-            {
-                string[] tempArray = tempValue.Split("&list=");
-
-                tempValue = tempArray[0];
-            }
-
-            textBox.Text = tempValue;
+            textBox.Text = SharedLiveChatCatcher
+                .GetYouTubeVideoID(textBox.Text.Trim());
         });
     }
 
@@ -282,6 +253,8 @@ public partial class FMain : Form
 
                 return;
             }
+
+            // TODO: 2023/12/14 待修正。
 
             CBRandomInterval.InvokeIfRequired(() =>
             {
