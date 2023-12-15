@@ -148,7 +148,7 @@ public class WebBrowserUtil
         }
         else
         {
-            ErrorMessage += $"{value}{Environment.NewLine}";
+            ErrorMessage += $"{Environment.NewLine}{value}";
         }
     }
 
@@ -163,7 +163,7 @@ public class WebBrowserUtil
     public static List<CookieData> GetCookies(
         BrowserType browserType,
         string profileName,
-        string hostKey)
+        string? hostKey)
     {
         // 先清除舊的錯誤訊息。
         SetErrorMessage(string.Empty);
@@ -176,7 +176,7 @@ public class WebBrowserUtil
             isCustomProfilePath = true;
         }
 
-        List<CookieData> outputData = [];
+        List<CookieData> listCookieData = [];
 
         string cookieFilePath = string.Empty;
 
@@ -232,10 +232,13 @@ public class WebBrowserUtil
 
         if (File.Exists(cookieFilePath))
         {
-            outputData = QuerySQLiteDB(browserType, cookieFilePath, hostKey);
+            listCookieData = QuerySQLiteDB(
+                browserType: browserType,
+                cookieFilePath: cookieFilePath,
+                hostKey: hostKey);
         }
 
-        return outputData;
+        return listCookieData;
     }
 
     /// <summary>
@@ -280,21 +283,26 @@ public class WebBrowserUtil
     private static List<CookieData> QuerySQLiteDB(
         BrowserType browserType,
         string cookieFilePath,
-        string hostKey)
+        string? hostKey)
     {
-        List<CookieData> outputData = [];
+        List<CookieData> listCookieData = [];
+
+        SqliteConnection? sqliteConnection = null;
+
+        SqliteCommand? sqliteCommand = null;
 
         try
         {
-            using SqliteConnection sqliteConnection = new($"Data Source={cookieFilePath}");
-            using SqliteCommand sqliteCommand = sqliteConnection.CreateCommand();
+            sqliteConnection = new($"Data Source={cookieFilePath}");
+
+            sqliteCommand = sqliteConnection.CreateCommand();
 
             string rawTSQL = browserType switch
             {
                 BrowserType.MozillaFirefox => "SELECT [name], [value], [host] FROM [moz_cookies]",
                 _ => "SELECT [name], [encrypted_value], [host_key] FROM [cookies]"
-            };
-            string rawWhereClauseTSQL = browserType switch
+            },
+            rawWhereClauseTSQL = browserType switch
             {
                 BrowserType.MozillaFirefox => $" WHERE [host] = '{hostKey}'",
                 //Browser.MozillaFirefox =>  $" WHERE [host] = LIKE '%{hostKey}%'",
@@ -302,6 +310,7 @@ public class WebBrowserUtil
                 //_ => $" WHERE [host_key] LIKE '%{hostKey}%'"
             };
 
+            // 當 hostKey 不為 null 或是空白時，則附加 WHERE 語句。
             if (!string.IsNullOrEmpty(hostKey))
             {
                 rawTSQL += rawWhereClauseTSQL;
@@ -321,7 +330,7 @@ public class WebBrowserUtil
 
                 while (sqliteDataReader.Read())
                 {
-                    if (!outputData.Any(a => a.Name == sqliteDataReader.GetString(0)))
+                    if (!listCookieData.Any(a => a.Name == sqliteDataReader.GetString(0)))
                     {
                         string value = string.Empty;
 
@@ -342,7 +351,7 @@ public class WebBrowserUtil
                                 break;
                         }
 
-                        outputData.Add(new CookieData()
+                        listCookieData.Add(new CookieData()
                         {
                             HostKey = sqliteDataReader.GetString(2),
                             Name = sqliteDataReader.GetString(0),
@@ -358,8 +367,17 @@ public class WebBrowserUtil
         {
             SetErrorMessage($"[WebBrowserUtil.QuerySQLiteDB()] {ex.GetExceptionMessage()}");
         }
+        finally
+        {
+            sqliteCommand?.Dispose();
+            sqliteCommand = null;
 
-        return outputData;
+            sqliteConnection?.Close();
+            sqliteConnection?.Dispose();
+            sqliteConnection = null;
+        }
+
+        return listCookieData;
     }
 
     /// <summary>

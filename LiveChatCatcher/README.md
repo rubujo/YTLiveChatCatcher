@@ -57,17 +57,17 @@ void Main()
 	// ※ 預設值為 3000。
 	//liveChatCatcher.TimeoutMs(3000);
 
-	// 設定是否使用 Cookies。
+	// 設定是否使用 Cookie。
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
-	// ※預設是不使用 Cookies。
-	//liveChatCatcher.UseCookies(
+	// ※預設是不使用 Cookie。
+	//liveChatCatcher.UseCookie(
 	//	enable: true,
 	//	browserType: WebBrowserUtil.BrowserType.GoogleChrome,
 	//	profileFolderName: string.Empty);
 
-	// 設定不使用 Cookies。
-	//liveChatCatcher.UseCookies(enable: false);
+	// 設定不使用 Cookie。
+	//liveChatCatcher.UseCookie(enable: false);
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
@@ -99,7 +99,7 @@ void Main()
 				Console.WriteLine(runningStatus.ToString());
 
 				// 依據您的需求處理獲取到的即時聊天資料，此處是輸出成 JSON 格式的資料。
-				Console.WriteLine(listMessage.ToJson());
+				Console.WriteLine(listMessage.ToJsonString());
 				
 				break;
 			case EnumSet.RunningStatus.ErrorOccured:
@@ -151,4 +151,5 @@ void Main()
 1. 本函式庫僅支援`正體中文`。
 2. 本函式庫是以 `gl = "TW"`、`hl = "zh-TW"` 等語系參數來取得 YouTube 聊天室的即時聊天資料。
 3. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
-4. 取得 Cookies 的相關方法，`僅限於 Microsoft Windows 平臺可以使用。`
+4. 取得 Cookie 的相關方法，`僅限於 Microsoft Windows 平臺可以使用。`
+  - `※使用相關方法時，請先確認該目標的網頁瀏覽器是處於關閉的狀態，否則有可能會無法成功的取得 Cookie 資料。`

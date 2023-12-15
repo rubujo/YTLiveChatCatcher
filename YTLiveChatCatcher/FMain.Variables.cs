@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Models;
-using System.Text.RegularExpressions;
 
 namespace YTLiveChatCatcher;
 
@@ -14,6 +13,11 @@ partial class DesignerBlocker { };
 public partial class FMain
 {
     /// <summary>
+    /// 共用的 HttpClient
+    /// </summary>
+    private HttpClient? SharedHttpClient;
+
+    /// <summary>
     /// 是否為直播
     /// </summary>
     private bool IsStreaming = false;
@@ -21,17 +25,7 @@ public partial class FMain
     /// <summary>
     /// 是否取得大張的影像檔
     /// </summary>
-    private bool FetchLargePicture = true;
-
-    /// <summary>
-    /// 共用的 LiveChatCatcher
-    /// </summary>
-    private LiveChatCatcher SharedLiveChatCatcher = new();
-
-    /// <summary>
-    /// 共用的 HttpClient
-    /// </summary>
-    private HttpClient? SharedHttpClient;
+    private readonly bool FetchLargePicture = true;
 
     /// <summary>
     /// 共用的 ILogger&lt;FMain&gt;
@@ -42,6 +36,11 @@ public partial class FMain
     /// 共用的 IHttpClientFactory
     /// </summary>
     private readonly IHttpClientFactory SharedHttpClientFactory;
+
+    /// <summary>
+    /// 共用的 LiveChatCatcher
+    /// </summary>
+    private readonly LiveChatCatcher SharedLiveChatCatcher = new();
 
     /// <summary>
     /// 共用的 ToolTip

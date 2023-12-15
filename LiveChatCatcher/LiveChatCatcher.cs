@@ -14,13 +14,12 @@ public partial class LiveChatCatcher
     /// <summary>
     /// 初始化
     /// </summary>
-    /// <param name="httpClient">HttpClient</param>
+    /// <param name="httpClient">HttpClient，預設值為 null</param>
     /// <param name="timeoutMs">數值，逾時的毫秒值，預設值 3000</param>
     /// <param name="isStreaming">布林值，是否為直播，預設值為 false</param>
     /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片，預設值為 true</param>
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
     public void Init(
-        HttpClient httpClient,
+        HttpClient? httpClient = null,
         int timeoutMs = 3000,
         bool isStreaming = false,
         bool isFetchLargePicture = true)
@@ -30,6 +29,9 @@ public partial class LiveChatCatcher
         SharedIsStreaming = isStreaming;
         SharedIsFetchLargePicture = isFetchLargePicture;
         SharedCookies = string.Empty;
+
+        // 當傳入的 httpClient 為 null 時，則自動建立 HttpClient。
+        SharedHttpClient ??= CreateHttpClient();
     }
 
     /// <summary>

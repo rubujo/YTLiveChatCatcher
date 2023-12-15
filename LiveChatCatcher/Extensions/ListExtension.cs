@@ -31,9 +31,39 @@ public static class ListExtension
     /// <summary>
     /// 轉換成 JSON 字串
     /// </summary>
+    /// <param name="list">List&lt;BadgeData&gt;</param>
+    /// <returns>字串</returns>
+    public static string ToJsonString(this List<BadgeData> list)
+    {
+        return JsonSerializer.Serialize(list, GetJsonSerializerOptions());
+    }
+
+    /// <summary>
+    /// 轉換成 JSON 字串
+    /// </summary>
+    /// <param name="list">List&lt;EmojiData&gt;</param>
+    /// <returns>字串</returns>
+    public static string ToJsonString(this List<EmojiData> list)
+    {
+        return JsonSerializer.Serialize(list, GetJsonSerializerOptions());
+    }
+
+    /// <summary>
+    /// 轉換成 JSON 字串
+    /// </summary>
+    /// <param name="list">List&lt;StickerData&gt;</param>
+    /// <returns>字串</returns>
+    public static string ToJsonString(this List<StickerData> list)
+    {
+        return JsonSerializer.Serialize(list, GetJsonSerializerOptions());
+    }
+
+    /// <summary>
+    /// 轉換成 JSON 字串
+    /// </summary>
     /// <param name="list">List&lt;RendererData&gt;</param>
     /// <returns>字串</returns>
-    public static string ToJson(this List<RendererData> list)
+    public static string ToJsonString(this List<RendererData> list)
     {
         return JsonSerializer.Serialize(list, GetJsonSerializerOptions());
     }

@@ -2259,7 +2259,7 @@ public partial class FMain
         });
 
         // 設定 LiveChatCatcher 是否使用 Cookies。
-        SharedLiveChatCatcher.UseCookies(
+        SharedLiveChatCatcher.UseCookie(
             enable: enable,
             browserType: browserType,
             profileFolderName: profileFolderName);

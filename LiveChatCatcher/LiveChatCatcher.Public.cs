@@ -47,40 +47,50 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 取得 Cookies
+    /// 設定 HttpClient
+    /// </summary>
+    /// <param name="httpClient">HttpClient</param>
+    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
+    public void SetHttpClient(HttpClient httpClient)
+    {
+        SharedHttpClient = httpClient;
+    }
+
+    /// <summary>
+    /// 取得使用的 Cookie
     /// </summary>
     /// <returns>字串，Cookies</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public string? GetCookies()
+    public string? GetUsedCookie()
     {
         return SharedCookies;
     }
 
     /// <summary>
-    /// 取得使用 Cookies
+    /// 取得使用 Cookie
     /// </summary>
     /// <returns>布林值</returns>
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public bool UseCookies()
+    public bool UseCookie()
     {
         return !string.IsNullOrEmpty(SharedCookies);
     }
 
     /// <summary>
-    /// 設定使用 Cookies
+    /// 設定使用 Cookie
     /// </summary>
     /// <param name="enable">布林值，啟用，預設值為 false</param>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
     /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
     [SupportedOSPlatform("windows")]
-    public void UseCookies(
+    public void UseCookie(
         bool enable = false,
         WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
         string profileFolderName = "")
     {
         if (enable)
         {
-            SharedCookies = GetYouTubeCookies(browserType, profileFolderName);
+            SharedCookies = GetYouTubeCookie(browserType, profileFolderName);
         }
         else
         {
@@ -389,46 +399,57 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 取得 YouTube 的 Coookies
+    /// 取得 YouTube 網站的 Cookie
     /// </summary>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
     /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
     /// <returns>字串</returns>
     [SupportedOSPlatform("windows")]
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public string GetYouTubeCookies(
+    public string GetYouTubeCookie(
         WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
         string profileFolderName = "")
     {
-        List<WebBrowserUtil.CookieData> cookies = WebBrowserUtil
-            .GetCookies(
-                browserType,
-                profileFolderName,
-                ".youtube.com");
-
-        return string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
+        return GetCookie(
+            browserType: browserType,
+            profileFolderName: profileFolderName,
+            hostKey: ".youtube.com");
     }
 
     /// <summary>
-    /// 取得特定 Host 的 Coookies
+    /// 取得 Cookie
     /// </summary>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
     /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
-    /// <param name="host">字串，目標 Host 的字串值，預設值為空白</param>
+    /// <param name="hostKey">字串，主機鍵值，預設值為空白</param>
     /// <returns>字串</returns>
     [SupportedOSPlatform("windows")]
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public string GetHostCookies(
+    public string GetCookie(
         WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
         string profileFolderName = "",
-        string host = "")
+        string? hostKey = null)
     {
-        List<WebBrowserUtil.CookieData> cookies = WebBrowserUtil
+        List<WebBrowserUtil.CookieData> listCookie = WebBrowserUtil
             .GetCookies(
                 browserType,
                 profileFolderName,
-                host);
+                hostKey);
 
-        return string.Join(";", cookies.Select(n => $"{n.Name}={n.Value}"));
+        if (listCookie.Count <= 0)
+        {
+            RaiseOnLogOutput(
+                EnumSet.LogType.Info,
+                $"[LiveChatCatcher.GetCookie()] 主機鍵值 \"{hostKey}\" 找不到 Cookie。");
+        }
+
+        string errorMessage = WebBrowserUtil.GetErrorMessage();
+
+        if (!string.IsNullOrEmpty(errorMessage))
+        {
+            RaiseOnLogOutput(
+                EnumSet.LogType.Error,
+                errorMessage);
+        }
+
+        return string.Join(";", listCookie.Select(n => $"{n.Name}={n.Value}"));
     }
 }

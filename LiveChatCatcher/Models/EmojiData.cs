@@ -3,6 +3,7 @@ using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Graphics.Platform;
 using Microsoft.Maui.Graphics.Skia;
 using Rubujo.YouTube.Utility.Extensions;
+using System.Text.Json.Serialization;
 
 namespace Rubujo.YouTube.Utility.Models;
 
@@ -14,36 +15,43 @@ public class EmojiData
     /// <summary>
     /// Emoji 的 ID 值
     /// </summary>
+    [JsonPropertyName("id")]
     public string? ID { get; set; }
 
     /// <summary>
     /// 影像檔的網址
     /// </summary>
+    [JsonPropertyName("url")]
     public string? Url { get; set; }
 
     /// <summary>
     /// 文字
     /// </summary>
+    [JsonPropertyName("text")]
     public string? Text { get; set; }
 
     /// <summary>
     /// 標籤
     /// </summary>
+    [JsonPropertyName("label")]
     public string? Label { get; set; }
 
     /// <summary>
     /// 是否為自定義表情符號
     /// </summary>
+    [JsonPropertyName("isCustomEmoji")]
     public bool IsCustomEmoji { get; set; }
 
     /// <summary>
     /// 影像檔的格式
     /// </summary>
+    [JsonPropertyName("format")]
     public string? Format { get; set; }
 
     /// <summary>
     /// 影像
     /// </summary>
+    [JsonIgnore]
     public IImage? Image { get; set; }
 
     /// <summary>

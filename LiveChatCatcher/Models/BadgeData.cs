@@ -3,6 +3,7 @@ using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Graphics.Platform;
 using Microsoft.Maui.Graphics.Skia;
 using Rubujo.YouTube.Utility.Extensions;
+using System.Text.Json.Serialization;
 
 namespace Rubujo.YouTube.Utility.Models;
 
@@ -14,31 +15,37 @@ public class BadgeData
     /// <summary>
     /// 工具提示
     /// </summary>
+    [JsonPropertyName("tooltip")]
     public string? Tooltip { get; set; }
 
     /// <summary>
     /// 標籤
     /// </summary>
+    [JsonPropertyName("label")]
     public string? Label { get; set; }
 
     /// <summary>
     /// 圖示類型
     /// </summary>
+    [JsonPropertyName("iconType")]
     public string? IconType { get; set; }
 
     /// <summary>
     /// 影像檔的網址
     /// </summary>
+    [JsonPropertyName("url")]
     public string? Url { get; set; }
 
     /// <summary>
     /// 影像檔的格式
     /// </summary>
+    [JsonPropertyName("format")]
     public string? Format { get; set; }
 
     /// <summary>
     /// 影像
     /// </summary>
+    [JsonIgnore]
     public IImage? Image { get; set; }
 
     /// <summary>
