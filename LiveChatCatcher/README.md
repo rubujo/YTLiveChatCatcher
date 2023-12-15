@@ -1,4 +1,4 @@
-# LiveChatCatcher
+# 即時聊天捕手
 
 ## 一、簡介
 
@@ -7,30 +7,20 @@
 ## 二、使用範例
 
 ```csharp
+using System;
+using System.Collections.Generic;
+
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
+using Rubujo.YouTube.Utility.Utils;
 
 void Main()
 {
 	// 宣告影片的網址或是 ID 值。
 	string videoUrlOrID = "{影片的網址或是 ID 值}";
-
-	// 宣告 httpClient。
-	HttpClient httpClient = new();
-
-	// 設定使用者代理字串。
-	string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " + 
-		"AppleWebKit/537.36 (KHTML, like Gecko) " + 
-		"Chrome/120.0.0.0 Safari/537.36";
-		
-	httpClient.DefaultRequestHeaders.UserAgent.Clear();
-	httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
 
 	// 宣告 listMessage，用於暫存獲取到的即時聊天資料。
 	List<RendererData> listMessage = [];
@@ -39,42 +29,26 @@ void Main()
 	LiveChatCatcher liveChatCatcher = new();
 
 	// 初始化 liveChatCatcher。
-	//liveChatCatcher.Init(
-	//	httpClient: httpClient,
-	//	timeoutMs: 3000,
-	//	isStreaming: false,
-	//	isFetchLargePicture: true);
-		
-	liveChatCatcher.Init(httpClient: httpClient);
-
-	// 設定目標影片是否為直播。
-	// ※預設值為 false。
-	//liveChatCatcher.IsStreaming(false);
-
+	liveChatCatcher.Init();
+	
 	// 設定逾時毫秒值。（意即得等待多久，才會再抓取下一批資料）
 	// 1. 在重播影片時可以自由設定。（配合 UseCookies() 使用時，此值請不要設太低，以免 YouTube 或是 Google 帳號被停權。）
 	// 2. 在直播影片時，會直接使用獲取到的 timeoutMs 的值。（意即指不會理會使用此方法設定的值）
 	// ※ 預設值為 3000。
-	//liveChatCatcher.TimeoutMs(3000);
-
+	liveChatCatcher.TimeoutMs(3000);
+	
 	// 設定是否使用 Cookie。
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
 	// ※預設是不使用 Cookie。
-	//liveChatCatcher.UseCookie(
-	//	enable: true,
-	//	browserType: WebBrowserUtil.BrowserType.GoogleChrome,
-	//	profileFolderName: string.Empty);
-
-	// 設定不使用 Cookie。
-	//liveChatCatcher.UseCookie(enable: false);
+	liveChatCatcher.UseCookie(
+		enable: false,
+		browserType: WebBrowserUtil.BrowserType.GoogleChrome,
+		profileFolderName: string.Empty);
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
-	//liveChatCatcher.FetchLargePicture(true);
-
-	// 設定獲取小張圖片。
-	//liveChatCatcher.FetchLargePicture(false);
+	liveChatCatcher.FetchLargePicture(true);
 
 	// 獲取即時聊天資料事件。
 	liveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
@@ -137,13 +111,12 @@ void Main()
 				break;
 		}
 	};
-
+	
 	// 開始獲取即時聊天資料。
 	liveChatCatcher.Start(videoUrlOrID);
-	
+
 	// 手動停止獲取即時聊天資料。
 	//liveChatCatcher.Stop();
-}
 ```
 
 ## 三、注意事項

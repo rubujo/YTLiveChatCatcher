@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace YTLiveChatCatcher.Common.Utils;
+namespace Rubujo.YouTube.Utility.Utils;
 
 /// <summary>
 /// 網頁瀏覽器工具

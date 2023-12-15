@@ -14,7 +14,7 @@
     <Setting Name="ProfileFolderName" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="LoadCookies" Type="System.Boolean" Scope="User">
+    <Setting Name="LoadCookie" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="EnableDebug" Type="System.Boolean" Scope="User">
@@ -22,9 +22,6 @@
     </Setting>
     <Setting Name="ExportAuthorPhoto" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
-    </Setting>
-    <Setting Name="IsStreaming" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="UpdateSettings" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

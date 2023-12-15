@@ -16,17 +16,14 @@ public partial class LiveChatCatcher
     /// </summary>
     /// <param name="httpClient">HttpClient，預設值為 null</param>
     /// <param name="timeoutMs">數值，逾時的毫秒值，預設值 3000</param>
-    /// <param name="isStreaming">布林值，是否為直播，預設值為 false</param>
     /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片，預設值為 true</param>
     public void Init(
         HttpClient? httpClient = null,
         int timeoutMs = 3000,
-        bool isStreaming = false,
         bool isFetchLargePicture = true)
     {
         SharedHttpClient = httpClient;
         SharedTimeoutMs = timeoutMs;
-        SharedIsStreaming = isStreaming;
         SharedIsFetchLargePicture = isFetchLargePicture;
         SharedCookies = string.Empty;
 
@@ -59,12 +56,18 @@ public partial class LiveChatCatcher
             return;
         }
 
-        // 開始 Task。
         SharedCancellationTokenSource = new CancellationTokenSource();
 
+        // 開始 Task。
         SharedTask = Task.Run(() =>
-            FetchLiveChatData(GetYouTubeVideoID(videoUrlOrID)),
-            SharedCancellationTokenSource.Token);
+        {
+            string vedioID = GetYouTubeVideoID(videoUrlOrID);
+
+            SharedIsStreaming = IsVideoStreaming(vedioID);
+
+            FetchLiveChatData(vedioID);
+        },
+        SharedCancellationTokenSource.Token);
 
         SharedTask.ContinueWith((task) =>
             TaskCompleted(task, null),
@@ -77,7 +80,12 @@ public partial class LiveChatCatcher
     [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
     public void Stop()
     {
+        // 清除 SharedCancellationTokenSource。
         SharedCancellationTokenSource?.Cancel();
+        SharedCancellationTokenSource = null;
+
+        // 清除 SharedTask。
+        SharedTask = null;
     }
 
     /// <summary>
@@ -170,5 +178,8 @@ public partial class LiveChatCatcher
         }
 
         RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Stopped);
+
+        // 清除 SharedTask。
+        SharedTask = null;
     }
 }

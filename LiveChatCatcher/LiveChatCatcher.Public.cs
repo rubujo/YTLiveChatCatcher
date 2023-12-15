@@ -2,12 +2,14 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
+using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Sets;
+using Rubujo.YouTube.Utility.Utils;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.Versioning;
+using System.Text.Json;
 using System.Text.RegularExpressions;
-using YTLiveChatCatcher.Common.Utils;
 
 namespace Rubujo.YouTube.Utility;
 
@@ -91,10 +93,23 @@ public partial class LiveChatCatcher
         if (enable)
         {
             SharedCookies = GetYouTubeCookie(browserType, profileFolderName);
+
+            if (!string.IsNullOrEmpty(SharedCookies))
+            {
+                RaiseOnLogOutput(EnumSet.LogType.Info, "已啟用使用 Cookie。");
+            }
+            else
+            {
+                SharedCookies = string.Empty;
+
+                RaiseOnLogOutput(EnumSet.LogType.Info, "Cookie 取得失敗，已關閉使用 Cookie。");
+            }
         }
         else
         {
             SharedCookies = string.Empty;
+
+            RaiseOnLogOutput(EnumSet.LogType.Info, "已關閉使用 Cookie。");
         }
     }
 
@@ -106,16 +121,6 @@ public partial class LiveChatCatcher
     public bool IsStreaming()
     {
         return SharedIsStreaming;
-    }
-
-    /// <summary>
-    /// 設定是否為直播
-    /// </summary>
-    /// <param name="value">布林值</param>
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
-    public void IsStreaming(bool value)
-    {
-        SharedIsStreaming = value;
     }
 
     /// <summary>
@@ -266,7 +271,9 @@ public partial class LiveChatCatcher
     public string GetLatestStreamingVideoID(string channelID)
     {
         string videoID = string.Empty,
-               url = $"{StringSet.Origin}/embed/live_stream?channel={channelID}";
+               //url = $"{StringSet.Origin}/embed/live_stream?channel={channelID}",
+               // 2023/12/15 改用其它方式取得最新直播的影片。
+               url = $"{StringSet.Origin}/channel/{channelID}/live";
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
@@ -399,6 +406,95 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
+    /// 檢查影片是否正在直播中
+    /// </summary>
+    /// <param name="videoID">字串，影片 ID</param>
+    /// <returns>布林值</returns>
+    public bool IsVideoStreaming(string videoID)
+    {
+        string url = $"{StringSet.Origin}/live_chat?v={videoID}";
+
+        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        if (!string.IsNullOrEmpty(SharedCookies))
+        {
+            SetHttpRequestMessageHeader(httpRequestMessage);
+        }
+
+        HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
+            .GetAwaiter()
+            .GetResult();
+
+        string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
+            .GetAwaiter()
+            .GetResult();
+
+        if (htmlContent == null)
+        {
+            RaiseOnLogOutput(
+                EnumSet.LogType.Error,
+                "[LiveChatCatcher.CheckVideoIsStreamingOrNot()] 發生錯誤，變數 \"htmlContent\" 為 null！");
+
+            return false;
+        }
+
+        if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
+        {
+            HtmlParser htmlParser = new();
+            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+            IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+            IElement targetScriptElement = scriptElements
+                .FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] = "))!;
+
+            string scriptContent = targetScriptElement.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty);
+
+            if (scriptContent.EndsWith(';'))
+            {
+                scriptContent = scriptContent[0..^1];
+            }
+
+            #region 非直播中影片的範例資料
+
+            /*
+            "contents": {
+                "messageRenderer": {
+                    "text": {
+                        "runs": [
+                            {
+                                "text": "這部直播影片的聊天室已停用。"
+                            }
+                        ]
+                    },
+                    "trackingParams": "CAEQljsiEwj4t4bixZCDAxUZYA8CHZS-A8s="
+                }
+            },
+            */
+
+            #endregion
+
+            JsonElement jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+            JsonElement? jeContents = jeRoot.Get("contents");
+            JsonElement? jeMessageRenderer = jeContents?.Get("messageRenderer");
+
+            return !jeMessageRenderer.HasValue;
+        }
+        else
+        {
+            string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
+                $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
+                $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
+                $"接收到的內容：{Environment.NewLine}" +
+                $"{htmlContent}{Environment.NewLine}";
+
+            RaiseOnLogOutput(
+                EnumSet.LogType.Error,
+                errorMessage);
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// 取得 YouTube 網站的 Cookie
     /// </summary>
     /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
@@ -437,7 +533,7 @@ public partial class LiveChatCatcher
         if (listCookie.Count <= 0)
         {
             RaiseOnLogOutput(
-                EnumSet.LogType.Info,
+                EnumSet.LogType.Error,
                 $"[LiveChatCatcher.GetCookie()] 主機鍵值 \"{hostKey}\" 找不到 Cookie。");
         }
 

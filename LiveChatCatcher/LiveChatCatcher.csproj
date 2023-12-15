@@ -6,9 +6,10 @@
     <Nullable>enable</Nullable>
     <Company>DD們的避難所</Company>
     <Authors>perditavojo</Authors>
-    <Version>1.0.0</Version>
+    <Version>0.0.1</Version>
     <Description>用於取得 YouTube 即時聊天資料的函式庫。</Description>
     <RootNamespace>Rubujo.YouTube.Utility</RootNamespace>
+    <Product>即時聊天捕手</Product>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

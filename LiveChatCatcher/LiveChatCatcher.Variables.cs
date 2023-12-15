@@ -30,7 +30,7 @@ public partial class LiveChatCatcher
     /// <summary>
     /// 共用的布林值（是否為直播）
     /// </summary>
-    private static bool SharedIsStreaming;
+    private static bool SharedIsStreaming = false;
 
     /// <summary>
     /// 共用的布林值（是否獲取大張圖片）

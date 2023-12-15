@@ -183,54 +183,6 @@ public partial class FMain : Form
         });
     }
 
-    private void RBtnStreaming_CheckedChanged(object sender, EventArgs e)
-    {
-        RadioButton? radioButton = (RadioButton?)sender;
-
-        if (radioButton == null)
-        {
-            return;
-        }
-
-        radioButton.InvokeIfRequired(() =>
-        {
-            IsStreaming = radioButton.Checked;
-
-            if (IsStreaming != Properties.Settings.Default.IsStreaming)
-            {
-                Properties.Settings.Default.IsStreaming = IsStreaming;
-                Properties.Settings.Default.Save();
-            }
-
-            // 更新 LiveChatCatcher 的是否為直播。
-            SharedLiveChatCatcher.IsStreaming(IsStreaming);
-        });
-    }
-
-    private void RBtnReplay_CheckedChanged(object sender, EventArgs e)
-    {
-        RadioButton? radioButton = (RadioButton?)sender;
-
-        if (radioButton == null)
-        {
-            return;
-        }
-
-        radioButton.InvokeIfRequired(() =>
-        {
-            IsStreaming = !radioButton.Checked;
-
-            if (IsStreaming != Properties.Settings.Default.IsStreaming)
-            {
-                Properties.Settings.Default.IsStreaming = IsStreaming;
-                Properties.Settings.Default.Save();
-            }
-
-            // 更新 LiveChatCatcher 的是否為直播。
-            SharedLiveChatCatcher.IsStreaming(IsStreaming);
-        });
-    }
-
     private void BtnStart_Click(object sender, EventArgs e)
     {
         try
@@ -275,63 +227,43 @@ public partial class FMain : Form
 
             bool isIntervalSet = false;
 
-            // 判斷是否為隨機間隔時間。
-            CBRandomInterval.InvokeIfRequired(() =>
-            {
-                if (CBRandomInterval.Checked)
-                {
-                    // 設定 LiveChatCatcher 的逾時毫秒值。
-                    SharedLiveChatCatcher.TimeoutMs(CustomFunction.GetRandomInterval());
-                }
-                else
-                {
-                    // 重設 LiveChatCatcher 的逾時毫秒值。
-                    SharedLiveChatCatcher.TimeoutMs(3000);
-                }
-
-                isIntervalSet = CBRandomInterval.Checked;
-            });
-
             // 判斷是否已經成功設定間隔值。
-            if (!isIntervalSet)
+            // 解析失敗。
+            if (!int.TryParse(TBInterval.Text.Trim(), out int interval))
             {
-                // 解析失敗。
-                if (!int.TryParse(TBInterval.Text.Trim(), out int interval))
-                {
-                    isIntervalSet = false;
+                isIntervalSet = false;
 
-                    MessageBox.Show(
-                        "請在間隔欄位輸入數值。",
-                        Text,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    "請在間隔欄位輸入數值。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
 
-                    BtnStop_Click(null, new EventArgs());
+                BtnStop_Click(null, new EventArgs());
 
-                    return;
-                }
-
-                // 最低不可以低於 3 秒。
-                if (interval < 3)
-                {
-                    isIntervalSet = false;
-
-                    MessageBox.Show(
-                        "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
-                        Text,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-
-                    BtnStop_Click(null, new EventArgs());
-
-                    return;
-                }
-
-                // 設定 LiveChatCatcher 的逾時毫秒值。
-                SharedLiveChatCatcher.TimeoutMs(interval * 1000);
-
-                isIntervalSet = true;
+                return;
             }
+
+            // 最低不可以低於 3 秒。
+            if (interval < 3)
+            {
+                isIntervalSet = false;
+
+                MessageBox.Show(
+                    "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                BtnStop_Click(null, new EventArgs());
+
+                return;
+            }
+
+            // 設定 LiveChatCatcher 的逾時毫秒值。
+            SharedLiveChatCatcher.TimeoutMs(interval * 1000);
+
+            isIntervalSet = true;
 
             #endregion
 
@@ -340,6 +272,9 @@ public partial class FMain : Form
             {
                 // 設定控制項的狀態。
                 SetControlsState(false);
+
+                // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
+                SetUseCookie();
 
                 SharedLiveChatCatcher.Start(videoID);
 
@@ -546,7 +481,7 @@ public partial class FMain : Form
         }
     }
 
-    private void CBLoadCookies_CheckedChanged(object sender, EventArgs e)
+    private void CBLoadCookie_CheckedChanged(object sender, EventArgs e)
     {
         CheckBox? checkBox = (CheckBox?)sender;
 
@@ -557,13 +492,13 @@ public partial class FMain : Form
 
         checkBox.InvokeIfRequired(() =>
         {
-            if (checkBox.Checked != Properties.Settings.Default.LoadCookies)
+            if (checkBox.Checked != Properties.Settings.Default.LoadCookie)
             {
-                Properties.Settings.Default.LoadCookies = checkBox.Checked;
+                Properties.Settings.Default.LoadCookie = checkBox.Checked;
                 Properties.Settings.Default.Save();
             }
 
-            SetUseCookies();
+            SetUseCookie();
         });
     }
 
@@ -584,7 +519,7 @@ public partial class FMain : Form
                 Properties.Settings.Default.Save();
             }
 
-            SetUseCookies();
+            SetUseCookie();
         });
     }
 
@@ -617,7 +552,7 @@ public partial class FMain : Form
                 Properties.Settings.Default.ProfileFolderName = textBox.Text;
                 Properties.Settings.Default.Save();
 
-                SetUseCookies();
+                SetUseCookie();
             }
         });
     }

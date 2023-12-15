@@ -18,16 +18,6 @@ public partial class FMain
     private HttpClient? SharedHttpClient;
 
     /// <summary>
-    /// 是否為直播
-    /// </summary>
-    private bool IsStreaming = false;
-
-    /// <summary>
-    /// 是否取得大張的影像檔
-    /// </summary>
-    private readonly bool FetchLargePicture = true;
-
-    /// <summary>
     /// 共用的 ILogger&lt;FMain&gt;
     /// </summary>
     public readonly ILogger<FMain> SharedLogger;

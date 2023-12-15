@@ -11,15 +11,16 @@ using OfficeOpenXml.Drawing.Chart.Style;
 using OfficeOpenXml.Style;
 using OfficeOpenXml.Style.XmlAccess;
 using Rubujo.YouTube.Utility.Events;
+using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
+using Rubujo.YouTube.Utility.Utils;
 using Size = System.Drawing.Size;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using System.Runtime.Versioning;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
-using Rubujo.YouTube.Utility.Extensions;
 
 namespace YTLiveChatCatcher;
 
@@ -226,13 +227,6 @@ public partial class FMain
 
             saveFileDialog.FileName = cleanedFileName;
         }
-
-        bool isStreaiming = false;
-
-        RBtnStreaming.InvokeIfRequired(() =>
-        {
-            isStreaiming = RBtnStreaming.Checked;
-        });
 
         DialogResult dialogResult = saveFileDialog.ShowDialog();
 
@@ -522,7 +516,9 @@ public partial class FMain
 
                             if (sourceList.Count > 0)
                             {
-                                string sheetName = isStreaiming ? StringSet.SheetName2 : StringSet.SheetName3;
+                                string sheetName = SharedLiveChatCatcher.IsStreaming() ?
+                                    StringSet.SheetName2 :
+                                    StringSet.SheetName3;
 
                                 ExcelWorksheet worksheet2 = workbook.Worksheets.Add(sheetName);
 
@@ -1188,21 +1184,8 @@ public partial class FMain
 
         TBInterval.InvokeIfRequired(() =>
         {
-            // 預設 5 秒。
-            TBInterval.Text = "5";
-        });
-
-        // 從 Settings 中讀取值。
-        IsStreaming = Properties.Settings.Default.IsStreaming;
-
-        RBtnStreaming.InvokeIfRequired(() =>
-        {
-            RBtnStreaming.Checked = Properties.Settings.Default.IsStreaming;
-        });
-
-        RBtnReplay.InvokeIfRequired(() =>
-        {
-            RBtnReplay.Checked = !Properties.Settings.Default.IsStreaming;
+            // 預設 3 秒。
+            TBInterval.Text = "3";
         });
 
         BtnStop.InvokeIfRequired(() =>
@@ -1223,10 +1206,10 @@ public partial class FMain
             CBEnableTTS.Checked = Properties.Settings.Default.EnableTTS;
         });
 
-        CBLoadCookies.InvokeIfRequired(() =>
+        CBLoadCookie.InvokeIfRequired(() =>
         {
             // 載入載入 Cookies 設定值。
-            CBLoadCookies.Checked = Properties.Settings.Default.LoadCookies;
+            CBLoadCookie.Checked = Properties.Settings.Default.LoadCookie;
         });
 
         CBBrowser.InvokeIfRequired(() =>
@@ -1294,7 +1277,9 @@ public partial class FMain
                     {
                         if (!SharedStickers.Any(n => n.ID == stickerData.ID))
                         {
-                            string errorMessage = await stickerData.SetImage(SharedHttpClient, FetchLargePicture);
+                            string errorMessage = await stickerData.SetImage(
+                                SharedHttpClient,
+                                SharedLiveChatCatcher.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -1315,7 +1300,9 @@ public partial class FMain
                         {
                             if (emojiData.IsCustomEmoji)
                             {
-                                string errorMessage = await emojiData.SetImage(SharedHttpClient, FetchLargePicture);
+                                string errorMessage = await emojiData.SetImage(
+                                    SharedHttpClient,
+                                    SharedLiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -1337,7 +1324,9 @@ public partial class FMain
                             !SharedBadges.Any(n => n.Label == badgeData.Label) &&
                             badgeData.Label.Contains(StringSet.Member))
                         {
-                            string errorMessage = await badgeData.SetImage(SharedHttpClient, FetchLargePicture);
+                            string errorMessage = await badgeData.SetImage(
+                                SharedHttpClient,
+                                SharedLiveChatCatcher.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -1764,7 +1753,9 @@ public partial class FMain
                             {
                                 if (emojiData.IsCustomEmoji)
                                 {
-                                    string errorMessage = await emojiData.SetImage(SharedHttpClient, FetchLargePicture);
+                                    string errorMessage = await emojiData.SetImage(
+                                        SharedHttpClient,
+                                        SharedLiveChatCatcher.FetchLargePicture());
 
                                     if (!string.IsNullOrEmpty(errorMessage))
                                     {
@@ -1819,7 +1810,9 @@ public partial class FMain
                             if (!SharedBadges.Any(n => n.Label == badgeData.Label) &&
                                 badgeData.Label.Contains(StringSet.Member))
                             {
-                                string errorMessage = await badgeData.SetImage(SharedHttpClient, FetchLargePicture);
+                                string errorMessage = await badgeData.SetImage(
+                                    SharedHttpClient,
+                                    SharedLiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -1864,7 +1857,9 @@ public partial class FMain
 
                             if (!SharedStickers.Any(n => n.Url == stickerData.Url))
                             {
-                                string errorMessage = await stickerData.SetImage(SharedHttpClient, FetchLargePicture);
+                                string errorMessage = await stickerData.SetImage(
+                                    SharedHttpClient,
+                                    SharedLiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -2115,16 +2110,6 @@ public partial class FMain
     /// <param name="enable">布林值，預設值為 true</param>
     private void SetControlsState(bool enable = true)
     {
-        RBtnStreaming.InvokeIfRequired(() =>
-        {
-            RBtnStreaming.Enabled = enable;
-        });
-
-        RBtnReplay.InvokeIfRequired(() =>
-        {
-            RBtnReplay.Enabled = enable;
-        });
-
         // 2022/5/30 暫時先不要鎖。
         /*
         BtnOpenVideoUrl.InvokeIfRequired(() =>
@@ -2163,30 +2148,19 @@ public partial class FMain
             TBVideoID.Enabled = enable;
         });
 
-        CBRandomInterval.InvokeIfRequired(() =>
-        {
-            CBRandomInterval.Enabled = enable;
-
-            TBInterval.InvokeIfRequired(() =>
-            {
-                TBInterval.Enabled = !CBRandomInterval.Checked;
-
-                if (!enable)
-                {
-                    TBInterval.Enabled = false;
-                }
-            });
-        });
-
         TBUserAgent.InvokeIfRequired(() =>
         {
             TBUserAgent.Enabled = enable;
         });
 
-
-        CBLoadCookies.InvokeIfRequired(() =>
+        TBInterval.InvokeIfRequired(() =>
         {
-            CBLoadCookies.Enabled = enable;
+            TBInterval.Enabled = enable;
+        });
+
+        CBLoadCookie.InvokeIfRequired(() =>
+        {
+            CBLoadCookie.Enabled = enable;
         });
 
         CBBrowser.InvokeIfRequired(() =>
@@ -2211,15 +2185,15 @@ public partial class FMain
     }
 
     /// <summary>
-    /// 設定使用 Coookies
+    /// 設定使用 Cookie
     /// </summary>
-    private void SetUseCookies()
+    private void SetUseCookie()
     {
         bool enable = false;
 
-        CBLoadCookies.InvokeIfRequired(() =>
+        CBLoadCookie.InvokeIfRequired(() =>
         {
-            enable = CBLoadCookies.Checked;
+            enable = CBLoadCookie.Checked;
         });
 
         WebBrowserUtil.BrowserType browserType =
@@ -2310,9 +2284,7 @@ public partial class FMain
             return;
         }
 
-        SharedLiveChatCatcher.Init(
-            httpClient: httpClient,
-            isStreaming: IsStreaming);
+        SharedLiveChatCatcher.Init(httpClient: httpClient);
         SharedLiveChatCatcher.FetchLargePicture(true);
         SharedLiveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
         {
@@ -2351,6 +2323,23 @@ public partial class FMain
 
                     WriteLog(e.Message);
 
+                    // 更新間隔欄位的值。
+                    if (e.Message.Contains("接收到的 timeoutMs："))
+                    {
+                        if (int.TryParse(e.Message.Replace("接收到的 timeoutMs：", string.Empty), out int newInterval))
+                        {
+                            newInterval /= 1000;
+
+                            TBInterval.InvokeIfRequired(() =>
+                            {
+                                if (newInterval.ToString() != TBInterval.Text)
+                                {
+                                    TBInterval.Text = newInterval.ToString();
+                                }
+                            });
+                        }
+                    }
+
                     break;
                 case EnumSet.LogType.Warn:
                     SharedLogger.LogWarning("{WarningMessage}", e.Message);
@@ -2372,6 +2361,15 @@ public partial class FMain
                     break;
             }
         };
+
+        CBLoadCookie.InvokeIfRequired(() =>
+        {
+            if (CBLoadCookie.Checked)
+            {
+                // 設定使用 Cookie
+                SetUseCookie();
+            }
+        });
     }
 
     /// <summary>

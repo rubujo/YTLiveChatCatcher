@@ -75,12 +75,12 @@ namespace YTLiveChatCatcher.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool LoadCookies {
+        public bool LoadCookie {
             get {
-                return ((bool)(this["LoadCookies"]));
+                return ((bool)(this["LoadCookie"]));
             }
             set {
-                this["LoadCookies"] = value;
+                this["LoadCookie"] = value;
             }
         }
         
@@ -105,18 +105,6 @@ namespace YTLiveChatCatcher.Properties {
             }
             set {
                 this["ExportAuthorPhoto"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool IsStreaming {
-            get {
-                return ((bool)(this["IsStreaming"]));
-            }
-            set {
-                this["IsStreaming"] = value;
             }
         }
         
