@@ -38,9 +38,20 @@ public partial class LiveChatCatcher
             SetHttpRequestMessageHeader(httpRequestMessage);
         }
 
+        // TODO: 2023/12/18 測試語系。
+        httpRequestMessage.Headers.AcceptLanguage.Clear();
+        httpRequestMessage.Headers.AcceptLanguage.TryParseAdd("ja-JP,ja;q=0.9");
+
+        RaiseOnLogOutput(EnumSet.LogType.Debug, httpRequestMessage.ToString());
+
         HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
             .GetAwaiter()
             .GetResult();
+
+        if (httpResponseMessage != null)
+        {
+            RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
+        }
 
         string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
             .GetAwaiter()
@@ -105,6 +116,8 @@ public partial class LiveChatCatcher
             JsonElement jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
 
             initialData.YTConfigData = ParseYtCfg(jeYtCfg);
+
+            RaiseOnLogOutput(EnumSet.LogType.Debug, jeYtCfg.GetRawText());
 
             IElement elementYtInitialData = SharedIsStreaming ?
                 scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] ="))! :
@@ -172,6 +185,8 @@ public partial class LiveChatCatcher
 
             string jsonContent = GetRequestPayloadData(ytConfigData);
 
+            RaiseOnLogOutput(EnumSet.LogType.Debug, jsonContent);
+
             HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
             if (!string.IsNullOrEmpty(SharedCookies))
@@ -183,26 +198,20 @@ public partial class LiveChatCatcher
 
             httpRequestMessage.Content = httpContent;
 
+            RaiseOnLogOutput(EnumSet.LogType.Debug, httpRequestMessage.ToString());
+
             HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
                 .GetAwaiter()
                 .GetResult();
 
+            if (httpResponseMessage != null)
+            {
+                RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
+            }
+
             string? receivedJsonContent = httpResponseMessage?.Content.ReadAsStringAsync()
                 .GetAwaiter()
                 .GetResult();
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                httpRequestMessage.ToString());
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                jsonContent);
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                httpResponseMessage?.ToString() ?? string.Empty);
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                receivedJsonContent ?? string.Empty);
 
             if (string.IsNullOrEmpty(receivedJsonContent))
             {
@@ -251,42 +260,27 @@ public partial class LiveChatCatcher
             {
                 Client = new()
                 {
-                    BrowserName = ytConfigData.BrowserName ?? string.Empty,
-                    BrowserVersion = ytConfigData.BrowserVersion ?? string.Empty,
-                    ClientFormFactor = ytConfigData.ClientFormFactor ?? "UNKNOWN_FORM_FACTOR",
+                    BrowserName = ytConfigData.BrowserName,
+                    BrowserVersion = ytConfigData.BrowserVersion ,
+                    ClientFormFactor = ytConfigData.ClientFormFactor,
                     ClientName = ytConfigData.ClientName,
                     ClientVersion = ytConfigData.ClientVersion,
-                    DeviceMake = ytConfigData.DeviceMake ?? string.Empty,
-                    DeviceModel = ytConfigData.DeviceModel ?? string.Empty,
-                    // 語系會影響取得的內容，使用 zh-TW, TW。
+                    DeviceMake = ytConfigData.DeviceMake,
+                    DeviceModel = ytConfigData.DeviceModel,
                     Gl = ytConfigData.Gl ?? "TW",
                     Hl = ytConfigData.Hl ?? "zh-TW",
-                    OriginalUrl = ytConfigData.OriginalUrl ?? string.Empty,
-                    OsName = ytConfigData.OsName ?? "Windows",
-                    OsVersion = ytConfigData.OsVersion ?? "10.0",
-                    Platform = ytConfigData.Platform ?? "DESKTOP",
-                    RemoteHost = ytConfigData.RemoteHost ?? "DESKTOP",
-                    UserAgent = ytConfigData.UserAgent ?? string.Empty,
+                    OriginalUrl = ytConfigData.OriginalUrl,
+                    OsName = ytConfigData.OsName,
+                    OsVersion = ytConfigData.OsVersion,
+                    Platform = ytConfigData.Platform,
+                    RemoteHost = ytConfigData.RemoteHost,
+                    UserAgent = ytConfigData.UserAgent,
                     VisitorData = ytConfigData.VisitorData,
                     TimeZone = "Asia/Taipei"
                 }
             },
             Continuation = ytConfigData.Continuation
         };
-
-        #region 最後總檢查 gl、hl 的值
-
-        if (requestPayloadData.Context.Client.Gl != "TW")
-        {
-            requestPayloadData.Context.Client.Gl = "TW";
-        }
-
-        if (requestPayloadData.Context.Client.Hl != "zh-TW")
-        {
-            requestPayloadData.Context.Client.Hl = "zh-TW";
-        }
-
-        #endregion
 
         return JsonSerializer.Serialize(requestPayloadData);
     }
