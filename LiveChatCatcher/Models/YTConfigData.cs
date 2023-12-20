@@ -162,4 +162,10 @@ public class YTConfigData
     /// </summary>
     [JsonPropertyName("INNERTUBE_CONTEXT.client.visitorData")]
     public string? VisitorData { get; set; }
+
+    /// <summary>
+    /// timeZone
+    /// </summary>
+    [JsonPropertyName("timeZone")]
+    public string? TimeZone { get; set; }
 }

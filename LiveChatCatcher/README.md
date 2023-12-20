@@ -9,6 +9,7 @@
 ```csharp
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
@@ -30,13 +31,12 @@ void Main()
 
 	// 初始化 liveChatCatcher。
 	liveChatCatcher.Init();
-	
-	// 設定逾時毫秒值。（意即得等待多久，才會再抓取下一批資料）
-	// 1. 在重播影片時可以自由設定。（配合 UseCookies() 使用時，此值請不要設太低，以免 YouTube 或是 Google 帳號被停權。）
-	// 2. 在直播影片時，會直接使用獲取到的 timeoutMs 的值。（意即指不會理會使用此方法設定的值）
-	// ※ 預設值為 3000。
-	liveChatCatcher.TimeoutMs(3000);
-	
+
+	// 設定強制間隔毫秒值。（意即得等待多久，才會再抓取下一批資料）
+	// 將此值設為 -1 即可改為使用 IntervalMs 的值。
+	// ※配合 UseCookies() 使用時，此值請不要設太低，以免 YouTube 或是 Google 帳號被停權。
+	LiveChatCatcher.ForceIntervalMs(-1);
+
 	// 設定是否使用 Cookie。
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
@@ -48,7 +48,19 @@ void Main()
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
-	liveChatCatcher.FetchLargePicture(true);
+	LiveChatCatcher.FetchLargePicture(true);
+
+	// 設定顯示語系。
+	//※預設值為 EnumSet.DisplayLanguage.Chinese_Traditional。
+	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Tamil);
+
+	// 設定即時聊天類型。
+	LiveChatCatcher.LiveChatType(EnumSet.LiveChatType.All);
+
+	// 設定自定義即時聊天類型。
+	// 當使用此方法時，會自動忽略使用 liveChatCatcher.CustomLiveChatType() 方法的設定值。
+	//LiveChatCatcher.CustomLiveChatType("重播熱門聊天室訊息");
+	//LiveChatCatcher.CustomLiveChatType("聊天重播");
 
 	// 獲取即時聊天資料事件。
 	liveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
@@ -71,8 +83,9 @@ void Main()
 				break;
 			case EnumSet.RunningStatus.Stopped:
 				Console.WriteLine(runningStatus.ToString());
-
+				
 				// 依據您的需求處理獲取到的即時聊天資料，此處是輸出成 JSON 格式的資料。
+				Console.WriteLine($"資料筆數: {listMessage.Count}");
 				Console.WriteLine(listMessage.ToJsonString());
 				
 				break;
@@ -111,17 +124,18 @@ void Main()
 				break;
 		}
 	};
-	
+
 	// 開始獲取即時聊天資料。
 	liveChatCatcher.Start(videoUrlOrID);
-
-	// 手動停止獲取即時聊天資料。
-	//liveChatCatcher.Stop();
+	
+	// 於 5 秒後停止獲取即時聊天資料。
+	Task.Delay(5000).ContinueWith(task => liveChatCatcher.Stop());
 ```
 
 ## 三、注意事項
 
-1. 本函式庫使用`正體中文`，是以 `gl = "TW"`、`hl = "zh-TW"` 等語系參數來取得 YouTube 聊天室的即時聊天資料。
+1. 本函式庫使用`正體中文`，預設是以`正體中文`的語系參數來取得 YouTube 影片或直播的即時聊天資料。
 2. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
 3. 取得 Cookie 的相關方法，`僅限於 Microsoft Windows 平臺可以使用。`
-   - `※使用相關方法時，請先確認該目標的網頁瀏覽器是處於關閉的狀態，否則有可能會無法成功的取得 Cookie 資料。`
+   - `※使用相關方法時，請先確認目標的網頁瀏覽器是處於關閉的狀態，否則有可能會無法成功的取得 Cookie 資料。`
+4. 本函式庫的`靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。

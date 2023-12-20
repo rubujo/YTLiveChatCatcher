@@ -38,9 +38,17 @@ public partial class LiveChatCatcher
             SetHttpRequestMessageHeader(httpRequestMessage);
         }
 
-        // TODO: 2023/12/18 測試語系。
-        httpRequestMessage.Headers.AcceptLanguage.Clear();
-        httpRequestMessage.Headers.AcceptLanguage.TryParseAdd("ja-JP,ja;q=0.9");
+        bool hasRegionData = DictionarySet.GetRegionDictionary()
+            .TryGetValue(
+                SharedDisplayLanguage,
+                out RegionData? regionData);
+
+        // 套用設定的語系。
+        if (hasRegionData)
+        {
+            httpRequestMessage.Headers.AcceptLanguage.Clear();
+            httpRequestMessage.Headers.AcceptLanguage.TryParseAdd(regionData?.AcceptLanguage);
+        }
 
         RaiseOnLogOutput(EnumSet.LogType.Debug, httpRequestMessage.ToString());
 
@@ -117,6 +125,14 @@ public partial class LiveChatCatcher
 
             initialData.YTConfigData = ParseYtCfg(jeYtCfg);
 
+            // 套用設定的語系。
+            if (hasRegionData)
+            {
+                initialData.YTConfigData.Gl = regionData?.Gl;
+                initialData.YTConfigData.Hl = regionData?.Hl;
+                initialData.YTConfigData.TimeZone = regionData?.TimeZone;
+            }
+
             RaiseOnLogOutput(EnumSet.LogType.Debug, jeYtCfg.GetRawText());
 
             IElement elementYtInitialData = SharedIsStreaming ?
@@ -135,7 +151,7 @@ public partial class LiveChatCatcher
             JsonElement jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
 
             initialData.YTConfigData.Continuation = SharedIsStreaming ?
-                ParseFirstTimeContinuation(jeYtInitialData)[0] :
+                ParseStreamingContinuation(jeYtInitialData)[0] :
                 ParseReplayContinuation(jeYtInitialData);
 
             // 若是直播中的影片時，剛載入頁面就影片聊天室的內容，這些資料也需要處理。
@@ -148,7 +164,9 @@ public partial class LiveChatCatcher
         {
             string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
                 $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
-                $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
+                $"{(httpResponseMessage != null ?
+                    $"({(int)(httpResponseMessage.StatusCode)})" :
+                    string.Empty)}{Environment.NewLine}" +
                 $"接收到的內容：{Environment.NewLine}" +
                 $"{htmlContent}{Environment.NewLine}";
 
@@ -183,6 +201,19 @@ public partial class LiveChatCatcher
                 ytConfigData.InitPage = $"{StringSet.Origin}/{apiType}/?continuation={ytConfigData.Continuation}";
             }
 
+            bool hasRegionData = DictionarySet.GetRegionDictionary()
+                .TryGetValue(
+                    SharedDisplayLanguage,
+                    out RegionData? regionData);
+
+            // 套用設定的語系。
+            if (hasRegionData)
+            {
+                ytConfigData.Gl = regionData?.Gl;
+                ytConfigData.Hl = regionData?.Hl;
+                ytConfigData.TimeZone = regionData?.TimeZone;
+            }
+
             string jsonContent = GetRequestPayloadData(ytConfigData);
 
             RaiseOnLogOutput(EnumSet.LogType.Debug, jsonContent);
@@ -192,6 +223,13 @@ public partial class LiveChatCatcher
             if (!string.IsNullOrEmpty(SharedCookies))
             {
                 SetHttpRequestMessageHeader(httpRequestMessage, ytConfigData);
+            }
+
+            // 套用設定的語系。
+            if (hasRegionData)
+            {
+                httpRequestMessage.Headers.AcceptLanguage.Clear();
+                httpRequestMessage.Headers.AcceptLanguage.TryParseAdd(regionData?.AcceptLanguage);
             }
 
             HttpContent httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
@@ -230,7 +268,9 @@ public partial class LiveChatCatcher
             {
                 string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
                     $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
-                    $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
+                    $"{(httpResponseMessage != null ?
+                        $"({(int)(httpResponseMessage.StatusCode)})" :
+                        string.Empty)}{Environment.NewLine}" +
                     $"接收到的內容：{Environment.NewLine}" +
                     $"{receivedJsonContent}{Environment.NewLine}";
 
@@ -261,14 +301,14 @@ public partial class LiveChatCatcher
                 Client = new()
                 {
                     BrowserName = ytConfigData.BrowserName,
-                    BrowserVersion = ytConfigData.BrowserVersion ,
+                    BrowserVersion = ytConfigData.BrowserVersion,
                     ClientFormFactor = ytConfigData.ClientFormFactor,
                     ClientName = ytConfigData.ClientName,
                     ClientVersion = ytConfigData.ClientVersion,
                     DeviceMake = ytConfigData.DeviceMake,
                     DeviceModel = ytConfigData.DeviceModel,
-                    Gl = ytConfigData.Gl ?? "TW",
-                    Hl = ytConfigData.Hl ?? "zh-TW",
+                    Gl = ytConfigData.Gl,
+                    Hl = ytConfigData.Hl,
                     OriginalUrl = ytConfigData.OriginalUrl,
                     OsName = ytConfigData.OsName,
                     OsVersion = ytConfigData.OsVersion,
@@ -276,7 +316,7 @@ public partial class LiveChatCatcher
                     RemoteHost = ytConfigData.RemoteHost,
                     UserAgent = ytConfigData.UserAgent,
                     VisitorData = ytConfigData.VisitorData,
-                    TimeZone = "Asia/Taipei"
+                    TimeZone = ytConfigData.TimeZone,
                 }
             },
             Continuation = ytConfigData.Continuation

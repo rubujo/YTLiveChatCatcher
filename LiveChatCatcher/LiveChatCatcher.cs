@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
@@ -15,17 +14,19 @@ public partial class LiveChatCatcher
     /// 初始化
     /// </summary>
     /// <param name="httpClient">HttpClient，預設值為 null</param>
-    /// <param name="timeoutMs">數值，逾時的毫秒值，預設值 3000</param>
-    /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片，預設值為 true</param>
-    public void Init(
-        HttpClient? httpClient = null,
-        int timeoutMs = 3000,
-        bool isFetchLargePicture = true)
+    public void Init(HttpClient? httpClient = null)
     {
+        SharedTask = null;
+        SharedCancellationTokenSource = null;
         SharedHttpClient = httpClient;
-        SharedTimeoutMs = timeoutMs;
-        SharedIsFetchLargePicture = isFetchLargePicture;
         SharedCookies = string.Empty;
+        SharedIsStreaming = false;
+        SharedIsFetchLargePicture = true;
+        SharedDisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional;
+        SharedLiveChatType = EnumSet.LiveChatType.All;
+        SharedCustomLiveChatType = string.Empty;
+        SharedIntervalMs = 0;
+        SharedForceIntervalMs = -1;
 
         // 當傳入的 httpClient 為 null 時，則自動建立 HttpClient。
         SharedHttpClient ??= CreateHttpClient();
@@ -61,11 +62,11 @@ public partial class LiveChatCatcher
         // 開始 Task。
         SharedTask = Task.Run(() =>
         {
-            string vedioID = GetYouTubeVideoID(videoUrlOrID);
+            string videoID = GetYouTubeVideoID(videoUrl: videoUrlOrID);
 
-            SharedIsStreaming = IsVideoStreaming(vedioID);
+            SharedIsStreaming = IsVideoStreaming(videoID: videoID);
 
-            FetchLiveChatData(vedioID);
+            FetchLiveChatData(videoID: videoID);
         },
         SharedCancellationTokenSource.Token);
 
@@ -77,12 +78,13 @@ public partial class LiveChatCatcher
     /// <summary>
     /// 停止
     /// </summary>
-    [SuppressMessage("Performance", "CA1822:將成員標記為靜態", Justification = "<暫止>")]
     public void Stop()
     {
         // 清除 SharedCancellationTokenSource。
         SharedCancellationTokenSource?.Cancel();
         SharedCancellationTokenSource = null;
+
+        RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Stopped);
 
         // 清除 SharedTask。
         SharedTask = null;
@@ -128,20 +130,20 @@ public partial class LiveChatCatcher
                 break;
             }
 
-            // 0：continuation、1：timeoutMs。
+            // 0：continuation、1：timeoutMs 或 timeUntilLastMessageMsec。
             string[] continuationData = ParseContinuation(jsonElement);
 
-            // 更換 Continuation。
+            // 更新 continuation。
             ytConfigData.Continuation = continuationData[0];
 
             if (int.TryParse(continuationData[1], out int timeoutMs))
             {
-                // 更新 SharedTimeoutMs。
-                SharedTimeoutMs = timeoutMs;
-
                 RaiseOnLogOutput(
                     EnumSet.LogType.Info,
-                    $"接收到的 timeoutMs：{SharedTimeoutMs}");
+                    $"接收到的間隔毫秒值：{timeoutMs}");
+
+                // 更新間隔值。
+                IntervalMs(timeoutMs);
             }
 
             List<RendererData> messages = ParseActions(jsonElement);
@@ -153,9 +155,9 @@ public partial class LiveChatCatcher
 
             RaiseOnLogOutput(
                 EnumSet.LogType.Info,
-                $"於 {SharedTimeoutMs / 1000} 秒後，獲取下一批次的即時聊天資料。");
+                $"於 {IntervalMs() / 1000} 秒後，獲取下一批次的即時聊天資料。");
 
-            SpinWait.SpinUntil(() => false, SharedTimeoutMs);
+            SpinWait.SpinUntil(() => false, IntervalMs());
         }
     }
 

@@ -21,6 +21,7 @@ using System.Runtime.Versioning;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
+using Rubujo.YouTube.Utility;
 
 namespace YTLiveChatCatcher;
 
@@ -516,7 +517,7 @@ public partial class FMain
 
                             if (sourceList.Count > 0)
                             {
-                                string sheetName = SharedLiveChatCatcher.IsStreaming() ?
+                                string sheetName = LiveChatCatcher.IsStreaming() ?
                                     StringSet.SheetName2 :
                                     StringSet.SheetName3;
 
@@ -1141,7 +1142,7 @@ public partial class FMain
 
                     if (!string.IsNullOrEmpty(authorExternalChannelId))
                     {
-                        string channelUrl = SharedLiveChatCatcher
+                        string channelUrl = LiveChatCatcher
                             .GetYouTubeChannelUrl(authorExternalChannelId);
 
                         CustomFunction.OpenBrowser(channelUrl);
@@ -1279,7 +1280,7 @@ public partial class FMain
                         {
                             string errorMessage = await stickerData.SetImage(
                                 SharedHttpClient,
-                                SharedLiveChatCatcher.FetchLargePicture());
+                                LiveChatCatcher.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -1302,7 +1303,7 @@ public partial class FMain
                             {
                                 string errorMessage = await emojiData.SetImage(
                                     SharedHttpClient,
-                                    SharedLiveChatCatcher.FetchLargePicture());
+                                    LiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -1326,7 +1327,7 @@ public partial class FMain
                         {
                             string errorMessage = await badgeData.SetImage(
                                 SharedHttpClient,
-                                SharedLiveChatCatcher.FetchLargePicture());
+                                LiveChatCatcher.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -1755,7 +1756,7 @@ public partial class FMain
                                 {
                                     string errorMessage = await emojiData.SetImage(
                                         SharedHttpClient,
-                                        SharedLiveChatCatcher.FetchLargePicture());
+                                        LiveChatCatcher.FetchLargePicture());
 
                                     if (!string.IsNullOrEmpty(errorMessage))
                                     {
@@ -1812,7 +1813,7 @@ public partial class FMain
                             {
                                 string errorMessage = await badgeData.SetImage(
                                     SharedHttpClient,
-                                    SharedLiveChatCatcher.FetchLargePicture());
+                                    LiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -1859,7 +1860,7 @@ public partial class FMain
                             {
                                 string errorMessage = await stickerData.SetImage(
                                     SharedHttpClient,
-                                    SharedLiveChatCatcher.FetchLargePicture());
+                                    LiveChatCatcher.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -2285,7 +2286,9 @@ public partial class FMain
         }
 
         SharedLiveChatCatcher.Init(httpClient: httpClient);
-        SharedLiveChatCatcher.FetchLargePicture(true);
+
+        LiveChatCatcher.FetchLargePicture(true);
+
         SharedLiveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
         {
             TBUserAgent.InvokeIfRequired(() =>

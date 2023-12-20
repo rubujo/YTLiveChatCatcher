@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using NLog;
+using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Extensions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
@@ -92,7 +93,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(async () =>
         {
-            textBox.Text = await SharedLiveChatCatcher
+            textBox.Text = await LiveChatCatcher
                 .GetYouTubeChannelID(textBox.Text.Trim());
         });
     }
@@ -108,7 +109,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(() =>
         {
-            textBox.Text = SharedLiveChatCatcher
+            textBox.Text = LiveChatCatcher
                 .GetYouTubeVideoID(textBox.Text.Trim());
         });
     }
@@ -261,7 +262,7 @@ public partial class FMain : Form
             }
 
             // 設定 LiveChatCatcher 的逾時毫秒值。
-            SharedLiveChatCatcher.TimeoutMs(interval * 1000);
+            LiveChatCatcher.IntervalMs(interval * 1000);
 
             isIntervalSet = true;
 

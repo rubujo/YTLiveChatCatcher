@@ -100,117 +100,274 @@ public partial class LiveChatCatcher
     }
 
     /// <summary>
-    /// 解析第一次的 continuation
+    /// 解析直播時的 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
-    /// <returns>字串陣列</returns>
-    private string[] ParseFirstTimeContinuation(JsonElement? jsonElement)
+    /// <returns>string[]</returns>
+    private string[] ParseStreamingContinuation(JsonElement? jsonElement)
     {
         string[] output = new string[2];
 
         if (jsonElement.HasValue)
         {
-            JsonElement.ArrayEnumerator? continuations = jsonElement?.Get("contents")
-                ?.Get("liveChatRenderer")
-                ?.Get("continuations")
-                ?.ToArrayEnumerator();
+            JsonElement? liveChatRenderer = jsonElement
+                ?.Get("contents")
+                ?.Get("liveChatRenderer");
 
-            if (continuations.HasValue)
+            if (liveChatRenderer.HasValue)
             {
-                foreach (JsonElement singleContinuation in continuations)
+                output[0] = ParseSubMenuItemsContinuation(liveChatRenderer);
+
+                // Fallback 機制。
+                JsonElement.ArrayEnumerator? continuations = liveChatRenderer
+                    ?.Get("continuations")
+                    ?.ToArrayEnumerator();
+
+                if (continuations.HasValue)
                 {
-                    #region invalidationContinuationData
-
-                    JsonElement? invalidationContinuationData = singleContinuation.Get("invalidationContinuationData");
-
-                    if (invalidationContinuationData.HasValue)
+                    foreach (JsonElement singleContinuation in continuations)
                     {
-                        JsonElement? continuation = invalidationContinuationData.Value.Get("continuation");
+                        #region invalidationContinuationData
 
-                        if (continuation.HasValue)
+                        JsonElement? invalidationContinuationData = singleContinuation.Get("invalidationContinuationData");
+
+                        if (invalidationContinuationData.HasValue)
                         {
-                            output[0] = continuation.Value.ToString();
+                            if (string.IsNullOrEmpty(output[0]))
+                            {
+                                JsonElement? continuation = invalidationContinuationData.Value.Get("continuation");
+
+                                if (continuation.HasValue)
+                                {
+                                    output[0] = continuation.Value.ToString();
+                                }
+                            }
+
+                            JsonElement? timeoutMs = invalidationContinuationData.Value.Get("timeoutMs");
+
+                            if (timeoutMs.HasValue)
+                            {
+                                output[1] = timeoutMs.Value.ToString();
+                            }
+
+                            break;
                         }
 
-                        JsonElement? timeoutMs = invalidationContinuationData.Value.Get("timeoutMs");
+                        #endregion
 
-                        if (timeoutMs.HasValue)
+                        #region timedContinuationData
+
+                        JsonElement? timedContinuationData = singleContinuation.Get("timedContinuationData");
+
+                        if (timedContinuationData.HasValue)
                         {
-                            output[1] = timeoutMs.Value.ToString();
+                            if (string.IsNullOrEmpty(output[0]))
+                            {
+                                JsonElement? continuation = timedContinuationData.Value.Get("continuation");
+
+                                if (continuation.HasValue)
+                                {
+                                    output[0] = continuation.Value.ToString();
+                                }
+                            }
+
+                            JsonElement? timeoutMs = timedContinuationData.Value.Get("timeoutMs");
+
+                            if (timeoutMs.HasValue)
+                            {
+                                output[1] = timeoutMs.Value.ToString();
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
+                        #endregion
 
-                    #endregion
+                        #region liveChatReplayContinuationData
 
-                    #region timedContinuationData
+                        JsonElement? liveChatReplayContinuationData = singleContinuation.Get("liveChatReplayContinuationData");
 
-                    JsonElement? timedContinuationData = singleContinuation.Get("timedContinuationData");
-
-                    if (timedContinuationData.HasValue)
-                    {
-                        JsonElement? continuation = timedContinuationData.Value.Get("continuation");
-
-                        if (continuation.HasValue)
+                        if (liveChatReplayContinuationData.HasValue)
                         {
-                            output[0] = continuation.Value.ToString();
-                        }
+                            if (string.IsNullOrEmpty(output[0]))
+                            {
+                                JsonElement? continuation = liveChatReplayContinuationData.Value.Get("continuation");
 
-                        JsonElement? timeoutMs = timedContinuationData.Value.Get("timeoutMs");
-
-                        if (timeoutMs.HasValue)
-                        {
-                            output[1] = timeoutMs.Value.ToString();
-                        }
-
-                        break;
-                    }
-
-                    #endregion
-
-                    #region liveChatReplayContinuationData
-
-                    JsonElement? liveChatReplayContinuationData = singleContinuation.Get("liveChatReplayContinuationData");
-
-                    if (liveChatReplayContinuationData.HasValue)
-                    {
-                        JsonElement? continuation = liveChatReplayContinuationData.Value.Get("continuation");
-
-                        if (continuation.HasValue)
-                        {
-                            output[0] = continuation.Value.ToString();
+                                if (continuation.HasValue)
+                                {
+                                    output[0] = continuation.Value.ToString();
+                                }
+                            }
 
                             // 沒有 "timeoutMs"。
                             output[1] = string.Empty;
+
+                            JsonElement? _ = liveChatReplayContinuationData.Value.Get("timeUntilLastMessageMsec");
+
+                            break;
                         }
 
-                        JsonElement? _ = liveChatReplayContinuationData.Value.Get("timeUntilLastMessageMsec");
+                        #endregion
 
-                        break;
-                    }
+                        #region playerSeekContinuationData
 
-                    #endregion
+                        JsonElement? playerSeekContinuationData = singleContinuation.Get("playerSeekContinuationData");
 
-                    #region playerSeekContinuationData
+                        if (playerSeekContinuationData.HasValue)
+                        {
+                            // 略過不進行任何的處理。
+                            RaiseOnLogOutput(
+                                EnumSet.LogType.Debug,
+                                $"方法：GetFirstTimeContinuation() -> playerSeekContinuationData -> " +
+                                $"略過不處理的內容：{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
+                        }
 
-                    JsonElement? playerSeekContinuationData = singleContinuation.Get("playerSeekContinuationData");
+                        #endregion
 
-                    if (playerSeekContinuationData.HasValue)
-                    {
-                        // 略過不進行任何的處理。
                         RaiseOnLogOutput(
                             EnumSet.LogType.Debug,
-                            $"方法：GetFirstTimeContinuation() -> playerSeekContinuationData -> " +
-                            $"略過不處理的內容：{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
+                            $"方法：GetFirstTimeContinuation() -> " +
+                            $"尚未支援的內容：{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
                     }
+                }
+            }
+        }
 
-                    #endregion
+        return output;
+    }
 
+    /// <summary>
+    /// 解析重播時的 continuation
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string ParseReplayContinuation(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        if (jsonElement.HasValue)
+        {
+            JsonElement? liveChatRenderer = jsonElement
+                ?.Get("contents")
+                ?.Get("twoColumnWatchNextResults")
+                ?.Get("conversationBar")
+                ?.Get("liveChatRenderer");
+
+            if (liveChatRenderer.HasValue)
+            {
+                output = ParseSubMenuItemsContinuation(liveChatRenderer);
+
+                // 當從 "subMenuItem" 取不到 "continuation" 時，
+                // 才使用此處的 "continuation"。
+                if (string.IsNullOrEmpty(output))
+                {
+                    JsonElement.ArrayEnumerator? continuations = liveChatRenderer
+                        ?.Get("continuations")
+                        ?.ToArrayEnumerator();
+
+                    if (continuations.HasValue)
+                    {
+                        foreach (JsonElement singleContinuation in continuations)
+                        {
+                            // 用此 "continuation" 可能無法抓到全部的訊息。
+                            JsonElement? continuation = singleContinuation
+                                .Get("reloadContinuationData")
+                                ?.Get("continuation");
+
+                            if (continuation.HasValue)
+                            {
+                                output = continuation.Value.GetString() ?? string.Empty;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 解析 subMenuItems 下的 continuation
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串</returns>
+    private string ParseSubMenuItemsContinuation(JsonElement? jsonElement)
+    {
+        string output = string.Empty;
+
+        if (jsonElement.HasValue)
+        {
+            JsonElement.ArrayEnumerator? subMenuItems = jsonElement
+                ?.Get("header")
+                ?.Get("liveChatHeaderRenderer")
+                ?.Get("viewSelector")
+                ?.Get("sortFilterSubMenuRenderer")
+                ?.Get("subMenuItems")
+                ?.ToArrayEnumerator();
+
+            if (subMenuItems.HasValue)
+            {
+                // 通常都是預設已選擇熱門的即時聊天。
+                // 照索引順序的話：
+                // 0：熱門
+                // 1：全部
+
+                // 當 SharedCustomTitle 不為 null 或空白時，則使用使用者自行帶入的值。
+                if (!string.IsNullOrEmpty(SharedCustomLiveChatType))
+                {
                     RaiseOnLogOutput(
                         EnumSet.LogType.Debug,
-                        $"方法：GetFirstTimeContinuation() -> " +
-                        $"尚未支援的內容：{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
+                        $"[LiveChatCatcher.ParseSubMenuItemsContinuation()] SharedCustomTitle：{SharedCustomLiveChatType}");
+
+                    foreach (JsonElement subMenuItem in subMenuItems)
+                    {
+                        JsonElement? title = subMenuItem.Get("title");
+
+                        RaiseOnLogOutput(
+                            EnumSet.LogType.Debug,
+                            $"[LiveChatCatcher.ParseSubMenuItemsContinuation()] title：{title?.GetString()}");
+
+                        if (title.HasValue && title?.GetString() == SharedCustomLiveChatType)
+                        {
+                            RaiseOnLogOutput(
+                                EnumSet.LogType.Debug,
+                                $"[LiveChatCatcher.ParseSubMenuItemsContinuation()] 吻合 SharedCustomTitle 的 title：{title?.GetString()}");
+
+                            JsonElement? continuation = subMenuItem.Get("continuation")
+                                ?.Get("reloadContinuationData")
+                                ?.Get("continuation");
+
+                            if (continuation.HasValue)
+                            {
+                                output = continuation.Value.GetString() ?? string.Empty;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    JsonElement subMenuItem = subMenuItems
+                        .Value
+                        .ElementAtOrDefault(SharedLiveChatType.ToInt32());
+
+                    JsonElement? title = subMenuItem.Get("title");
+
+                    if (title.HasValue)
+                    {
+                        JsonElement? continuation = subMenuItem.Get("continuation")
+                            ?.Get("reloadContinuationData")
+                            ?.Get("continuation");
+
+                        if (continuation.HasValue)
+                        {
+                            output = continuation.Value.GetString() ?? string.Empty;
+                        }
+                    }
                 }
             }
         }
@@ -222,7 +379,7 @@ public partial class LiveChatCatcher
     /// 解析 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
-    /// <returns>字串陣列</returns>
+    /// <returns>string[]</returns>
     private string[] ParseContinuation(JsonElement? jsonElement)
     {
         string[] output = new string[2];
@@ -299,12 +456,14 @@ public partial class LiveChatCatcher
                         if (continuation.HasValue)
                         {
                             output[0] = continuation.Value.ToString();
-
-                            // 沒有 "timeoutMs"。
-                            output[1] = string.Empty;
                         }
 
-                        JsonElement? _ = liveChatReplayContinuationData.Value.Get("timeUntilLastMessageMsec");
+                        JsonElement? timeUntilLastMessageMsec = liveChatReplayContinuationData.Value.Get("timeUntilLastMessageMsec");
+
+                        if (timeUntilLastMessageMsec.HasValue)
+                        {
+                            output[1] = timeUntilLastMessageMsec.Value.ToString();
+                        }
 
                         break;
                     }
@@ -331,86 +490,6 @@ public partial class LiveChatCatcher
                         EnumSet.LogType.Debug,
                         $"方法：GetContinuation() -> " +
                         $"尚未支援的內容：{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
-                }
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// 解析重播時的 continuation
-    /// </summary>
-    /// <param name="jsonElement">JsonElement</param>
-    /// <returns>字串</returns>
-    private string ParseReplayContinuation(JsonElement? jsonElement)
-    {
-        string output = string.Empty;
-
-        if (jsonElement.HasValue)
-        {
-            JsonElement? liveChatRenderer = jsonElement?.Get("contents")
-                ?.Get("twoColumnWatchNextResults")
-                ?.Get("conversationBar")
-                ?.Get("liveChatRenderer");
-
-            if (liveChatRenderer.HasValue)
-            {
-                JsonElement.ArrayEnumerator? subMenuItems = liveChatRenderer?.Get("header")
-                    ?.Get("liveChatHeaderRenderer")
-                    ?.Get("viewSelector")
-                    ?.Get("sortFilterSubMenuRenderer")
-                    ?.Get("subMenuItems")
-                    ?.ToArrayEnumerator();
-
-                if (subMenuItems.HasValue)
-                {
-                    foreach (JsonElement subMenuItem in subMenuItems)
-                    {
-                        JsonElement? title = subMenuItem.Get("title");
-
-                        // "StringSet.TitleHotReplay" 與 "StringSet.TitleReplay" 的結構是一樣的。
-                        if (title.HasValue && title.Value.GetString() == StringSet.TitleReplay)
-                        {
-                            JsonElement? continuation = subMenuItem.Get("continuation")
-                                ?.Get("reloadContinuationData")
-                                ?.Get("continuation");
-
-                            if (continuation.HasValue)
-                            {
-                                output = continuation.Value.GetString() ?? string.Empty;
-
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // 當從 "subMenuItem" 取不到 "continuation" 時，
-                // 才使用此處的 "continuation"。
-                if (string.IsNullOrEmpty(output))
-                {
-                    JsonElement.ArrayEnumerator? continuations = liveChatRenderer
-                        ?.Get("continuations")
-                        ?.ToArrayEnumerator();
-
-                    if (continuations.HasValue)
-                    {
-                        foreach (JsonElement singleContinuation in continuations)
-                        {
-                            // 用此 "continuation" 可能無法抓到全部的訊息。
-                            JsonElement? continuation = singleContinuation
-                                .Get("reloadContinuationData")
-                                ?.Get("continuation");
-
-                            if (continuation.HasValue)
-                            {
-                                output = continuation.Value.GetString() ?? string.Empty;
-
-                                break;
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -1371,7 +1450,19 @@ public partial class LiveChatCatcher
             // 將 Microseconds 轉換成 Miliseconds。
             long timestamp = Convert.ToInt64(timestampUsec.Value.GetString()) / 1000L;
 
-            output = DateTimeOffset.FromUnixTimeMilliseconds(timestamp).LocalDateTime.ToString();
+            // TODO: 2023/12/20 未確認在其它語系時，是否轉換出來的時間值是正確的。
+            bool hasRegionData = DictionarySet.GetRegionDictionary()
+                .TryGetValue(
+                    SharedDisplayLanguage,
+                    out RegionData? regionData);
+
+            output = hasRegionData ?
+                DateTimeOffset.FromUnixTimeMilliseconds(timestamp)
+                    .LocalDateTime
+                    .ToString(regionData?.GetCultureInfo()) :
+                DateTimeOffset.FromUnixTimeMilliseconds(timestamp)
+                    .LocalDateTime
+                    .ToString();
         }
 
         return output;

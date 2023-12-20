@@ -15,20 +15,6 @@ public class StringSet
     /// </summary>
     public static readonly string Origin = "https://www.youtube.com";
 
-    #region 聊天室標題
-
-    /// <summary>
-    /// 重播熱門聊天室訊息
-    /// </summary>
-    public static readonly string TitleHotReplay = "重播熱門聊天室訊息";
-
-    /// <summary>
-    /// 聊天重播
-    /// </summary>
-    public static readonly string TitleReplay = "聊天重播";
-
-    #endregion
-
     #region 會員訊息類型
 
     /// <summary>
