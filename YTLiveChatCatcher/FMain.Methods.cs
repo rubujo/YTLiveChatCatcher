@@ -2288,6 +2288,7 @@ public partial class FMain
         SharedLiveChatCatcher.Init(httpClient: httpClient);
 
         LiveChatCatcher.FetchLargePicture(true);
+        LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
 
         SharedLiveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
         {
@@ -2327,9 +2328,11 @@ public partial class FMain
                     WriteLog(e.Message);
 
                     // 更新間隔欄位的值。
-                    if (e.Message.Contains("接收到的 timeoutMs："))
+                    if (e.Message.Contains("接收到的間隔毫秒值："))
                     {
-                        if (int.TryParse(e.Message.Replace("接收到的 timeoutMs：", string.Empty), out int newInterval))
+                        if (int.TryParse(
+                            e.Message.Replace("接收到的間隔毫秒值：", string.Empty),
+                            out int newInterval))
                         {
                             newInterval /= 1000;
 

@@ -159,31 +159,6 @@ public partial class FMain : Form
         }
     }
 
-    private void CBRandomInterval_CheckedChanged(object sender, EventArgs e)
-    {
-        CheckBox? checkBox = (CheckBox?)sender;
-
-        if (checkBox == null)
-        {
-            return;
-        }
-
-        checkBox.InvokeIfRequired(() =>
-        {
-            TBInterval.InvokeIfRequired(() =>
-            {
-                if (checkBox.Checked)
-                {
-                    int interval = CustomFunction.GetRandomInterval();
-
-                    TBInterval.Text = (interval / 1000).ToString();
-                };
-
-                TBInterval.Enabled = !checkBox.Checked;
-            });
-        });
-    }
-
     private void BtnStart_Click(object sender, EventArgs e)
     {
         try

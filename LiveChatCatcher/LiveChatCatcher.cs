@@ -62,6 +62,8 @@ public partial class LiveChatCatcher
         // 開始 Task。
         SharedTask = Task.Run(() =>
         {
+            SharedCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
             string videoID = GetYouTubeVideoID(videoUrl: videoUrlOrID);
 
             SharedIsStreaming = IsVideoStreaming(videoID: videoID);
@@ -83,8 +85,6 @@ public partial class LiveChatCatcher
         // 清除 SharedCancellationTokenSource。
         SharedCancellationTokenSource?.Cancel();
         SharedCancellationTokenSource = null;
-
-        RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Stopped);
 
         // 清除 SharedTask。
         SharedTask = null;
