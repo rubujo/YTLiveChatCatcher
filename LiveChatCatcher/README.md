@@ -52,8 +52,32 @@ void Main()
 
 	// 設定顯示語系。
 	//※預設值為 EnumSet.DisplayLanguage.Chinese_Traditional。
-	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Tamil);
-
+	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.English);
+	
+	// 設定本地化字串。
+	if (!DictionarySet.GetLocalizeDictionary().ContainsKey(EnumSet.DisplayLanguage.English))
+	{
+		DictionarySet.GetLocalizeDictionary().Add(
+			EnumSet.DisplayLanguage.English,
+			new Dictionary<string, string>()
+			{
+				{ KeySet.ChatGeneral, "General" },
+				{ KeySet.ChatSuperChat, "Super Chat" },
+				{ KeySet.ChatSuperSticker, "Super Sticker" },
+				{ KeySet.ChatJoinMember, "Join Member" },
+				{ KeySet.ChatMemberUpgrade, "Member Upgrade" },
+				{ KeySet.ChatMemberMilestone, "Member Milestone" },
+				{ KeySet.ChatMemberGift, "Member Gift" },
+				{ KeySet.ChatReceivedMemberGift, "Received Member Gift" },
+				{ KeySet.ChatRedirect, "Redirect" },
+				{ KeySet.ChatPinned, "Pinned" },
+				// 使用 Contains() 判斷。
+				{ KeySet.MemberUpgrade, "Upgraded membership to" },
+				{ KeySet.MemberMilestone, "milestone" }
+			}
+		);
+	}
+	
 	// 設定即時聊天類型。
 	LiveChatCatcher.LiveChatType(EnumSet.LiveChatType.All);
 
@@ -129,7 +153,8 @@ void Main()
 	liveChatCatcher.Start(videoUrlOrID);
 	
 	// 於 5 秒後停止獲取即時聊天資料。
-	Task.Delay(5000).ContinueWith(task => liveChatCatcher.Stop());
+	Task.Delay(5000).ContinueWith(task => LiveChatCatcher.Stop());
+}
 ```
 
 ## 三、注意事項

@@ -13,6 +13,14 @@ namespace Rubujo.YouTube.Utility;
 public partial class LiveChatCatcher
 {
     /// <summary>
+    /// 停止
+    /// </summary>
+    public static void Stop()
+    {
+        SharedCancellationTokenSource?.Cancel();
+    }
+
+    /// <summary>
     /// 取得 Task
     /// </summary>
     /// <returns>Task</returns>
@@ -155,6 +163,11 @@ public partial class LiveChatCatcher
     /// <param name="value">數值，值，預設值為 -1</param>
     public static void ForceIntervalMs(int value = -1)
     {
+        if (value >= -1)
+        {
+            value = -1;
+        }
+
         SharedForceIntervalMs = value;
     }
 
@@ -326,5 +339,15 @@ public partial class LiveChatCatcher
     public static string GetYouTubeChannelUrl(string channelID)
     {
         return $"{StringSet.Origin}/channel/{channelID}";
+    }
+
+    /// <summary>
+    /// 取得本地化字串
+    /// </summary>
+    /// <param name="key">字串，鍵值</param>
+    /// <returns>字串</returns>
+    public static string GetLocalizeString(string key)
+    {
+        return LangUtil.GetLocalizeString(SharedDisplayLanguage, key);
     }
 }

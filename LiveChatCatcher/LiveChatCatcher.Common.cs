@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using Rubujo.YouTube.Utility.Sets;
+using Rubujo.YouTube.Utility.Utils;
 
 namespace Rubujo.YouTube.Utility;
 
@@ -81,16 +82,16 @@ public partial class LiveChatCatcher
     {
         return rendererName switch
         {
-            "liveChatTextMessageRenderer" => StringSet.ChatGeneral,
-            "liveChatPaidMessageRenderer" => StringSet.ChatSuperChat,
-            "liveChatPaidStickerRenderer" => StringSet.ChatSuperSticker,
-            "liveChatMembershipItemRenderer" => StringSet.ChatJoinMember,
-            "liveChatViewerEngagementMessageRenderer" => StringSet.YouTube,
-            "liveChatModeChangeMessageRenderer" => StringSet.YouTube,
-            "liveChatSponsorshipsGiftPurchaseAnnouncementRenderer" => StringSet.ChatMemberGift,
-            "liveChatSponsorshipsGiftRedemptionAnnouncementRenderer" => StringSet.ChatReceivedMemberGift,
-            "liveChatBannerHeaderRenderer" => StringSet.ChatPinned,
-            "liveChatBannerRedirectRenderer" => StringSet.ChatRedirect,
+            "liveChatTextMessageRenderer" => GetLocalizeString(KeySet.ChatGeneral),
+            "liveChatPaidMessageRenderer" => GetLocalizeString(KeySet.ChatSuperChat),
+            "liveChatPaidStickerRenderer" => GetLocalizeString(KeySet.ChatSuperSticker),
+            "liveChatMembershipItemRenderer" => GetLocalizeString(KeySet.ChatJoinMember),
+            "liveChatViewerEngagementMessageRenderer" => GetLocalizeString(StringSet.YouTube),
+            "liveChatModeChangeMessageRenderer" => GetLocalizeString(StringSet.YouTube),
+            "liveChatSponsorshipsGiftPurchaseAnnouncementRenderer" => GetLocalizeString(KeySet.ChatMemberGift),
+            "liveChatSponsorshipsGiftRedemptionAnnouncementRenderer" => GetLocalizeString(KeySet.ChatReceivedMemberGift),
+            "liveChatBannerHeaderRenderer" => GetLocalizeString(KeySet.ChatPinned),
+            "liveChatBannerRedirectRenderer" => GetLocalizeString(KeySet.ChatRedirect),
             _ => string.Empty
         };
     }

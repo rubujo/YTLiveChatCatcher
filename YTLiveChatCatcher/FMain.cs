@@ -275,7 +275,7 @@ public partial class FMain : Form
     {
         try
         {
-            SharedLiveChatCatcher.Stop();
+            LiveChatCatcher.Stop();
 
             // 設定控制項的狀態。
             SetControlsState(true);

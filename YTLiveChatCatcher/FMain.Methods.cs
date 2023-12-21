@@ -91,12 +91,21 @@ public partial class FMain
             },
             new()
             {
+                Name = "ForegroundColor",
+                Text = "前景顏色",
+                TextAlign = HorizontalAlignment.Center,
+                // 設成 0，預設不直接顯示。
+                Width = 0,
+                DisplayIndex = 6
+            },
+            new()
+            {
                 Name = "BackgroundColor",
                 Text = "背景顏色",
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
-                DisplayIndex = 6
+                DisplayIndex = 7
             },
             new()
             {
@@ -105,7 +114,7 @@ public partial class FMain
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
-                DisplayIndex = 7
+                DisplayIndex = 8
             },
             new()
             {
@@ -114,7 +123,7 @@ public partial class FMain
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
-                DisplayIndex = 8
+                DisplayIndex = 9
             },
             new()
             {
@@ -123,7 +132,7 @@ public partial class FMain
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
-                DisplayIndex = 9
+                DisplayIndex = 10
             },
             new()
             {
@@ -132,7 +141,7 @@ public partial class FMain
                 TextAlign = HorizontalAlignment.Center,
                 // 設成 0，預設不直接顯示。
                 Width = 0,
-                DisplayIndex = 10
+                DisplayIndex = 11
             }
         ];
 
@@ -167,9 +176,9 @@ public partial class FMain
 
                 string speakText = string.Empty;
 
-                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatGeneral ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker)
+                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatGeneral) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker))
                 {
                     speakText = $"{authorName}說{message}";
                 }
@@ -250,7 +259,7 @@ public partial class FMain
 
                         using ExcelPackage package = new();
 
-                        double[] widthSet = [5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 0.0];
+                        double[] widthSet = [5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 20.0, 0.0];
 
                         ExcelWorkbook workbook = package.Workbook;
                         ExcelWorksheet worksheet1 = workbook.Worksheets.Add(StringSet.SheetName1);
@@ -311,7 +320,7 @@ public partial class FMain
                         }
 
                         // 設定篩選。
-                        worksheet1.Cells[1, 2, 1, 9].AutoFilter = true;
+                        worksheet1.Cells[1, 2, 1, 10].AutoFilter = true;
 
                         #endregion
 
@@ -374,7 +383,7 @@ public partial class FMain
                                     excelRange.Style.Fill.SetBackground(listViewItem.BackColor);
                                     excelRange.Style.WrapText = true;
 
-                                    if (j == 8)
+                                    if (j == 9)
                                     {
                                         if (!string.IsNullOrEmpty(listViewSubItem.Text))
                                         {
@@ -395,7 +404,7 @@ public partial class FMain
 
                             int summaryIdx = 1;
 
-                            ExcelRange summaryHeaderRange = worksheet1.Cells[summaryIdx, 14, summaryIdx, 15];
+                            ExcelRange summaryHeaderRange = worksheet1.Cells[summaryIdx, 15, summaryIdx, 16];
 
                             summaryHeaderRange.Merge = true;
                             summaryHeaderRange.StyleName = "HeaderStyle";
@@ -406,16 +415,16 @@ public partial class FMain
 
                             List<string> arrayFormula =
                             [
-                                $"SUM(COUNTIF(G:G,{{\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatGeneral}\", " +
-                                $"\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}\"," +
-                                $"\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}\"}}))&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift}\")&\" 個\"",
-                                $"COUNTIF(G:G,\"{Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift}\")&\" 個\""
+                                $"SUM(COUNTIF(G:G,{{\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatGeneral)}\", " +
+                                $"\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}\"," +
+                                $"\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}\"}}))&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)}\")&\" 個\"",
+                                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)}\")&\" 個\""
                             ];
 
                             char[] separators1 = ['、'];
@@ -446,7 +455,7 @@ public partial class FMain
                             }
 
                             // 設定預設寬度。
-                            worksheet1.Column(14).Width = 15.0;
+                            worksheet1.Column(15).Width = 15.0;
 
                             char[] separators2 = ['：'];
 
@@ -455,7 +464,7 @@ public partial class FMain
                                 string[] arrayInfo = arraySummaryInfo[i].Split(separators2,
                                     StringSplitOptions.RemoveEmptyEntries);
 
-                                ExcelRange summaryTitleRange = worksheet1.Cells[summaryIdx, 14];
+                                ExcelRange summaryTitleRange = worksheet1.Cells[summaryIdx, 15];
 
                                 summaryTitleRange.StyleName = "HeaderStyle";
                                 summaryTitleRange.Style.Font.Bold = false;
@@ -463,7 +472,7 @@ public partial class FMain
                                 // 2022-05-30 改為使用固定寬度。
                                 //summaryTitleRange.AutoFitColumns();
 
-                                ExcelRange summaryContentRange = worksheet1.Cells[summaryIdx, 15];
+                                ExcelRange summaryContentRange = worksheet1.Cells[summaryIdx, 16];
 
                                 summaryContentRange.StyleName = "ContentStyle";
                                 summaryContentRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
@@ -500,17 +509,17 @@ public partial class FMain
                                 .GetListViewItems()
                                 .Where(n => n.SubItems[5].Text != StringSet.AppName &&
                                     n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                                    // 2022-10-25 因不容易轉換成影片對應時間點，故而直接排除
-                                    // Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift、
-                                    // Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift 等類型的資料，
+                                    // 2022/10/25 因不容易轉換成影片對應時間點，故而直接排除
+                                    // LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)、
+                                    // LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) 等類型的資料，
                                     // 以免在時間熱點活頁簿內出現奇怪的時間點。
-                                    n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift &&
-                                    n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift &&
-                                    !string.IsNullOrEmpty(n.SubItems[7].Text) &&
-                                    !n.SubItems[7].Text.Contains('-'))
-                                .Select(n => n.SubItems[7].Text.Length > 3 ?
-                                    n.SubItems[7].Text[0..^3] :
-                                    n.SubItems[7].Text)
+                                    n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) &&
+                                    n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
+                                    !string.IsNullOrEmpty(n.SubItems[8].Text) &&
+                                    !n.SubItems[8].Text.Contains('-'))
+                                .Select(n => n.SubItems[8].Text.Length > 3 ?
+                                    n.SubItems[8].Text[0..^3] :
+                                    n.SubItems[8].Text)
                                 .GroupBy(n => n)
                                 .Select(n => new { Timestamp = n.Key, Count = n.Count() })
                                 .ToDictionary(n => n.Timestamp, n => n.Count);
@@ -1055,7 +1064,7 @@ public partial class FMain
                         workbook.Properties.Keywords = $"{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}, {StringSet.SheetName1}";
                         workbook.Properties.Author = $"{StringSet.AppName} {version}";
                         workbook.Properties.Comments = comments;
-                        workbook.Properties.Company = string.Empty;
+                        workbook.Properties.Company = "DD們的避難所";
 
                         package.SaveAs(fileStream);
                     }
@@ -1341,38 +1350,42 @@ public partial class FMain
 
                 string id = rendererData.ID ?? string.Empty;
                 string authorName = (rendererData.AuthorName != null &&
-                    rendererData.AuthorName != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorName) ?
+                    rendererData.AuthorName != KeySet.NoAuthorName) ?
                     rendererData.AuthorName :
                     string.Empty;
                 string authorBages = (rendererData.AuthorBadges != null &&
-                    rendererData.AuthorBadges != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorBadges) ?
+                    rendererData.AuthorBadges != KeySet.NoAuthorBadges) ?
                     rendererData.AuthorBadges :
                     string.Empty;
                 string authorPhotoUrl = (rendererData.AuthorPhotoUrl != null &&
-                    rendererData.AuthorPhotoUrl != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorPhotoUrl) ?
+                    rendererData.AuthorPhotoUrl != KeySet.NoAuthorPhotoUrl) ?
                     rendererData.AuthorPhotoUrl :
                     string.Empty;
                 string messageContent = (rendererData.MessageContent != null &&
-                    rendererData.MessageContent != Rubujo.YouTube.Utility.Sets.StringSet.NoMessageContent) ?
+                    rendererData.MessageContent != KeySet.NoMessageContent) ?
                     rendererData.MessageContent :
                     string.Empty;
                 string purchaseAmountText = (rendererData.PurchaseAmountText != null &&
-                    rendererData.PurchaseAmountText != Rubujo.YouTube.Utility.Sets.StringSet.NoPurchaseAmountText) ?
+                    rendererData.PurchaseAmountText != KeySet.NoPurchaseAmountText) ?
                     rendererData.PurchaseAmountText :
                     string.Empty;
                 string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
                 string type = rendererData.Type ?? string.Empty;
+                string foregroundColor = (rendererData.ForegroundColor != null &&
+                    rendererData.ForegroundColor != KeySet.NoForegroundColor) ?
+                    rendererData.ForegroundColor :
+                    string.Empty;
                 string backgroundColor = (rendererData.BackgroundColor != null &&
-                    rendererData.BackgroundColor != Rubujo.YouTube.Utility.Sets.StringSet.NoBackgroundColor) ?
+                    rendererData.BackgroundColor != KeySet.NoBackgroundColor) ?
                     rendererData.BackgroundColor :
                     string.Empty;
                 // 直播不會有，只有重播才會有。
                 string timestampText = (rendererData.TimestampText != null &&
-                    rendererData.TimestampText != Rubujo.YouTube.Utility.Sets.StringSet.NoTimestampText) ?
+                    rendererData.TimestampText != KeySet.NoTimestampText) ?
                     rendererData.TimestampText :
                     string.Empty;
                 string authorExternalChannelID = (rendererData.AuthorExternalChannelID != null &&
-                    rendererData.AuthorExternalChannelID != Rubujo.YouTube.Utility.Sets.StringSet.NoAuthorExternalChannelID) ?
+                    rendererData.AuthorExternalChannelID != KeySet.NoAuthorExternalChannelID) ?
                     rendererData.AuthorExternalChannelID :
                     string.Empty;
 
@@ -1418,6 +1431,7 @@ public partial class FMain
                     purchaseAmountText,
                     timestampUsec,
                     type,
+                    foregroundColor,
                     backgroundColor,
                     timestampText,
                     authorPhotoUrl,
@@ -1437,6 +1451,20 @@ public partial class FMain
                     }
                 }
 
+                if (!string.IsNullOrEmpty(foregroundColor))
+                {
+                    for (int j = 0; j < lvItem.SubItems.Count; j++)
+                    {
+                        // 只變更訊息欄位的前景色。
+                        if (j == 2)
+                        {
+                            ListViewItem.ListViewSubItem item = lvItem.SubItems[j];
+
+                            item.ForeColor = ColorTranslator.FromHtml(foregroundColor);
+                        }
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(backgroundColor))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
@@ -1445,11 +1473,11 @@ public partial class FMain
                     }
                 }
 
-                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift)
+                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -1458,8 +1486,8 @@ public partial class FMain
                     }
                 }
 
-                if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect ||
-                    type == Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
+                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) ||
+                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -1574,15 +1602,16 @@ public partial class FMain
                 {
                     string authorName = sheet1.Cells[rowIdx1, 2].Text;
                     string authorBages = sheet1.Cells[rowIdx1, 3].Text;
-                    string authorPhotoUrl = sheet1.Cells[rowIdx1, 10].Text;
+                    string authorPhotoUrl = sheet1.Cells[rowIdx1, 11].Text;
                     string messageContent = sheet1.Cells[rowIdx1, 4].Text;
                     string purchaseAmmount = sheet1.Cells[rowIdx1, 5].Text;
                     string timestampUsec = sheet1.Cells[rowIdx1, 6].Text;
                     string type = sheet1.Cells[rowIdx1, 7].Text;
-                    string backgroundColor = sheet1.Cells[rowIdx1, 8].Text;
-                    string timestampText = sheet1.Cells[rowIdx1, 9].Text;
-                    string authorExternalChannelID = sheet1.Cells[rowIdx1, 11].Text;
-                    string id = sheet1.Cells[rowIdx1, 12].Text;
+                    string foregroundColor = sheet1.Cells[rowIdx1, 8].Text;
+                    string backgroundColor = sheet1.Cells[rowIdx1, 9].Text;
+                    string timestampText = sheet1.Cells[rowIdx1, 10].Text;
+                    string authorExternalChannelID = sheet1.Cells[rowIdx1, 12].Text;
+                    string id = sheet1.Cells[rowIdx1, 13].Text;
 
                     // 當 "type" 為 null 或空值時，直接進入下一個。
                     if (string.IsNullOrEmpty(type))
@@ -1623,6 +1652,7 @@ public partial class FMain
                         purchaseAmmount,
                         timestampUsec,
                         type,
+                        foregroundColor,
                         backgroundColor,
                         timestampText,
                         authorPhotoUrl,
@@ -1642,6 +1672,20 @@ public partial class FMain
                         }
                     }
 
+                    if (!string.IsNullOrEmpty(foregroundColor))
+                    {
+                        for (int j = 0; j < lvItem.SubItems.Count; j++)
+                        {
+                            // 只變更訊息欄位的前景色。
+                            if (j == 2)
+                            {
+                                ListViewItem.ListViewSubItem item = lvItem.SubItems[j];
+
+                                item.ForeColor = ColorTranslator.FromHtml(foregroundColor);
+                            }
+                        }
+                    }
+
                     if (!string.IsNullOrEmpty(backgroundColor))
                     {
                         foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
@@ -1650,11 +1694,11 @@ public partial class FMain
                         }
                     }
 
-                    if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember ||
-                       type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade ||
-                       type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone ||
-                       type == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift ||
-                       type == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift)
+                    if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) ||
+                       type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
+                       type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) ||
+                       type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) ||
+                       type == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift))
                     {
                         foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                         {
@@ -1663,8 +1707,8 @@ public partial class FMain
                         }
                     }
 
-                    if (type == Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect ||
-                        type == Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
+                    if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) ||
+                        type == LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
                     {
                         foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                         {
@@ -2001,8 +2045,8 @@ public partial class FMain
         TBLog.InvokeIfRequired(() =>
         {
             IEnumerable<ListViewItem> tempDataSet = dataSet.Where(n =>
-                (n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat ||
-                n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker) &&
+                (n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat) ||
+                n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)) &&
                 n.SubItems[3].Text.StartsWith('$'));
 
             double totalIncome = 0.0;
@@ -2036,13 +2080,13 @@ public partial class FMain
         LChatCount.InvokeIfRequired(() =>
         {
             int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatRedirect &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatPinned)
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
                 .Count();
 
             LChatCount.Text = $"留言數量：{count} 個";
@@ -2050,41 +2094,41 @@ public partial class FMain
 
         LSuperChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)).Count();
 
-            LSuperChatCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperChat}：{count} 個";
+            LSuperChatCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}：{count} 個";
         });
 
         LSuperStickerCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)).Count();
 
-            LSuperStickerCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatSuperSticker}：{count} 個";
+            LSuperStickerCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}：{count} 個";
         });
 
         LMemberJoinCount.InvokeIfRequired(() =>
         {
-            int joinCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember).Count();
-            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade).Count();
-            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone).Count();
-            int giftCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift).Count();
-            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift).Count();
+            int joinCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)).Count();
+            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)).Count();
+            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)).Count();
+            int giftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)).Count();
+            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)).Count();
 
-            LMemberJoinCount.Text = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember}：{joinCount} 位";
+            LMemberJoinCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)}：{joinCount} 位";
 
-            string tooltip = $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade}：{upgradeCount} 位、" +
-                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone}：{milestoneCount} 位、" +
-                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberGift}：{giftCount} 位、" +
-                $"{Rubujo.YouTube.Utility.Sets.StringSet.ChatReceivedMemberGift}：{receivedGiftCount} 位";
+            string tooltip = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)}：{upgradeCount} 位、" +
+                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)}：{milestoneCount} 位、" +
+                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)}：{giftCount} 位、" +
+                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)}：{receivedGiftCount} 位";
 
             SharedTooltip.SetToolTip(LMemberJoinCount, tooltip);
         });
 
         LMemberInRoomCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatJoinMember &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberUpgrade &&
-                n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.ChatMemberMilestone &&
+            int count = dataSet.Where(n => n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
+                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) &&
                 n.SubItems[1].Text.Contains(StringSet.Member))
                 .Select(n => n.SubItems[0].Text)
                 .Distinct()

@@ -36,7 +36,7 @@ public partial class LiveChatCatcher
     /// 開始
     /// </summary>
     /// <param name="videoUrlOrID">字串，YouTube 影片網址或是 ID 值</param>
-    public void Start(string videoUrlOrID)
+    public async void Start(string videoUrlOrID)
     {
         if (SharedTask != null && !SharedTask.IsCompleted)
         {
@@ -50,6 +50,7 @@ public partial class LiveChatCatcher
         if (SharedHttpClient == null)
         {
             RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
+
             RaiseOnLogOutput(
                 EnumSet.LogType.Error,
                 "[LiveChatCatcher.Start()] 發生錯誤，變數 \"SharedHttpClient\" 是 null！");
@@ -62,8 +63,6 @@ public partial class LiveChatCatcher
         // 開始 Task。
         SharedTask = Task.Run(() =>
         {
-            SharedCancellationTokenSource.Token.ThrowIfCancellationRequested();
-
             string videoID = GetYouTubeVideoID(videoUrl: videoUrlOrID);
 
             SharedIsStreaming = IsVideoStreaming(videoID: videoID);
@@ -72,22 +71,9 @@ public partial class LiveChatCatcher
         },
         SharedCancellationTokenSource.Token);
 
-        SharedTask.ContinueWith((task) =>
-            TaskCompleted(task, null),
-            SharedCancellationTokenSource.Token);
-    }
-
-    /// <summary>
-    /// 停止
-    /// </summary>
-    public void Stop()
-    {
-        // 清除 SharedCancellationTokenSource。
-        SharedCancellationTokenSource?.Cancel();
-        SharedCancellationTokenSource = null;
-
-        // 清除 SharedTask。
-        SharedTask = null;
+        SharedTask?.ContinueWith(
+            task => TaskCompleted(task, null),
+            CancellationToken.None);
     }
 
     /// <summary>
@@ -172,15 +158,13 @@ public partial class LiveChatCatcher
         {
             RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
 
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                task.Exception.GetExceptionMessage());
-
-            return;
+            RaiseOnLogOutput(EnumSet.LogType.Error, task.Exception.GetExceptionMessage());
         }
 
         RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Stopped);
 
+        // 清除 SharedCancellationTokenSource。
+        SharedCancellationTokenSource = null;
         // 清除 SharedTask。
         SharedTask = null;
     }

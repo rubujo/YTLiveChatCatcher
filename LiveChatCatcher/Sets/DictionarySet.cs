@@ -13,6 +13,13 @@ public class DictionarySet
     private static readonly Dictionary<EnumSet.DisplayLanguage, RegionData> DictRegion = new()
     {
         // TODO: 2023/12/19 待完成字典：區域。
+        // 來源資料：
+        // http://www.lingoes.net/en/translator/langcode.htm
+        // https://support.google.com/business/answer/6270107?hl=zh-Hant
+        // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#DUBLIN
+        // https://github.com/lau/tzdata/blob/master/test/tzdata_fixtures/europe_shortened
+        // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#DUBLIN
+        // https://github.com/lau/tzdata/blob/master/test/tzdata_fixtures/europe_shortened
         { EnumSet.DisplayLanguage.Afrikaans, new RegionData() { Gl = "ZA", Hl = "af", TimeZone = "Africa/Johannesburg", AcceptLanguage = "af-ZA,af;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6" } },
         { EnumSet.DisplayLanguage.Albanian, new RegionData() { Gl = "AL", Hl = "sq", TimeZone = "Europe/Tirane", AcceptLanguage = "sq-AL,sq;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6" } },
         { EnumSet.DisplayLanguage.Amharic, new RegionData() { Gl = "ET", Hl = "sm", TimeZone = "Africa/Nairobi", AcceptLanguage = "sm-ET,sm;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6" } },
@@ -99,6 +106,32 @@ public class DictionarySet
     };
 
     /// <summary>
+    /// 字典：本地化
+    /// </summary>
+    private static readonly Dictionary<EnumSet.DisplayLanguage, Dictionary<string, string>> DictLocalize = new()
+    {
+        // TODO: 2023/12/20 考慮是否要擴充字典：本地化。
+        {
+            EnumSet.DisplayLanguage.Chinese_Traditional,
+            new Dictionary<string, string>()
+            {
+                { KeySet.ChatGeneral, "一般" },
+                { KeySet.ChatSuperChat, "超級留言" },
+                { KeySet.ChatSuperSticker, "超級貼圖" },
+                { KeySet.ChatJoinMember, "加入會員" },
+                { KeySet.ChatMemberUpgrade, "會員升級" },
+                { KeySet.ChatMemberMilestone, "會員里程碑" },
+                { KeySet.ChatMemberGift, "贈送會員" },
+                { KeySet.ChatReceivedMemberGift, "接收會員贈送" },
+                { KeySet.ChatRedirect, "重新導向" },
+                { KeySet.ChatPinned, "置頂留言" },
+                { KeySet.MemberUpgrade, "頻道會員等級已升級至" },
+                { KeySet.MemberMilestone, "已加入會員" }
+            }
+        }
+    };
+
+    /// <summary>
     /// 取得字典：區域
     /// </summary>
     /// <returns>Dictionary&lt;EnumSet.DisplayLanguage, RegionData&gt;</returns>
@@ -107,11 +140,12 @@ public class DictionarySet
         return DictRegion;
     }
 
-    // 來源資料：
-    // http://www.lingoes.net/en/translator/langcode.htm
-    // https://support.google.com/business/answer/6270107?hl=zh-Hant
-    // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#DUBLIN
-    // https://github.com/lau/tzdata/blob/master/test/tzdata_fixtures/europe_shortened
-    // https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#DUBLIN
-    // https://github.com/lau/tzdata/blob/master/test/tzdata_fixtures/europe_shortened
+    /// <summary>
+    /// 字典：本地化
+    /// </summary>
+    /// <returns>Dictionary&lt;EnumSet.DisplayLanguage, Dictionary&lt;string, string&gt;&gt;</returns>
+    public static Dictionary<EnumSet.DisplayLanguage, Dictionary<string, string>> GetLocalizeDictionary()
+    {
+        return DictLocalize;
+    }
 }

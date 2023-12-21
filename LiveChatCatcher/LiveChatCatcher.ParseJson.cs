@@ -2,6 +2,7 @@
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
+using Rubujo.YouTube.Utility.Utils;
 
 namespace Rubujo.YouTube.Utility;
 
@@ -594,7 +595,7 @@ public partial class LiveChatCatcher
                                 {
                                     if ((string.IsNullOrEmpty(rendererData.TimestampText) &&
                                         string.IsNullOrEmpty(rendererData.TimestampUsec)) ||
-                                        rendererData.TimestampText == StringSet.NoTimestampText)
+                                        rendererData.TimestampText == KeySet.NoTimestampText)
                                     {
                                         rendererData.TimestampText = videoOffsetTimeText;
                                     }
@@ -1085,7 +1086,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(tempText))
         {
-            tempText = StringSet.NoMessageContent;
+            tempText = KeySet.NoMessageContent;
         }
 
         output.Text = tempText;
@@ -1265,10 +1266,10 @@ public partial class LiveChatCatcher
             timestampUsec = GetTimestampUsec(jsonElement),
             authorName = GetAuthorName(jsonElement),
             authorPhoto = GetAuthorPhoto(jsonElement),
-            authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges,
-            message = messageData.Text ?? StringSet.NoMessageContent,
+            authorBadges = authorBadgesData.Text ?? KeySet.NoAuthorBadges,
+            message = messageData.Text ?? KeySet.NoMessageContent,
             purchaseAmountText = GetPurchaseAmountText(jsonElement),
-            forgroundColor = messageData?.TextColor ?? string.Empty,
+            forgroundColor = messageData?.TextColor ?? KeySet.NoForegroundColor,
             backgroundColor = GetBackgroundColor(jsonElement),
             timestampText = GetTimestampText(jsonElement),
             authorExternalChannelID = GetAuthorExternalChannelId(jsonElement);
@@ -1282,14 +1283,14 @@ public partial class LiveChatCatcher
 
         if (rendererName == "liveChatMembershipItemRenderer")
         {
-            // 此處 message 為 headerSubtext。
-            if (message.Contains(StringSet.MemberUpgrade))
+            // 此處 message 為 headerSubtext，依據 message 是否帶有關鍵字來更新 type。
+            if (message.Contains(GetLocalizeString(KeySet.MemberUpgrade)))
             {
-                type = StringSet.ChatMemberUpgrade;
+                type = GetLocalizeString(KeySet.ChatMemberUpgrade);
             }
-            else if (message.Contains(StringSet.MemberMilestone))
+            else if (message.Contains(GetLocalizeString(KeySet.MemberMilestone)))
             {
-                type = StringSet.ChatMemberMilestone;
+                type = GetLocalizeString(KeySet.ChatMemberMilestone);
             }
             else
             {
@@ -1309,9 +1310,9 @@ public partial class LiveChatCatcher
 
                 authorName = GetAuthorName(liveChatSponsorshipsHeaderRenderer.Value);
                 authorPhoto = GetAuthorPhoto(liveChatSponsorshipsHeaderRenderer.Value);
-                authorBadges = authorBadgesData.Text ?? StringSet.NoAuthorBadges;
+                authorBadges = authorBadgesData.Text ?? KeySet.NoAuthorBadges;
                 // 此處 message 為 primaryText。
-                message = messageData.Text ?? StringSet.NoMessageContent;
+                message = messageData.Text ?? KeySet.NoMessageContent;
             }
         }
         else
@@ -1380,7 +1381,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            output = StringSet.NoAuthorName;
+            output = KeySet.NoAuthorName;
         }
 
         return output;
@@ -1404,7 +1405,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            output = StringSet.NoAuthorPhotoUrl;
+            output = KeySet.NoAuthorPhotoUrl;
         }
 
         return output;
@@ -1428,7 +1429,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            output = StringSet.NoAuthorExternalChannelID;
+            output = KeySet.NoAuthorExternalChannelID;
         }
 
         return output;
@@ -1488,7 +1489,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            output = StringSet.NoTimestampText;
+            output = KeySet.NoTimestampText;
         }
 
         return output;
@@ -1514,7 +1515,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            return StringSet.NoPurchaseAmountText;
+            return KeySet.NoPurchaseAmountText;
         }
 
         return output;
@@ -1545,7 +1546,7 @@ public partial class LiveChatCatcher
 
         if (string.IsNullOrEmpty(output))
         {
-            output = StringSet.NoBackgroundColor;
+            output = KeySet.NoBackgroundColor;
         }
 
         return output;

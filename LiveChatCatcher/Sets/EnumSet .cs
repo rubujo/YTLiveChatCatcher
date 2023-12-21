@@ -1,4 +1,6 @@
-﻿namespace Rubujo.YouTube.Utility.Sets;
+﻿using Rubujo.YouTube.Utility.Sets;
+
+namespace Rubujo.YouTube.Utility.Sets;
 
 /// <summary>
 /// 列舉組

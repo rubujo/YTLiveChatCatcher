@@ -25,7 +25,7 @@ public static class ListExtension
             return string.Join("、", array);
         }
 
-        return StringSet.NoAuthorBadges;
+        return KeySet.NoAuthorBadges;
     }
 
     /// <summary>
