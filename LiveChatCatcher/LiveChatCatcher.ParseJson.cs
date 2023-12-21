@@ -2,7 +2,6 @@
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
-using Rubujo.YouTube.Utility.Utils;
 
 namespace Rubujo.YouTube.Utility;
 
