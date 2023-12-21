@@ -12,7 +12,8 @@ public class DictionarySet
     /// </summary>
     private static readonly Dictionary<EnumSet.DisplayLanguage, RegionData> DictRegion = new()
     {
-        // TODO: 2023/12/19 待完成字典：區域。
+        // TODO: 2023/12/19 待完成字典：區域，需要刪除人造語言以及死語言。
+
         // 來源資料：
         // http://www.lingoes.net/en/translator/langcode.htm
         // https://support.google.com/business/answer/6270107?hl=zh-Hant
@@ -110,7 +111,8 @@ public class DictionarySet
     /// </summary>
     private static readonly Dictionary<EnumSet.DisplayLanguage, Dictionary<string, string>> DictLocalize = new()
     {
-        // TODO: 2023/12/20 考慮是否要擴充字典：本地化。
+        // 2023/12/20 請自行補充其它語系的本地化字串，
+        // 詳細請參考 README.md 內的範例程式碼。。
         {
             EnumSet.DisplayLanguage.Chinese_Traditional,
             new Dictionary<string, string>()

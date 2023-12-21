@@ -147,6 +147,7 @@ namespace YTLiveChatCatcher
             // 
             // TBInterval
             // 
+            TBInterval.Enabled = false;
             TBInterval.Location = new Point(525, 28);
             TBInterval.Name = "TBInterval";
             TBInterval.Size = new Size(100, 23);

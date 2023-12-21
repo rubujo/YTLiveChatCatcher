@@ -199,63 +199,15 @@ public partial class FMain : Form
                 return;
             }
 
-            #region 設定間隔時間
+            // 設定控制項的狀態。
+            SetControlsState(false);
 
-            bool isIntervalSet = false;
+            // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
+            SetUseCookie();
 
-            // 判斷是否已經成功設定間隔值。
-            // 解析失敗。
-            if (!int.TryParse(TBInterval.Text.Trim(), out int interval))
-            {
-                isIntervalSet = false;
+            SharedLiveChatCatcher.Start(videoID);
 
-                MessageBox.Show(
-                    "請在間隔欄位輸入數值。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-
-                BtnStop_Click(null, new EventArgs());
-
-                return;
-            }
-
-            // 最低不可以低於 3 秒。
-            if (interval < 3)
-            {
-                isIntervalSet = false;
-
-                MessageBox.Show(
-                    "目前的間隔秒數太低，請調高；最低不可以低於 3 秒。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-
-                BtnStop_Click(null, new EventArgs());
-
-                return;
-            }
-
-            // 設定 LiveChatCatcher 的逾時毫秒值。
-            LiveChatCatcher.IntervalMs(interval * 1000);
-
-            isIntervalSet = true;
-
-            #endregion
-
-            // 當成功設定間隔值後才可以執行。
-            if (isIntervalSet)
-            {
-                // 設定控制項的狀態。
-                SetControlsState(false);
-
-                // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
-                SetUseCookie();
-
-                SharedLiveChatCatcher.Start(videoID);
-
-                WriteLog("開始取得聊天室的內容。");
-            }
+            WriteLog("開始取得聊天室的內容。");
         }
         catch (Exception ex)
         {
@@ -279,6 +231,12 @@ public partial class FMain : Form
 
             // 設定控制項的狀態。
             SetControlsState(true);
+
+            TBInterval.InvokeIfRequired(() =>
+            {
+                // 清除間隔欄位的內容。
+                TBInterval.Text = string.Empty;
+            });
 
             WriteLog("已停止取得聊天室的內容。");
         }
