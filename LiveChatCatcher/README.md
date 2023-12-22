@@ -29,6 +29,8 @@ void Main()
 	// 宣告 liveChatCatcher。
 	LiveChatCatcher liveChatCatcher = new();
 
+	#region 設定 LiveChatCatcher
+
 	// 初始化 liveChatCatcher。
 	liveChatCatcher.Init();
 
@@ -41,22 +43,32 @@ void Main()
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
 	// ※預設是不使用 Cookie。
-	liveChatCatcher.UseCookie(
-		enable: false,
-		browserType: WebBrowserUtil.BrowserType.GoogleChrome,
-		profileFolderName: string.Empty);
+	//liveChatCatcher.UseCookie(
+	//	enable: false,
+	//	browserType: WebBrowserUtil.BrowserType.GoogleChrome,
+	//	profileFolderName: string.Empty);
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
-	LiveChatCatcher.FetchLargePicture(true);
+	//LiveChatCatcher.FetchLargePicture(true);
 
-	// 設定顯示語系。
+	// 設定顯示語言。
 	//※預設值為 EnumSet.DisplayLanguage.Chinese_Traditional。
-	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.English);
+	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
 	
-	// 設定本地化字串。
+	#region 設定本地化字串
+	
+	// 判斷語言是否已存在。
+	if (DictionarySet.GetLocalizeDictionary().ContainsKey(EnumSet.DisplayLanguage.English))
+	{
+		// 若已存在則移除。
+		DictionarySet.GetLocalizeDictionary().Remove(EnumSet.DisplayLanguage.English);
+	}
+	
+	// 判斷語言是否已存在。
 	if (!DictionarySet.GetLocalizeDictionary().ContainsKey(EnumSet.DisplayLanguage.English))
 	{
+		// 若不存在則新增。
 		DictionarySet.GetLocalizeDictionary().Add(
 			EnumSet.DisplayLanguage.English,
 			new Dictionary<string, string>()
@@ -78,13 +90,46 @@ void Main()
 		);
 	}
 	
+	#region 更新現有的本地化字串
+	
+	//bool hasValue = DictionarySet.GetLocalizeDictionary()
+	//	.TryGetValue(
+	//		EnumSet.DisplayLanguage.English,
+	//		out Dictionary<string, string>? value);
+	//
+	//if (hasValue && value != null)
+	//{
+	//	value[KeySet.ChatGeneral] = "{新的值}";
+	//	value[KeySet.ChatSuperChat] = "{新的值}";
+	//	value[KeySet.ChatSuperSticker] = "{新的值}";
+	//	value[KeySet.ChatJoinMember] = "{新的值}";
+	//	value[KeySet.ChatMemberUpgrade] = "{新的值}";
+	//	value[KeySet.ChatMemberMilestone] = "{新的值}";
+	//	value[KeySet.ChatMemberGift] = "{新的值}";
+	//	value[KeySet.ChatReceivedMemberGift] = "{新的值}";
+	//	value[KeySet.ChatRedirect] = "{新的值}";
+	//	value[KeySet.ChatPinned] = "{新的值}";
+	//	// 使用 Contains() 判斷。
+	//	value[KeySet.MemberUpgrade] = "{新的值}";
+	//	value[KeySet.MemberMilestone] = "{新的值}";
+	//}
+	
+	#endregion
+	
+	#endregion
+	
 	// 設定即時聊天類型。
 	LiveChatCatcher.LiveChatType(EnumSet.LiveChatType.All);
 
 	// 設定自定義即時聊天類型。
 	// 當使用此方法時，會自動忽略使用 liveChatCatcher.CustomLiveChatType() 方法的設定值。
+	// ※請依照顯示語言填入對應的語言字串。
 	//LiveChatCatcher.CustomLiveChatType("重播熱門聊天室訊息");
 	//LiveChatCatcher.CustomLiveChatType("聊天重播");
+
+	#endregion
+
+	#region 事件
 
 	// 獲取即時聊天資料事件。
 	liveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
@@ -148,7 +193,9 @@ void Main()
 				break;
 		}
 	};
-
+	
+	#endregion
+	
 	// 開始獲取即時聊天資料。
 	liveChatCatcher.Start(videoUrlOrID);
 	
@@ -161,6 +208,6 @@ void Main()
 
 1. 本函式庫使用`正體中文`，預設是以`正體中文`的語系參數來取得 YouTube 影片或直播的即時聊天資料。
 2. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
-3. 取得 Cookie 的相關方法，`僅限於 Microsoft Windows 平臺可以使用。`
+3. 取得 Cookie 的相關方法，`僅限於` Microsoft Windows 平臺可以使用。
    - `※使用相關方法時，請先確認目標的網頁瀏覽器是處於關閉的狀態，否則有可能會無法成功的取得 Cookie 資料。`
-4. 本函式庫的`靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。
+4. 本函式庫的`公開靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。
