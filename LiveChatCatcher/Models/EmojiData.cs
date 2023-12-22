@@ -45,7 +45,7 @@ public class EmojiData
     /// <summary>
     /// 影像檔的格式
     /// </summary>
-    [JsonPropertyName("format")]
+    [JsonIgnore]
     public string? Format { get; set; }
 
     /// <summary>

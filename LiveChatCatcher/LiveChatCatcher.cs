@@ -36,7 +36,7 @@ public partial class LiveChatCatcher
     /// 開始
     /// </summary>
     /// <param name="videoUrlOrID">字串，YouTube 影片網址或是 ID 值</param>
-    public async void Start(string videoUrlOrID)
+    public void Start(string videoUrlOrID)
     {
         if (SharedTask != null && !SharedTask.IsCompleted)
         {

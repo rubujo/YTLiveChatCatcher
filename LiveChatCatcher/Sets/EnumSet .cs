@@ -1,6 +1,4 @@
-﻿using Rubujo.YouTube.Utility.Sets;
-
-namespace Rubujo.YouTube.Utility.Sets;
+﻿namespace Rubujo.YouTube.Utility.Sets;
 
 /// <summary>
 /// 列舉組
@@ -81,10 +79,6 @@ public class EnumSet
         /// </summary>
         Albanian,
         /// <summary>
-        /// 安哈拉語
-        /// </summary>
-        Amharic,
-        /// <summary>
         /// 阿拉伯語
         /// </summary>
         Arabic,
@@ -104,10 +98,6 @@ public class EnumSet
         /// 孟加拉語
         /// </summary>
         Bengali,
-        /// <summary>
-        /// 比哈爾語
-        /// </summary>
-        Bihari,
         /// <summary>
         /// 波士尼亞語
         /// </summary>
@@ -149,17 +139,9 @@ public class EnumSet
         /// </summary>
         English,
         /// <summary>
-        /// 世界語
-        /// </summary>
-        Esperanto,
-        /// <summary>
         /// 愛沙尼亞語
         /// </summary>
         Estonian,
-        /// <summary>
-        /// 法羅語
-        /// </summary>
-        Faroese,
         /// <summary>
         /// 芬蘭語
         /// </summary>
@@ -168,14 +150,6 @@ public class EnumSet
         /// 法語
         /// </summary>
         French,
-        /// <summary>
-        /// 弗里斯蘭語
-        /// </summary>
-        Frisian,
-        /// <summary>
-        /// 加利西亞語,
-        /// </summary>
-        Galician,
         /// <summary>
         /// 喬治亞語
         /// </summary>
@@ -213,14 +187,6 @@ public class EnumSet
         /// </summary>
         Indonesian,
         /// <summary>
-        /// 國際語
-        /// </summary>
-        Interlingua,
-        /// <summary>
-        /// 愛爾蘭語
-        /// </summary>
-        Irish,
-        /// <summary>
         /// 義大利語
         /// </summary>
         Italian,
@@ -229,10 +195,6 @@ public class EnumSet
         /// </summary>
         Japanese,
         /// <summary>
-        /// 爪哇語
-        /// </summary>
-        Javanese,
-        /// <summary>
         /// 卡納達語
         /// </summary>
         Kannada,
@@ -240,10 +202,6 @@ public class EnumSet
         /// 韓語
         /// </summary>
         Korean,
-        /// <summary>
-        /// 拉丁語
-        /// </summary>
-        Latin,
         /// <summary>
         /// 拉脫維亞語
         /// </summary>
@@ -265,10 +223,6 @@ public class EnumSet
         /// </summary>
         Malayam,
         /// <summary>
-        /// 馬爾他語
-        /// </summary>
-        Maltese,
-        /// <summary>
         /// 馬拉地語
         /// </summary>
         Marathi,
@@ -280,14 +234,6 @@ public class EnumSet
         /// 挪威語
         /// </summary>
         Norwegian,
-        /// <summary>
-        /// 新挪威語
-        /// </summary>
-        Norwegian_Nynorsk,
-        /// <summary>
-        /// 奧克西唐語
-        /// </summary>
-        Occitan,
         /// <summary>
         /// 波斯語
         /// </summary>
@@ -317,10 +263,6 @@ public class EnumSet
         /// </summary>
         Russian,
         /// <summary>
-        /// 蘇格蘭蓋爾語
-        /// </summary>
-        Scots_Gaelic,
-        /// <summary>
         /// 塞爾維亞語
         /// </summary>
         Serbian,
@@ -340,10 +282,6 @@ public class EnumSet
         /// 西班牙語
         /// </summary>
         Spanish,
-        /// <summary>
-        /// 蘇丹語
-        /// </summary>
-        Sudanese,
         /// <summary>
         /// 斯瓦希里語
         /// </summary>
@@ -369,10 +307,6 @@ public class EnumSet
         /// </summary>
         Thai,
         /// <summary>
-        /// 提格里尼亞語
-        /// </summary>
-        Tigrinya,
-        /// <summary>
         /// 土耳其語
         /// </summary>
         Turkish,
@@ -392,14 +326,6 @@ public class EnumSet
         /// 越南語
         /// </summary>
         Vietnamese,
-        /// <summary>
-        /// 威爾斯語
-        /// </summary>
-        Welsh,
-        /// <summary>
-        /// 科薩語
-        /// </summary>
-        Xhosa,
         /// <summary>
         /// 祖魯語
         /// </summary>
