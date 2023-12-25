@@ -2,9 +2,19 @@
 
 ## 一、簡介
 
-原本為 `YouTube 聊天室捕手` 的核心程式碼，為了未來的開發以及再利用，因此將 `YouTube 聊天室捕手` 中與獲取 YouTube 聊天室的即時聊天資料有關的程式碼，剝離出來，並做成獨立的函式庫以供使用。
+原本為 `YouTube 聊天室捕手` 應用程式的相關核心程式碼，主要是用於學習如何使用 `System.Text.Json` 來處理 JSON 資料，但為了學習如何設計函式庫，因此才將這部分的程式碼剝離出來，並練習寫成函式庫。
 
-## 二、使用範例
+1. 本函式庫使用`正體中文`，預設是以`正體中文`的語系參數來取得 YouTube 影片或直播的即時聊天資料。
+2. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
+3. `沒有人可以保證您使用本函式庫，不會違反 YouTube 或是 Google 的服務條款，相關的風險請您自行負責，否則請勿使用本函式庫。`
+
+## 二、注意事項
+
+1. 本函式庫的`公開靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。
+2. 取得 Cookie 的相關方法，`僅限於` Microsoft Windows 平臺可以使用。
+   - ※使用相關方法時，請先確認目標的網頁瀏覽器是否處於`關閉`的狀態，否則會有可能無法成功的取得該網頁瀏覽器的 Cookie 資料。
+
+## 三、使用範例
 
 ```csharp
 using System;
@@ -85,7 +95,7 @@ void Main()
 				{ KeySet.ChatPinned, "Pinned" },
 				// 使用 Contains() 判斷。
 				{ KeySet.MemberUpgrade, "Upgraded membership to" },
-				{ KeySet.MemberMilestone, "milestone" }
+				{ KeySet.MemberMilestone, "Member for" }
 			}
 		);
 	}
@@ -203,11 +213,3 @@ void Main()
 	Task.Delay(5000).ContinueWith(task => LiveChatCatcher.Stop());
 }
 ```
-
-## 三、注意事項
-
-1. 本函式庫使用`正體中文`，預設是以`正體中文`的語系參數來取得 YouTube 影片或直播的即時聊天資料。
-2. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
-3. 取得 Cookie 的相關方法，`僅限於` Microsoft Windows 平臺可以使用。
-   - `※使用相關方法時，請先確認目標的網頁瀏覽器是處於關閉的狀態，否則有可能會無法成功的取得 Cookie 資料。`
-4. 本函式庫的`公開靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。

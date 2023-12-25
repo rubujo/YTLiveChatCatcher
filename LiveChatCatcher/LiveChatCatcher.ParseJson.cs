@@ -1283,11 +1283,15 @@ public partial class LiveChatCatcher
         if (rendererName == "liveChatMembershipItemRenderer")
         {
             // 此處 message 為 headerSubtext，依據 message 是否帶有關鍵字來更新 type。
-            if (message.Contains(GetLocalizeString(KeySet.MemberUpgrade)))
+            if (message.Contains(
+                GetLocalizeString(KeySet.MemberUpgrade),
+                StringComparison.InvariantCultureIgnoreCase))
             {
                 type = GetLocalizeString(KeySet.ChatMemberUpgrade);
             }
-            else if (message.Contains(GetLocalizeString(KeySet.MemberMilestone)))
+            else if (message.Contains(
+                GetLocalizeString(KeySet.MemberMilestone),
+                StringComparison.InvariantCultureIgnoreCase))
             {
                 type = GetLocalizeString(KeySet.ChatMemberMilestone);
             }

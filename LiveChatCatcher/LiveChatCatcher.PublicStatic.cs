@@ -163,7 +163,7 @@ public partial class LiveChatCatcher
     /// <param name="value">數值，值，預設值為 -1</param>
     public static void ForceIntervalMs(int value = -1)
     {
-        if (value >= -1)
+        if (value < -1)
         {
             value = -1;
         }
