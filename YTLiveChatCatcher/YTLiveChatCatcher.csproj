@@ -31,8 +31,12 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.3" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
-		<PackageReference Include="NLog" Version="5.2.7" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.7" />
+		<PackageReference Include="NLog" Version="5.2.8" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.8" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\YTJsonParser\YTJsonParser.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -60,10 +64,6 @@
 			<Generator>SettingsSingleFileGenerator</Generator>
 			<LastGenOutput>Settings.Designer.cs</LastGenOutput>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\LiveChatCatcher\LiveChatCatcher.csproj" />
 	</ItemGroup>
 
 </Project>

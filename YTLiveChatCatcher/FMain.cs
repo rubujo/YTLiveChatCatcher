@@ -93,7 +93,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(async () =>
         {
-            textBox.Text = await LiveChatCatcher
+            textBox.Text = await YTJsonParser
                 .GetYouTubeChannelID(textBox.Text.Trim());
         });
     }
@@ -109,7 +109,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(() =>
         {
-            textBox.Text = LiveChatCatcher
+            textBox.Text = YTJsonParser
                 .GetYouTubeVideoID(textBox.Text.Trim());
         });
     }
@@ -171,7 +171,7 @@ public partial class FMain : Form
 
                 if (string.IsNullOrEmpty(videoID))
                 {
-                    videoID = SharedLiveChatCatcher.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
+                    videoID = SharedYTJsonParser.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
 
                     if (!string.IsNullOrEmpty(videoID))
                     {
@@ -205,7 +205,7 @@ public partial class FMain : Form
             // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
             SetUseCookie();
 
-            SharedLiveChatCatcher.Start(videoID);
+            SharedYTJsonParser.StartFetchLiveChatData(videoID);
 
             WriteLog("開始取得聊天室的內容。");
         }
@@ -227,7 +227,7 @@ public partial class FMain : Form
     {
         try
         {
-            LiveChatCatcher.Stop();
+            YTJsonParser.Stop();
 
             // 設定控制項的狀態。
             SetControlsState(true);
