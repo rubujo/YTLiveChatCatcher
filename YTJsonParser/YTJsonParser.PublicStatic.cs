@@ -1,5 +1,7 @@
 ﻿using AngleSharp;
 using AngleSharp.Dom;
+using GetCachable;
+using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Sets;
 using Rubujo.YouTube.Utility.Utils;
 using System.Runtime.Versioning;
@@ -367,5 +369,36 @@ public partial class YTJsonParser
     public static string GetLocalizeString(string key)
     {
         return LangUtil.GetLocalizeString(SharedDisplayLanguage, key);
+    }
+
+    /// <summary>
+    /// 取得圖片的 byte[]
+    /// </summary>
+    /// <param name="url">字串，圖片的網址</param>
+    /// <returns>Task&lt;byte[]&gt;</returns>
+    public static async Task<byte[]?> GetImageBytes(string? url)
+    {
+        if (string.IsNullOrEmpty(url) || SharedHttpClient == null)
+        {
+            return null;
+        }
+
+        byte[]? imageBytes = await BetterCacheManager.GetCachableData(url, async () =>
+        {
+            try
+            {
+                using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url);
+
+                return await httpResponseMessage.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.GetExceptionMessage());
+
+                return null;
+            }
+        }, 10);
+
+        return imageBytes;
     }
 }

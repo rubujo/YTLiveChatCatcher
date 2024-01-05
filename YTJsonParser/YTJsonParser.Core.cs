@@ -365,31 +365,6 @@ public partial class YTJsonParser
     }
 
     /// <summary>
-    /// 設定 YTConfigData 的 Continuation
-    /// </summary>
-    /// <param name="arrayEnumerator">JsonElement.ArrayEnumerator</param>
-    /// <param name="ytConfigData">YTConfig</param>
-    private void SetContinuation(
-        JsonElement.ArrayEnumerator? arrayEnumerator,
-        YTConfigData? ytConfigData)
-    {
-        if (ytConfigData != null)
-        {
-            if (arrayEnumerator != null)
-            {
-                JsonElement? continuationItemRenderer = arrayEnumerator
-                    ?.FirstOrDefault(n => n.Get("continuationItemRenderer") != null);
-
-                ytConfigData.Continuation = GetToken(continuationItemRenderer);
-            }
-            else
-            {
-                ytConfigData.Continuation = null;
-            }
-        }
-    }
-
-    /// <summary>
     /// 取得要求裝載資料
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>

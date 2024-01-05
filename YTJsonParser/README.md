@@ -2,10 +2,10 @@
 
 ## 一、簡介
 
-原本為 `YouTube 聊天室捕手` 應用程式的相關核心程式碼，主要是用於學習如何使用 `System.Text.Json` 來處理 JSON 資料，但為了學習如何設計函式庫，因此才將這部分的程式碼剝離出來，並練習寫成函式庫。
+原本為 `YouTube 聊天室捕手` 應用程式的核心程式碼，後續為了便利再利用，所以獨立成函式庫。
 
-1. 本函式庫使用`正體中文`，預設是以`正體中文`的語系參數來取得 YouTube 影片或直播的即時聊天資料。
-2. 本函式庫`僅支援部分類型`的即時聊天資料的獲取。
+1. 本函式庫使用`正體中文`，預設是以`正體中文`的顯示語言參數來取得 YouTube 社群貼文、影片或直播影片的即時聊天資料。
+2. 本函式庫`僅支援部分類型`的 YouTube 社群貼文、即時聊天資料的獲取。
 3. `沒有人可以保證您使用本函式庫，不會違反 YouTube 或是 Google 的服務條款，相關的風險請您自行負責，否則請勿使用本函式庫。`
 
 ## 二、注意事項
@@ -25,56 +25,80 @@ using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Models.Community;
+using Rubujo.YouTube.Utility.Models.LiveChat;
 using Rubujo.YouTube.Utility.Sets;
 using Rubujo.YouTube.Utility.Utils;
 
+#region 宣告變數
+
+// 宣告 listMessage，用於暫存獲取到的即時聊天資料。
+List<RendererData> listMessage = [];
+
+// 宣告 listPost，用於暫存獲取到的社群貼文資料。
+List<PostData> listPost = [];
+
+#endregion
+
 void Main()
 {
-	// 宣告影片的網址或是 ID 值。
-	string videoUrlOrID = "{影片的網址或是 ID 值}";
+	// 宣告 YouTube 影片、頻道的網址或是 ID 值。
+	string urlOrIDOfChannelOrVideo = "{YouTube 影片、頻道的網址或是 ID 值}";
+	
+	urlOrIDOfChannelOrVideo = "https://www.youtube.com/@koe__zzz";
+	
+	// 宣告 isFetchLiveChatData，用於決定是否要獲取即時聊天資料。
+	// 當值為 false 時，則為獲取社群貼文資料。
+	bool isFetchLiveChatData = false;
 
-	// 宣告 listMessage，用於暫存獲取到的即時聊天資料。
-	List<RendererData> listMessage = [];
+	// 宣告 ytJsonParser。
+	YTJsonParser ytJsonParser = new();
 
-	// 宣告 liveChatCatcher。
-	LiveChatCatcher liveChatCatcher = new();
+	#region 設定 YTJsonParser
 
-	#region 設定 LiveChatCatcher
-
-	// 初始化 liveChatCatcher。
-	liveChatCatcher.Init();
+	// 初始化 ytJsonParser。
+	// ※在使用 YTJsonParser 的公開靜態方法前，需先呼叫此方法。
+	ytJsonParser.Init();
 
 	// 設定強制間隔毫秒值。（意即得等待多久，才會再抓取下一批資料）
-	// 將此值設為 -1 即可改為使用 IntervalMs 的值。
 	// ※配合 UseCookies() 使用時，此值請不要設太低，以免 YouTube 或是 Google 帳號被停權。
-	LiveChatCatcher.ForceIntervalMs(-1);
+	// ※將此值設為 -1 即可改為使用 IntervalMs 的值。
+	if (isFetchLiveChatData)
+	{
+		YTJsonParser.ForceIntervalMs(-1);
+	}
+	else
+	{
+		// ※在獲取社群貼文資料時，IntervalMs 的值會是 0，需手動設定期望的強制間隔毫秒值。
+		YTJsonParser.ForceIntervalMs(1000);
+	}
 
 	// 設定是否使用 Cookie。
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
 	// ※預設是不使用 Cookie。
-	//liveChatCatcher.UseCookie(
+	//ytJsonParser.UseCookie(
 	//	enable: false,
 	//	browserType: WebBrowserUtil.BrowserType.GoogleChrome,
 	//	profileFolderName: string.Empty);
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
-	//LiveChatCatcher.FetchLargePicture(true);
+	//YTJsonParser.FetchLargePicture(true);
 
 	// 設定顯示語言。
 	//※預設值為 EnumSet.DisplayLanguage.Chinese_Traditional。
-	LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
-	
+	YTJsonParser.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
+
 	#region 設定本地化字串
-	
+
 	// 判斷語言是否已存在。
 	if (DictionarySet.GetLocalizeDictionary().ContainsKey(EnumSet.DisplayLanguage.English))
 	{
 		// 若已存在則移除。
 		DictionarySet.GetLocalizeDictionary().Remove(EnumSet.DisplayLanguage.English);
 	}
-	
+
 	// 判斷語言是否已存在。
 	if (!DictionarySet.GetLocalizeDictionary().ContainsKey(EnumSet.DisplayLanguage.English))
 	{
@@ -99,9 +123,9 @@ void Main()
 			}
 		);
 	}
-	
+
 	#region 更新現有的本地化字串
-	
+
 	//bool hasValue = DictionarySet.GetLocalizeDictionary()
 	//	.TryGetValue(
 	//		EnumSet.DisplayLanguage.English,
@@ -123,33 +147,49 @@ void Main()
 	//	value[KeySet.MemberUpgrade] = "{新的值}";
 	//	value[KeySet.MemberMilestone] = "{新的值}";
 	//}
-	
-	#endregion
-	
-	#endregion
-	
-	// 設定即時聊天類型。
-	LiveChatCatcher.LiveChatType(EnumSet.LiveChatType.All);
 
-	// 設定自定義即時聊天類型。
-	// 當使用此方法時，會自動忽略使用 liveChatCatcher.CustomLiveChatType() 方法的設定值。
-	// ※請依照顯示語言填入對應的語言字串。
-	//LiveChatCatcher.CustomLiveChatType("重播熱門聊天室訊息");
-	//LiveChatCatcher.CustomLiveChatType("聊天重播");
+	#endregion
+
+	#endregion
+
+	if (isFetchLiveChatData)
+	{
+		// 設定要獲取的即時聊天類型。
+		// ※預設值為 EnumSet.LiveChatType.All。
+		YTJsonParser.LiveChatType(EnumSet.LiveChatType.All);
+
+		// 設定自定義即時聊天類型。
+		// 當使用此方法時，會自動忽略使用 YTJsonParser.LiveChatType() 方法所設定的值。
+		// ※請依照顯示語言填入對應的語言字串。
+		//YTJsonParser.CustomLiveChatType("重播熱門聊天室訊息");
+		//YTJsonParser.CustomLiveChatType("聊天重播");
+	}
+	else
+	{
+		// 設定是否要獲取全部的社群貼文。
+		// ※預設值為 true。
+		YTJsonParser.FetchWholeCommunityPosts(true);
+	}
 
 	#endregion
 
 	#region 事件
 
 	// 獲取即時聊天資料事件。
-	liveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
+	ytJsonParser.OnFecthLiveChatData += (object? sender, FecthLiveChatDataArgs e) =>
 	{
 		// 依據您的需求處理獲取到的即時聊天資料。
 		listMessage.AddRange(e.Data);
 	};
 
+	ytJsonParser.OnFecthCommunityPosts += (object? sender, FecthCommunityPostsArgs e) =>
+	{
+		// 依據您的需求處理獲取到的社群貼文資料。
+		listPost.AddRange(e.Data);
+	};
+
 	// 執行狀態更新事件。
-	liveChatCatcher.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
+	ytJsonParser.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
 	{
 		EnumSet.RunningStatus runningStatus = e.RunningStatus;
 
@@ -162,11 +202,42 @@ void Main()
 				break;
 			case EnumSet.RunningStatus.Stopped:
 				Console.WriteLine(runningStatus.ToString());
-				
-				// 依據您的需求處理獲取到的即時聊天資料，此處是輸出成 JSON 格式的資料。
-				Console.WriteLine($"資料筆數: {listMessage.Count}");
-				Console.WriteLine(listMessage.ToJsonString());
-				
+
+				// 依據您的需求處理獲取到的資料，此處是輸出成 JSON 格式的資料。
+				if (isFetchLiveChatData)
+				{
+					if (listMessage.Count > 0)
+					{
+						Console.WriteLine($"資料筆數: {listMessage.Count}");
+						Console.WriteLine(listMessage.ToJsonString());
+					}
+				}
+				else
+				{
+					if (listPost.Count > 0)
+					{
+						#region 後處理資料
+						
+						foreach (PostData postData in listPost)
+						{
+							postData.SetDataUri();
+							
+							if(postData.Attachments != null)
+							{
+								foreach (AttachmentData attachmentData in postData.Attachments)
+								{
+									attachmentData.SetDataUri();
+								}
+							}
+						}
+						
+						#endregion
+	
+						Console.WriteLine($"資料筆數: {listPost.Count}");
+						Console.WriteLine(listPost.ToJsonString());
+					}
+				}
+
 				break;
 			case EnumSet.RunningStatus.ErrorOccured:
 				Console.WriteLine(runningStatus.ToString());
@@ -176,7 +247,7 @@ void Main()
 	};
 
 	// 紀錄輸出事件。
-	liveChatCatcher.OnLogOutput += (object? sender, LogOutputArgs e) =>
+	ytJsonParser.OnLogOutput += (object? sender, LogOutputArgs e) =>
 	{
 		EnumSet.LogType logType = e.LogType;
 
@@ -203,13 +274,22 @@ void Main()
 				break;
 		}
 	};
-	
+
 	#endregion
 	
-	// 開始獲取即時聊天資料。
-	liveChatCatcher.Start(videoUrlOrID);
-	
+	// 獲取資料。
+	if (isFetchLiveChatData)
+	{
+		// 開始獲取即時聊天資料。
+		ytJsonParser.StartFetchLiveChatData(urlOrIDOfChannelOrVideo);
+	}
+	else
+	{
+		// 開始獲取社群貼文資料。
+		ytJsonParser.StartFetchCommunityPosts(urlOrIDOfChannelOrVideo);
+	}
+
 	// 於 5 秒後停止獲取即時聊天資料。
-	Task.Delay(5000).ContinueWith(task => LiveChatCatcher.Stop());
+	Task.Delay(5000).ContinueWith(task => YTJsonParser.Stop());
 }
 ```
