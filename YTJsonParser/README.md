@@ -45,11 +45,9 @@ void Main()
 	// 宣告 YouTube 影片、頻道的網址或是 ID 值。
 	string urlOrIDOfChannelOrVideo = "{YouTube 影片、頻道的網址或是 ID 值}";
 	
-	urlOrIDOfChannelOrVideo = "https://www.youtube.com/@koe__zzz";
-	
 	// 宣告 isFetchLiveChatData，用於決定是否要獲取即時聊天資料。
 	// 當值為 false 時，則為獲取社群貼文資料。
-	bool isFetchLiveChatData = false;
+	bool isFetchLiveChatData = true;
 
 	// 宣告 ytJsonParser。
 	YTJsonParser ytJsonParser = new();
