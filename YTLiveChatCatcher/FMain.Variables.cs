@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility;
-using Rubujo.YouTube.Utility.Models;
+using Rubujo.YouTube.Utility.Models.LiveChat;
 
 namespace YTLiveChatCatcher;
 
@@ -28,9 +28,9 @@ public partial class FMain
     private readonly IHttpClientFactory SharedHttpClientFactory;
 
     /// <summary>
-    /// 共用的 LiveChatCatcher
+    /// 共用的 YTJsonParser
     /// </summary>
-    private readonly LiveChatCatcher SharedLiveChatCatcher = new();
+    private readonly YTJsonParser SharedYTJsonParser = new();
 
     /// <summary>
     /// 共用的 ToolTip

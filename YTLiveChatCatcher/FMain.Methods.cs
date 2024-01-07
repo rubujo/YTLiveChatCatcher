@@ -5,7 +5,6 @@ using NLog;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
 using Rubujo.YouTube.Utility.Extensions;
-using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
 using Rubujo.YouTube.Utility.Utils;
 using Size = System.Drawing.Size;
@@ -14,6 +13,7 @@ using System.Runtime.Versioning;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
+using Rubujo.YouTube.Utility.Models.LiveChat;
 
 namespace YTLiveChatCatcher;
 
@@ -168,9 +168,9 @@ public partial class FMain
 
                 string speakText = string.Empty;
 
-                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatGeneral) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker))
+                if (type == YTJsonParser.GetLocalizeString(KeySet.ChatGeneral) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker))
                 {
                     speakText = $"{authorName}說{message}";
                 }
@@ -220,7 +220,7 @@ public partial class FMain
         });
 
         // 取得影片的標題。
-        string videoTitle = SharedLiveChatCatcher.GetVideoTitle(videoID);
+        string videoTitle = SharedYTJsonParser.GetVideoTitle(videoID);
 
         if (!string.IsNullOrEmpty(videoTitle))
         {
@@ -328,7 +328,7 @@ public partial class FMain
 
                     if (!string.IsNullOrEmpty(authorExternalChannelId))
                     {
-                        string channelUrl = LiveChatCatcher
+                        string channelUrl = YTJsonParser
                             .GetYouTubeChannelUrl(authorExternalChannelId);
 
                         CustomFunction.OpenBrowser(channelUrl);
@@ -467,7 +467,7 @@ public partial class FMain
                         {
                             string errorMessage = await stickerData.SetImage(
                                 SharedHttpClient,
-                                LiveChatCatcher.FetchLargePicture());
+                                YTJsonParser.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -490,7 +490,7 @@ public partial class FMain
                             {
                                 string errorMessage = await emojiData.SetImage(
                                     SharedHttpClient,
-                                    LiveChatCatcher.FetchLargePicture());
+                                    YTJsonParser.FetchLargePicture());
 
                                 if (!string.IsNullOrEmpty(errorMessage))
                                 {
@@ -514,7 +514,7 @@ public partial class FMain
                         {
                             string errorMessage = await badgeData.SetImage(
                                 SharedHttpClient,
-                                LiveChatCatcher.FetchLargePicture());
+                                YTJsonParser.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -651,11 +651,11 @@ public partial class FMain
                     }
                 }
 
-                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift))
+                if (type == YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -664,8 +664,8 @@ public partial class FMain
                     }
                 }
 
-                if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) ||
-                    type == LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
+                if (type == YTJsonParser.GetLocalizeString(KeySet.ChatRedirect) ||
+                    type == YTJsonParser.GetLocalizeString(KeySet.ChatPinned))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -861,8 +861,8 @@ public partial class FMain
         TBLog.InvokeIfRequired(() =>
         {
             IEnumerable<ListViewItem> tempDataSet = dataSet.Where(n =>
-                (n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat) ||
-                n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)) &&
+                (n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat) ||
+                n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)) &&
                 n.SubItems[3].Text.StartsWith('$'));
 
             double totalIncome = 0.0;
@@ -896,13 +896,13 @@ public partial class FMain
         LChatCount.InvokeIfRequired(() =>
         {
             int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatRedirect) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatPinned))
                 .Count();
 
             LChatCount.Text = $"留言數量：{count} 個";
@@ -910,41 +910,41 @@ public partial class FMain
 
         LSuperChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)).Count();
 
-            LSuperChatCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}：{count} 個";
+            LSuperChatCount.Text = $"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}：{count} 個";
         });
 
         LSuperStickerCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)).Count();
+            int count = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)).Count();
 
-            LSuperStickerCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}：{count} 個";
+            LSuperStickerCount.Text = $"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}：{count} 個";
         });
 
         LMemberJoinCount.InvokeIfRequired(() =>
         {
-            int joinCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)).Count();
-            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)).Count();
-            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)).Count();
-            int giftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)).Count();
-            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)).Count();
+            int joinCount = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)).Count();
+            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)).Count();
+            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)).Count();
+            int giftCount = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)).Count();
+            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)).Count();
 
-            LMemberJoinCount.Text = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)}：{joinCount} 位";
+            LMemberJoinCount.Text = $"{YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}：{joinCount} 位";
 
-            string tooltip = $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)}：{upgradeCount} 位、" +
-                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)}：{milestoneCount} 位、" +
-                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)}：{giftCount} 位、" +
-                $"{LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)}：{receivedGiftCount} 位";
+            string tooltip = $"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}：{upgradeCount} 位、" +
+                $"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}：{milestoneCount} 位、" +
+                $"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}：{giftCount} 位、" +
+                $"{YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}：{receivedGiftCount} 位";
 
             SharedTooltip.SetToolTip(LMemberJoinCount, tooltip);
         });
 
         LMemberInRoomCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
-                n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) &&
+            int count = dataSet.Where(n => n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
+                n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) &&
                 n.SubItems[1].Text.Contains(StringSet.Member))
                 .Select(n => n.SubItems[0].Text)
                 .Distinct()
@@ -1097,7 +1097,7 @@ public partial class FMain
         });
 
         // 設定 LiveChatCatcher 是否使用 Cookies。
-        SharedLiveChatCatcher.UseCookie(
+        SharedYTJsonParser.UseCookie(
             enable: enable,
             browserType: browserType,
             profileFolderName: profileFolderName);
@@ -1148,19 +1148,19 @@ public partial class FMain
             return;
         }
 
-        SharedLiveChatCatcher.Init(httpClient: httpClient);
+        SharedYTJsonParser.Init(httpClient: httpClient);
 
-        LiveChatCatcher.FetchLargePicture(true);
-        LiveChatCatcher.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
+        YTJsonParser.FetchLargePicture(true);
+        YTJsonParser.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
 
-        SharedLiveChatCatcher.OnFecthLiveChat += (object? sender, FecthLiveChatArgs e) =>
+        SharedYTJsonParser.OnFecthLiveChatData += (object? sender, FecthLiveChatDataArgs e) =>
         {
             TBUserAgent.InvokeIfRequired(() =>
             {
                 DoProcessMessages(e.Data);
             });
         };
-        SharedLiveChatCatcher.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
+        SharedYTJsonParser.OnRunningStatusUpdate += (object? sender, RunningStatusArgs e) =>
         {
             EnumSet.RunningStatus runningStatus = e.RunningStatus;
 
@@ -1179,7 +1179,7 @@ public partial class FMain
                     break;
             }
         };
-        SharedLiveChatCatcher.OnLogOutput += (object? sender, LogOutputArgs e) =>
+        SharedYTJsonParser.OnLogOutput += (object? sender, LogOutputArgs e) =>
         {
             EnumSet.LogType logType = e.LogType;
 

@@ -8,12 +8,12 @@ using OfficeOpenXml.Style.XmlAccess;
 using OfficeOpenXml.Style;
 using OfficeOpenXml;
 using Rubujo.YouTube.Utility.Extensions;
-using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Sets;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Extensions;
+using Rubujo.YouTube.Utility.Models.LiveChat;
 
 namespace YTLiveChatCatcher;
 
@@ -203,16 +203,16 @@ public partial class FMain
 
             List<string> arrayFormula =
             [
-                $"SUM(COUNTIF(G:G,{{\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatGeneral)}\", " +
-                $"\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}\"," +
-                $"\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}\"}}))&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperChat)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatSuperSticker)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)}\")&\" 個\"",
-                $"COUNTIF(G:G,\"{LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift)}\")&\" 個\""
+                $"SUM(COUNTIF(G:G,{{\"{YTJsonParser.GetLocalizeString(KeySet.ChatGeneral)}\", " +
+                $"\"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}\"," +
+                $"\"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}\"}}))&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}\")&\" 個\"",
+                $"COUNTIF(G:G,\"{YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}\")&\" 個\""
             ];
 
             char[] separators1 = ['、'];
@@ -301,8 +301,8 @@ public partial class FMain
                     // LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift)、
                     // LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) 等類型的資料，
                     // 以免在時間熱點活頁簿內出現奇怪的時間點。
-                    n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) &&
-                    n.SubItems[5].Text != LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
+                    n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) &&
+                    n.SubItems[5].Text != YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
                     !string.IsNullOrEmpty(n.SubItems[8].Text) &&
                     !n.SubItems[8].Text.Contains('-'))
                 .Select(n => n.SubItems[8].Text.Length > 3 ?
@@ -314,7 +314,7 @@ public partial class FMain
 
             if (sourceList.Count > 0)
             {
-                string sheetName = LiveChatCatcher.IsStreaming() ?
+                string sheetName = YTJsonParser.IsStreaming() ?
                     StringSet.SheetName2 :
                     StringSet.SheetName3;
 
@@ -999,11 +999,11 @@ public partial class FMain
                 }
             }
 
-            if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatJoinMember) ||
-               type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
-               type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberMilestone) ||
-               type == LiveChatCatcher.GetLocalizeString(KeySet.ChatMemberGift) ||
-               type == LiveChatCatcher.GetLocalizeString(KeySet.ChatReceivedMemberGift))
+            if (type == YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) ||
+               type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
+               type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) ||
+               type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) ||
+               type == YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift))
             {
                 foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                 {
@@ -1012,8 +1012,8 @@ public partial class FMain
                 }
             }
 
-            if (type == LiveChatCatcher.GetLocalizeString(KeySet.ChatRedirect) ||
-                type == LiveChatCatcher.GetLocalizeString(KeySet.ChatPinned))
+            if (type == YTJsonParser.GetLocalizeString(KeySet.ChatRedirect) ||
+                type == YTJsonParser.GetLocalizeString(KeySet.ChatPinned))
             {
                 foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                 {
@@ -1105,7 +1105,7 @@ public partial class FMain
                         {
                             string errorMessage = await emojiData.SetImage(
                                 SharedHttpClient,
-                                LiveChatCatcher.FetchLargePicture());
+                                YTJsonParser.FetchLargePicture());
 
                             if (!string.IsNullOrEmpty(errorMessage))
                             {
@@ -1162,7 +1162,7 @@ public partial class FMain
                     {
                         string errorMessage = await badgeData.SetImage(
                             SharedHttpClient,
-                            LiveChatCatcher.FetchLargePicture());
+                            YTJsonParser.FetchLargePicture());
 
                         if (!string.IsNullOrEmpty(errorMessage))
                         {
@@ -1209,7 +1209,7 @@ public partial class FMain
                     {
                         string errorMessage = await stickerData.SetImage(
                             SharedHttpClient,
-                            LiveChatCatcher.FetchLargePicture());
+                            YTJsonParser.FetchLargePicture());
 
                         if (!string.IsNullOrEmpty(errorMessage))
                         {
