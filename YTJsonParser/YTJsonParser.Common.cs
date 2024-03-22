@@ -16,9 +16,7 @@ public partial class YTJsonParser
     {
         HttpClient httpClient = new();
 
-        string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-            "AppleWebKit/537.36 (KHTML, like Gecko) " +
-            "Chrome/120.0.0.0 Safari/537.36";
+        string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
 
         httpClient.DefaultRequestHeaders.UserAgent.Clear();
         httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
@@ -26,7 +24,7 @@ public partial class YTJsonParser
         Dictionary<string, string> dictKeyValues = new()
         {
             { "Sec-CH-Prefers-Reduced-Motion", string.Empty },
-            { "Sec-CH-UA", "\"Not_A Brand\";v=\"8\", \"Chromium\";v=\"120\", \"Google Chrome\";v=\"120\"" },
+            { "Sec-CH-UA", "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"" },
             { "Sec-CH-UA-Arch", string.Empty },
             { "Sec-CH-UA-Bitness",string.Empty },
             { "Sec-CH-UA-Full-Version-List", string.Empty },

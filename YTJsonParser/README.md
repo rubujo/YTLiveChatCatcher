@@ -75,14 +75,14 @@ void Main()
 	// 1. "browserType" 為網頁瀏覽器的類型。
 	// 2. "profileFolderName" 為設定檔資料夾名稱。
 	// ※預設是不使用 Cookie。
-	//ytJsonParser.UseCookie(
-	//	enable: false,
-	//	browserType: WebBrowserUtil.BrowserType.GoogleChrome,
-	//	profileFolderName: string.Empty);
+	ytJsonParser.UseCookie(
+		enable: false,
+		browserType: WebBrowserUtil.BrowserType.GoogleChrome,
+		profileFolderName: string.Empty);
 
 	// 設定獲取大張圖片。
 	// ※預設值為 true。
-	//YTJsonParser.FetchLargePicture(true);
+	YTJsonParser.FetchLargePicture(true);
 
 	// 設定顯示語言。
 	//※預設值為 EnumSet.DisplayLanguage.Chinese_Traditional。
@@ -180,6 +180,7 @@ void Main()
 		listMessage.AddRange(e.Data);
 	};
 
+	// 獲取社群貼文資料事件。
 	ytJsonParser.OnFecthCommunityPosts += (object? sender, FecthCommunityPostsArgs e) =>
 	{
 		// 依據您的需求處理獲取到的社群貼文資料。
