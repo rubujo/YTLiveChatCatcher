@@ -322,9 +322,9 @@ public partial class FMain
 
             if (focusedItem != null && focusedItem.Bounds.Contains(e.Location))
             {
-                if (focusedItem.SubItems.Count >= 10)
+                if (focusedItem.SubItems.Count >= 11)
                 {
-                    string authorExternalChannelId = focusedItem.SubItems[9].Text;
+                    string authorExternalChannelId = focusedItem.SubItems[10].Text;
 
                     if (!string.IsNullOrEmpty(authorExternalChannelId))
                     {
