@@ -3,15 +3,16 @@ using NLog;
 using NLog.Config;
 using NLog.Extensions.Logging;
 using NLog.Targets;
-using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace YTLiveChatCatcher;
 
 internal static class Program
 {
-    [SuppressMessage("Performance", "CA1859:盡可能使用具象類型以提高效能", Justification = "<暫止>")]
-    private static IServiceProvider? ServiceProvider { get; set; }
+    /// <summary>
+    /// ServiceProvider
+    /// </summary>
+    private static ServiceProvider? ServiceProvider { get; set; }
 
     /// <summary>
     /// The main entry point for the application.

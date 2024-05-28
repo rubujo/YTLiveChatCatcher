@@ -1060,7 +1060,7 @@ public partial class FMain
         LVLiveChatList.InvokeIfRequired(() =>
         {
             LVLiveChatList.BeginUpdate();
-            LVLiveChatList.Items.AddRange(listTempItem.ToArray());
+            LVLiveChatList.Items.AddRange([.. listTempItem]);
             LVLiveChatList.Items[^1].EnsureVisible();
             LVLiveChatList.EndUpdate();
         });
