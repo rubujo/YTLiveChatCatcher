@@ -356,10 +356,18 @@ public partial class YTJsonParser
                         .Value
                         .ElementAtOrDefault(SharedLiveChatType.ToInt32());
 
+                    RaiseOnLogOutput(
+                        EnumSet.LogType.Debug,
+                        $"[YTJsonParser.ParseSubMenuItemsContinuation()] SharedLiveChatType：{SharedLiveChatType} | {SharedLiveChatType.ToInt32()}");
+
                     JsonElement? title = subMenuItem.Get("title");
 
                     if (title.HasValue)
                     {
+                        RaiseOnLogOutput(
+                            EnumSet.LogType.Debug,
+                            $"[YTJsonParser.ParseSubMenuItemsContinuation()] 吻合 SharedLiveChatType 的 title：{title?.GetString()}");
+
                         JsonElement? continuation = subMenuItem.Get("continuation")
                             ?.Get("reloadContinuationData")
                             ?.Get("continuation");
