@@ -18,7 +18,7 @@ public partial class YTJsonParser
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="ytConfigData">YTConfigData</param>
     /// <returns>List&lt;PostData&gt;</returns>
-    private List<PostData> GetInitialPosts(
+    private static List<PostData> GetInitialPosts(
         JsonElement? jsonElement,
         YTConfigData? ytConfigData)
     {
@@ -97,12 +97,12 @@ public partial class YTJsonParser
     /// 取得先前的社群貼文
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>
-    /// <returns>List&lt;PostData&gt;</returns>
-    private List<PostData> GetEarlierPosts(YTConfigData ytConfigData)
+    /// <returns>Task&lt;List&lt;PostData&gt;&gt;</returns>
+    private async Task<List<PostData>> GetEarlierPostsAsync(YTConfigData ytConfigData)
     {
         List<PostData> postDatas = [];
 
-        JsonElement jsonElement = GetJsonElement(
+        JsonElement jsonElement = await GetJsonElementAsync(
             ytConfigData: ytConfigData,
             EnumSet.DataType.Community);
 
@@ -178,7 +178,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="arrayEnumerator">JsonElement.ArrayEnumerator</param>
     /// <param name="ytConfigData">YTConfigData</param>
-    private void SetContinuation(
+    private static void SetContinuation(
         JsonElement.ArrayEnumerator? arrayEnumerator,
         YTConfigData? ytConfigData)
     {
@@ -203,7 +203,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetTabs(JsonElement? jsonElement)
+    private static JsonElement? GetTabs(JsonElement? jsonElement)
     {
         return jsonElement?.Get("contents")
             ?.Get("twoColumnBrowseResultsRenderer")
@@ -215,7 +215,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetCommunityTab(JsonElement? jsonElement)
+    private static JsonElement? GetCommunityTab(JsonElement? jsonElement)
     {
         JsonElement? tabs = GetTabs(jsonElement);
 
@@ -244,7 +244,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetTabContents(JsonElement? jsonElement)
+    private static JsonElement? GetTabContents(JsonElement? jsonElement)
     {
         return jsonElement?.Get("tabRenderer")
             ?.Get("content")
@@ -257,7 +257,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetItemSectionRendererContents(JsonElement? jsonElement)
+    private static JsonElement? GetItemSectionRendererContents(JsonElement? jsonElement)
     {
         return jsonElement?.Get("itemSectionRenderer")
             ?.Get("contents");
@@ -268,7 +268,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement.ArrayEnumerator</returns>
-    private JsonElement.ArrayEnumerator? GetOnResponseReceivedEndpointsArray(JsonElement? jsonElement)
+    private static JsonElement.ArrayEnumerator? GetOnResponseReceivedEndpointsArray(JsonElement? jsonElement)
     {
         return jsonElement?.Get("onResponseReceivedEndpoints")
                 ?.ToArrayEnumerator();
@@ -279,7 +279,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetAppendContinuationItemsActionContinuationItems(JsonElement? jsonElement)
+    private static JsonElement? GetAppendContinuationItemsActionContinuationItems(JsonElement? jsonElement)
     {
         return jsonElement?.Get("appendContinuationItemsAction")
             ?.Get("continuationItems");
@@ -290,7 +290,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
-    private JsonElement? GetBackstagePostRenderer(JsonElement? jsonElement)
+    private static JsonElement? GetBackstagePostRenderer(JsonElement? jsonElement)
     {
         return jsonElement?.Get("backstagePostThreadRenderer")
             ?.Get("post")
@@ -302,7 +302,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>布林值</returns>
-    private bool IsSponsorsOnly(JsonElement? jsonElement)
+    private static bool IsSponsorsOnly(JsonElement? jsonElement)
     {
         JsonElement? sponsorsOnlyBadge = jsonElement?.Get("sponsorsOnlyBadge");
 
@@ -314,7 +314,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetPostID(JsonElement? jsonElement)
+    private static string GetPostID(JsonElement? jsonElement)
     {
         JsonElement? postId = jsonElement?.Get("postId");
 
@@ -331,7 +331,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetAuthorText(JsonElement? jsonElement)
+    private static string GetAuthorText(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? runs = jsonElement?.Get("authorText")
             ?.Get("runs")
@@ -358,7 +358,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetAuthorThumbnailUrl(JsonElement? jsonElement)
+    private static string GetAuthorThumbnailUrl(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? thumbnails = jsonElement?.Get("authorThumbnail")
             ?.Get("thumbnails")
@@ -378,7 +378,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private List<RunsData> GetContentText(JsonElement? jsonElement)
+    private static List<RunsData> GetContentText(JsonElement? jsonElement)
     {
         List<RunsData> runsDatas = [];
 
@@ -407,7 +407,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetPublishedTimeText(JsonElement? jsonElement)
+    private static string GetPublishedTimeText(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? runs = jsonElement?.Get("publishedTimeText")
             ?.Get("runs")
@@ -435,7 +435,7 @@ public partial class YTJsonParser
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="simpleText">布林值，是否取得 simpleText 的文字內容，預設值為 false</param>
     /// <returns>字串</returns>
-    private string GetVoteCount(JsonElement? jsonElement, bool simpleText = false)
+    private static string GetVoteCount(JsonElement? jsonElement, bool simpleText = false)
     {
         JsonElement? voteCount = jsonElement?.Get("voteCount");
         JsonElement? element = simpleText ?
@@ -452,7 +452,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>List&lt;Attachment&gt;</returns>
-    private List<AttachmentData> GetBackstageAttachment(JsonElement? jsonElement)
+    private static List<AttachmentData> GetBackstageAttachment(JsonElement? jsonElement)
     {
         List<AttachmentData> attachmentDatas = [];
 
@@ -538,7 +538,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>VideoData</returns>
-    private VideoData? GetVideoData(JsonElement? jsonElement)
+    private static VideoData? GetVideoData(JsonElement? jsonElement)
     {
         string? url = GetVideoRendererVideoUrl(jsonElement: jsonElement);
 
@@ -566,7 +566,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererVideoID(JsonElement? jsonElement)
+    private static string? GetVideoRendererVideoID(JsonElement? jsonElement)
     {
         return jsonElement?.Get("videoId")?.GetString();
     }
@@ -576,7 +576,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererVideoUrl(JsonElement? jsonElement)
+    private static string? GetVideoRendererVideoUrl(JsonElement? jsonElement)
     {
         string? url = jsonElement?.Get("navigationEndpoint")
             ?.Get("commandMetadata")
@@ -597,7 +597,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererThumbnailUrl(JsonElement? jsonElement)
+    private static string? GetVideoRendererThumbnailUrl(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? thumbnails = jsonElement?.Get("thumbnail")
             ?.Get("thumbnails")
@@ -611,7 +611,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererTitle(JsonElement? jsonElement)
+    private static string? GetVideoRendererTitle(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? runs = jsonElement?.Get("title")
             ?.Get("runs")
@@ -639,7 +639,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererDescriptionSnippet(JsonElement? jsonElement)
+    private static string? GetVideoRendererDescriptionSnippet(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? runs = jsonElement?.Get("descriptionSnippet")
             ?.Get("runs")
@@ -667,7 +667,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererPublishedTimeText(JsonElement? jsonElement)
+    private static string? GetVideoRendererPublishedTimeText(JsonElement? jsonElement)
     {
         return jsonElement?.Get("publishedTimeText")?.Get("simpleText")?.GetString();
     }
@@ -678,7 +678,7 @@ public partial class YTJsonParser
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="simpleText">布林值，是否取得 simpleText 的文字內容，預設值為 false</param>
     /// <returns>字串</returns>
-    private string GetVideoRendererLengthText(JsonElement? jsonElement, bool simpleText = false)
+    private static string GetVideoRendererLengthText(JsonElement? jsonElement, bool simpleText = false)
     {
         JsonElement? lengthText = jsonElement?.Get("lengthText");
         JsonElement? element = simpleText ?
@@ -695,7 +695,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererViewCountText(JsonElement? jsonElement)
+    private static string? GetVideoRendererViewCountText(JsonElement? jsonElement)
     {
         return jsonElement?.Get("viewCountText")?.Get("simpleText")?.GetString();
     }
@@ -705,7 +705,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetVideoRendererOwnerText(JsonElement? jsonElement)
+    private static string? GetVideoRendererOwnerText(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? runs = jsonElement?.Get("ownerText")
             ?.Get("runs")
@@ -733,7 +733,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>VideoData</returns>
-    private PollData? GetPollData(JsonElement? jsonElement)
+    private static PollData? GetPollData(JsonElement? jsonElement)
     {
         return new PollData()
         {
@@ -747,7 +747,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetPollRendererTotalVotes(JsonElement? jsonElement)
+    private static string? GetPollRendererTotalVotes(JsonElement? jsonElement)
     {
         return jsonElement?.Get("totalVotes")?.Get("simpleText")?.GetString();
     }
@@ -757,7 +757,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>List&lt;ChoiceData&gt;</returns>
-    private List<ChoiceData>? GetPollRendererChoices(JsonElement? jsonElement)
+    private static List<ChoiceData>? GetPollRendererChoices(JsonElement? jsonElement)
     {
         List<ChoiceData> choiceDatas = [];
 
@@ -792,7 +792,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetChoicesText(JsonElement? jsonElement)
+    private static string? GetChoicesText(JsonElement? jsonElement)
     {
         string? runText = string.Empty;
 
@@ -822,7 +822,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetChoicesNumVotes(JsonElement? jsonElement)
+    private static string? GetChoicesNumVotes(JsonElement? jsonElement)
     {
         // 要登入後才看的到 numVotes。
         return jsonElement?.Get("numVotes")?.GetString();
@@ -833,7 +833,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetChoicesVotePercentage(JsonElement? jsonElement)
+    private static string? GetChoicesVotePercentage(JsonElement? jsonElement)
     {
         // 要登入後才看的到 votePercentage。
         if (jsonElement?.TryGetProperty(
@@ -852,7 +852,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string? GetChoicesImage(JsonElement? jsonElement)
+    private static string? GetChoicesImage(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? thumbnails = jsonElement?.Get("image")
             ?.Get("thumbnails")
@@ -866,7 +866,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>RunsData</returns>
-    private RunsData? GetRuns(JsonElement? jsonElement)
+    private static RunsData? GetRuns(JsonElement? jsonElement)
     {
         JsonElement? text = jsonElement?.Get("text");
 
@@ -893,7 +893,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetUrl(JsonElement? jsonElement)
+    private static string GetUrl(JsonElement? jsonElement)
     {
         JsonElement? url = jsonElement?.Get("navigationEndpoint")
             ?.Get("commandMetadata")
@@ -920,7 +920,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>布林值</returns>
-    private bool IsLink(JsonElement? jsonElement)
+    private static bool IsLink(JsonElement? jsonElement)
     {
         JsonElement? navigationEndpoint = jsonElement?.Get("navigationEndpoint");
 
@@ -932,7 +932,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetBackstageImageRendererThumbnailUrl(JsonElement? jsonElement)
+    private static string GetBackstageImageRendererThumbnailUrl(JsonElement? jsonElement)
     {
         JsonElement.ArrayEnumerator? thumbnails = jsonElement?.Get("backstageImageRenderer")
             ?.Get("image")
@@ -948,7 +948,7 @@ public partial class YTJsonParser
     /// <param name="arrayEnumerator">JsonElement.ArrayEnumerator</param>
     /// <param name="width">數值，寬度，預設值為 0</param>
     /// <returns>字串</returns>
-    private string GetThumbnailUrl(
+    private static string GetThumbnailUrl(
         JsonElement.ArrayEnumerator? arrayEnumerator,
         int width = 0)
     {
@@ -999,7 +999,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetToken(JsonElement? jsonElement)
+    private static string GetToken(JsonElement? jsonElement)
     {
         JsonElement? token = jsonElement?.Get("continuationItemRenderer")
             ?.Get("continuationEndpoint")

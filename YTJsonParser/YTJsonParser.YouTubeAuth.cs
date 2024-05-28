@@ -20,7 +20,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="httpRequestMessage">HttpRequestMessage</param>
     /// <param name="ytConfigData">YTConfigData</param>
-    private void SetHttpRequestMessageHeader(
+    private static void SetHttpRequestMessageHeader(
         HttpRequestMessage httpRequestMessage,
         YTConfigData? ytConfigData = null)
     {
@@ -102,7 +102,7 @@ public partial class YTJsonParser
     /// <param name="sapiSid">字串，SAPISID</param>
     /// <param name="origin">字串，origin</param>
     /// <returns>字串</returns>
-    private string GetSapiSidHash(string sapiSid, string origin)
+    private static string GetSapiSidHash(string sapiSid, string origin)
     {
         long unixTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
@@ -114,7 +114,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="value">字串，值</param>
     /// <returns>字串</returns>
-    private string GetSHA1Hash(string value)
+    private static string GetSHA1Hash(string value)
     {
         byte[] bytes = SHA1.HashData(Encoding.UTF8.GetBytes(value));
 

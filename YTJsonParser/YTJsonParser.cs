@@ -16,7 +16,7 @@ public partial class YTJsonParser
     /// 初始化
     /// </summary>
     /// <param name="httpClient">HttpClient，預設值為 null</param>
-    public void Init(HttpClient? httpClient = null)
+    public static void Init(HttpClient? httpClient = null)
     {
         SharedTask = null;
         SharedCancellationTokenSource = null;
@@ -64,18 +64,18 @@ public partial class YTJsonParser
         SharedCancellationTokenSource = new CancellationTokenSource();
 
         // 開始 Task。
-        SharedTask = Task.Run(() =>
+        SharedTask = Task.Run(async () =>
         {
             string videoID = GetYouTubeVideoID(videoUrl: videoUrlOrID);
 
-            SharedIsStreaming = IsVideoStreaming(videoID: videoID);
+            SharedIsStreaming = await IsVideoStreamingAsync(videoID: videoID);
 
-            FetchLiveChatData(videoID: videoID);
+            await FetchLiveChatDataAsync(videoID: videoID);
         },
         SharedCancellationTokenSource.Token);
 
         SharedTask?.ContinueWith(
-            task => TaskCompleted(task, null),
+            TaskCompleted,
             CancellationToken.None);
     }
 
@@ -112,12 +112,12 @@ public partial class YTJsonParser
         {
             string channelID = await GetYouTubeChannelID(channelUrl: channelUrlOrID);
 
-            FetchCommunityPosts(channelID: channelID);
+            await FetchCommunityPostsAsync(channelID: channelID);
         },
         SharedCancellationTokenSource.Token);
 
         SharedTask?.ContinueWith(
-            task => TaskCompleted(task, null),
+            TaskCompleted,
             CancellationToken.None);
     }
 
@@ -125,11 +125,12 @@ public partial class YTJsonParser
     /// 獲取即時聊天資料
     /// </summary>
     /// <param name="videoID">字串，YouTube 影片的 ID 值</param>
-    private void FetchLiveChatData(string videoID)
+    /// <returns>Task</returns>
+    private async Task FetchLiveChatDataAsync(string videoID)
     {
         RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Running);
 
-        InitialData initialData = GetYTConfigData(videoID, EnumSet.DataType.LiveChat);
+        InitialData initialData = await GetYTConfigDataAsync(videoID, EnumSet.DataType.LiveChat);
 
         YTConfigData? ytConfigData = initialData.YTConfigData;
 
@@ -153,7 +154,7 @@ public partial class YTJsonParser
         // 持續取得即時聊天資料。
         while (SharedCancellationTokenSource?.IsCancellationRequested == false)
         {
-            JsonElement jsonElement = GetJsonElement(ytConfigData, EnumSet.DataType.LiveChat);
+            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat);
 
             // 判斷是否有取得有效的內容。
             if (string.IsNullOrEmpty(jsonElement.ToString()))
@@ -196,11 +197,12 @@ public partial class YTJsonParser
     /// 獲取社群貼文資料
     /// </summary>
     /// <param name="channelID">字串，YouTube 頻道的 ID 值</param>
-    private void FetchCommunityPosts(string channelID)
+    /// <returns>Task</returns>
+    private async Task FetchCommunityPostsAsync(string channelID)
     {
         RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Running);
 
-        InitialData initialData = GetYTConfigData(channelID, EnumSet.DataType.Community);
+        InitialData initialData = await GetYTConfigDataAsync(channelID, EnumSet.DataType.Community);
 
         YTConfigData? ytConfigData = initialData.YTConfigData;
 
@@ -233,7 +235,7 @@ public partial class YTJsonParser
             while (SharedCancellationTokenSource?.IsCancellationRequested == false &&
                 !string.IsNullOrEmpty(ytConfigData?.Continuation))
             {
-                List<PostData> posts = GetEarlierPosts(ytConfigData: ytConfigData);
+                List<PostData> posts = await GetEarlierPostsAsync(ytConfigData: ytConfigData);
 
                 if (posts.Count > 0)
                 {
@@ -253,8 +255,7 @@ public partial class YTJsonParser
     /// 已完成任務
     /// </summary>
     /// <param name="task">Task</param>
-    /// <param name="obj">object</param>
-    private void TaskCompleted(Task task, object? obj)
+    private void TaskCompleted(Task task)
     {
         if (task.IsFaulted)
         {

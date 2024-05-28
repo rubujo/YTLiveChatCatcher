@@ -37,7 +37,6 @@ public partial class FMain : Form
                 userAgent = TBUserAgent.Text;
             });
 
-
             // 更新 SharedHttpClient 的標頭資訊。
             HttpClientUtil.UpdateHttpClient(SharedHttpClient, userAgent);
 
@@ -165,13 +164,13 @@ public partial class FMain : Form
         {
             string videoID = string.Empty;
 
-            TBVideoID.InvokeIfRequired(() =>
+            TBVideoID.InvokeIfRequired(async () =>
             {
                 videoID = TBVideoID.Text;
 
                 if (string.IsNullOrEmpty(videoID))
                 {
-                    videoID = SharedYTJsonParser.GetLatestStreamingVideoID(TBChannelID.Text.Trim());
+                    videoID = await SharedYTJsonParser.GetLatestStreamingVideoIDAsync(TBChannelID.Text.Trim());
 
                     if (!string.IsNullOrEmpty(videoID))
                     {

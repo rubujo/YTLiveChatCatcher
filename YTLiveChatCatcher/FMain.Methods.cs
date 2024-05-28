@@ -220,7 +220,7 @@ public partial class FMain
         });
 
         // 取得影片的標題。
-        string videoTitle = SharedYTJsonParser.GetVideoTitle(videoID);
+        string videoTitle = await SharedYTJsonParser.GetVideoTitleAsync(videoID);
 
         if (!string.IsNullOrEmpty(videoTitle))
         {
@@ -709,7 +709,7 @@ public partial class FMain
             LVLiveChatList.InvokeIfRequired(() =>
             {
                 LVLiveChatList.BeginUpdate();
-                LVLiveChatList.Items.AddRange(listTempItem.ToArray());
+                LVLiveChatList.Items.AddRange([.. listTempItem]);
 
                 if (LVLiveChatList.Items.Count > 0)
                 {
@@ -1148,7 +1148,7 @@ public partial class FMain
             return;
         }
 
-        SharedYTJsonParser.Init(httpClient: httpClient);
+        YTJsonParser.Init(httpClient: httpClient);
 
         YTJsonParser.FetchLargePicture(true);
         YTJsonParser.DisplayLanguage(EnumSet.DisplayLanguage.Chinese_Traditional);
