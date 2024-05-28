@@ -10,16 +10,16 @@
 
 ## 二、注意事項
 
-1. 本函式庫的`公開靜態`方法，請在呼叫 `Init()` 方法後再呼叫使用。
+1. 呼叫使用本函式庫的方法前，請先呼叫 `YTJsonParser.Init()` 方法後再呼叫使用。
 2. 取得 Cookie 的相關方法，`僅限於` Microsoft Windows 平臺可以使用。
    - ※使用相關方法時，請先確認目標的網頁瀏覽器是否處於`關閉`的狀態，否則會有可能無法成功的取得該網頁瀏覽器的 Cookie 資料。
 
 ## 三、使用範例
 
 ```csharp
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System
+using System.Collections.Generic
+using System.Threading.Tasks
 
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
@@ -44,7 +44,7 @@ void Main()
 {
 	// 宣告 YouTube 影片、頻道的網址或是 ID 值。
 	string urlOrIDOfChannelOrVideo = "{YouTube 影片、頻道的網址或是 ID 值}";
-	
+
 	// 宣告 isFetchLiveChatData，用於決定是否要獲取即時聊天資料。
 	// 當值為 false 時，則為獲取社群貼文資料。
 	bool isFetchLiveChatData = true;
@@ -54,9 +54,9 @@ void Main()
 
 	#region 設定 YTJsonParser
 
-	// 初始化 ytJsonParser。
-	// ※在使用 YTJsonParser 的公開靜態方法前，需先呼叫此方法。
-	ytJsonParser.Init();
+	// 初始化 YTJsonParser。
+	// ※在使用 YTJsonParser 前，需先呼叫此方法。
+	YTJsonParser.Init();
 
 	// 設定強制間隔毫秒值。（意即得等待多久，才會再抓取下一批資料）
 	// ※配合 UseCookies() 使用時，此值請不要設太低，以免 YouTube 或是 Google 帳號被停權。
@@ -124,27 +124,27 @@ void Main()
 
 	#region 更新現有的本地化字串
 
-	//bool hasValue = DictionarySet.GetLocalizeDictionary()
-	//	.TryGetValue(
-	//		EnumSet.DisplayLanguage.English,
-	//		out Dictionary<string, string>? value);
-	//
-	//if (hasValue && value != null)
-	//{
-	//	value[KeySet.ChatGeneral] = "{新的值}";
-	//	value[KeySet.ChatSuperChat] = "{新的值}";
-	//	value[KeySet.ChatSuperSticker] = "{新的值}";
-	//	value[KeySet.ChatJoinMember] = "{新的值}";
-	//	value[KeySet.ChatMemberUpgrade] = "{新的值}";
-	//	value[KeySet.ChatMemberMilestone] = "{新的值}";
-	//	value[KeySet.ChatMemberGift] = "{新的值}";
-	//	value[KeySet.ChatReceivedMemberGift] = "{新的值}";
-	//	value[KeySet.ChatRedirect] = "{新的值}";
-	//	value[KeySet.ChatPinned] = "{新的值}";
-	//	// 使用 Contains() 判斷。
-	//	value[KeySet.MemberUpgrade] = "{新的值}";
-	//	value[KeySet.MemberMilestone] = "{新的值}";
-	//}
+	bool hasValue = DictionarySet.GetLocalizeDictionary()
+		.TryGetValue(
+			EnumSet.DisplayLanguage.English,
+			out Dictionary<string, string>? value);
+
+	if (hasValue && value != null)
+	{
+		value[KeySet.ChatGeneral] = "{新的值}";
+		value[KeySet.ChatSuperChat] = "{新的值}";
+		value[KeySet.ChatSuperSticker] = "{新的值}";
+		value[KeySet.ChatJoinMember] = "{新的值}";
+		value[KeySet.ChatMemberUpgrade] = "{新的值}";
+		value[KeySet.ChatMemberMilestone] = "{新的值}";
+		value[KeySet.ChatMemberGift] = "{新的值}";
+		value[KeySet.ChatReceivedMemberGift] = "{新的值}";
+		value[KeySet.ChatRedirect] = "{新的值}";
+		value[KeySet.ChatPinned] = "{新的值}";
+		// 使用 Contains() 判斷。
+		value[KeySet.MemberUpgrade] = "{新的值}";
+		value[KeySet.MemberMilestone] = "{新的值}";
+	}
 
 	#endregion
 
@@ -216,12 +216,12 @@ void Main()
 					if (listPost.Count > 0)
 					{
 						#region 後處理資料
-						
+
 						foreach (PostData postData in listPost)
 						{
 							postData.SetDataUri();
-							
-							if(postData.Attachments != null)
+
+							if (postData.Attachments != null)
 							{
 								foreach (AttachmentData attachmentData in postData.Attachments)
 								{
@@ -229,9 +229,9 @@ void Main()
 								}
 							}
 						}
-						
+
 						#endregion
-	
+
 						Console.WriteLine($"資料筆數: {listPost.Count}");
 						Console.WriteLine(listPost.ToJsonString());
 					}
@@ -275,7 +275,7 @@ void Main()
 	};
 
 	#endregion
-	
+
 	// 獲取資料。
 	if (isFetchLiveChatData)
 	{
