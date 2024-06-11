@@ -17,9 +17,9 @@
 ## 三、使用範例
 
 ```csharp
-using System
-using System.Collections.Generic
-using System.Threading.Tasks
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Events;
