@@ -26,13 +26,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="EPPlus" Version="7.3.0" />
+		<PackageReference Include="EPPlus" Version="7.4.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.80" />
+		<PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.91" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.8" />
-		<PackageReference Include="NLog" Version="5.3.3" />
-		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.12" />
+		<PackageReference Include="NLog" Version="5.3.4" />
+		<PackageReference Include="NLog.Extensions.Logging" Version="5.3.14" />
 	</ItemGroup>
 
 	<ItemGroup>
