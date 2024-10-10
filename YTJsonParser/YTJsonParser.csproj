@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.14" />
     <PackageReference Include="Microsoft.Maui.Graphics.Skia" Version="8.0.14" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.0" />
+    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
