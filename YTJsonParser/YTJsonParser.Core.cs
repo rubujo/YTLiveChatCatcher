@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.Json;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
-using Rubujo.YouTube.Utility.Extensions;
 
 namespace Rubujo.YouTube.Utility;
 
@@ -22,8 +21,8 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="videoIDorChannelID">字串，影片 ID 或是頻道 ID</param>
     /// <param name="dataType">EnumSet.DataType，預設直為 DataType.LiveChat</param>
-    /// <returns>InitialData</returns>
-    private InitialData GetYTConfigData(
+    /// <returns>Task&lt;InitialData&gt;</returns>
+    private async Task<InitialData> GetYTConfigDataAsync(
         string videoIDorChannelID,
         EnumSet.DataType dataType = EnumSet.DataType.LiveChat)
     {
@@ -70,20 +69,18 @@ public partial class YTJsonParser
 
         RaiseOnLogOutput(EnumSet.LogType.Debug, httpRequestMessage.ToString());
 
-        HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
-            .GetAwaiter()
-            .GetResult();
-
-        if (httpResponseMessage != null)
+        if (SharedHttpClient == null)
         {
-            RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
+            Init();
         }
 
-        string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
-            .GetAwaiter()
-            .GetResult();
+        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
 
-        if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
+        RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
+
+        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
+
+        if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
         {
             if (string.IsNullOrEmpty(htmlContent))
             {
@@ -110,7 +107,7 @@ public partial class YTJsonParser
             }
 
             // TODO: 2023/6/13 考慮是否待修改。
-            // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v1.0.5/yt_chat.go#L140
+            // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v2.0.3/yt_chat.go#L147
             // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
             string jsonYtCfg = elementYtCfg.InnerHtml;
 
@@ -244,8 +241,8 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>
     /// <param name="dataType">EnumSet.DataType，預設直為 DataType.LiveChat</param>
-    /// <returns>JsonElement</returns>
-    private JsonElement GetJsonElement(
+    /// <returns>Task&lt;JsonElement&gt;</returns>
+    private async Task<JsonElement> GetJsonElementAsync(
         YTConfigData ytConfigData,
         EnumSet.DataType dataType = EnumSet.DataType.LiveChat)
     {
@@ -319,18 +316,11 @@ public partial class YTJsonParser
 
             RaiseOnLogOutput(EnumSet.LogType.Debug, httpRequestMessage.ToString());
 
-            HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
-                .GetAwaiter()
-                .GetResult();
+            HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
 
-            if (httpResponseMessage != null)
-            {
-                RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
-            }
+            RaiseOnLogOutput(EnumSet.LogType.Debug, httpResponseMessage.ToString());
 
-            string? receivedJsonContent = httpResponseMessage?.Content.ReadAsStringAsync()
-                .GetAwaiter()
-                .GetResult();
+            string? receivedJsonContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
             if (string.IsNullOrEmpty(receivedJsonContent))
             {
@@ -369,7 +359,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>
     /// <returns>字串</returns>
-    private string GetRequestPayloadData(YTConfigData ytConfigData)
+    private static string GetRequestPayloadData(YTConfigData ytConfigData)
     {
         // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1764
         // 參考：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/main/yt_chat.go

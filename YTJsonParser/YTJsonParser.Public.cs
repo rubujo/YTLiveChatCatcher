@@ -20,8 +20,8 @@ public partial class YTJsonParser
     /// 透過 YouTube 頻道的 ID 值取得該頻道最新的直播影片的影片 ID 值
     /// </summary>
     /// <param name="channelID">字串，頻道的 ID 值</param>
-    /// <returns>字串</returns>
-    public string GetLatestStreamingVideoID(string channelID)
+    /// <returns>Task&lt;string&gt;</returns>
+    public async Task<string> GetLatestStreamingVideoIDAsync(string channelID)
     {
         string videoID = string.Empty,
                //url = $"{StringSet.Origin}/embed/live_stream?channel={channelID}",
@@ -32,13 +32,14 @@ public partial class YTJsonParser
 
         SetHttpRequestMessageHeader(httpRequestMessage);
 
-        HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
-            .GetAwaiter()
-            .GetResult();
+        if (SharedHttpClient == null)
+        {
+            Init();
+        }
 
-        string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
-            .GetAwaiter()
-            .GetResult();
+        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+
+        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
         if (string.IsNullOrEmpty(htmlContent))
         {
@@ -96,8 +97,8 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="videoID">字串，影片 ID 值</param>
     /// <param name="cookies">字串，Cookies</param>
-    /// <returns>字串</returns>
-    public string GetVideoTitle(string videoID)
+    /// <returns>Task&lt;string&gt;</returns>
+    public async Task<string> GetVideoTitleAsync(string videoID)
     {
         string videoTitle = string.Empty,
                url = $"{StringSet.Origin}/watch?v={videoID}";
@@ -106,13 +107,14 @@ public partial class YTJsonParser
 
         SetHttpRequestMessageHeader(httpRequestMessage);
 
-        HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
-            .GetAwaiter()
-            .GetResult();
+        if (SharedHttpClient == null)
+        {
+            Init();
+        }
 
-        string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
-            .GetAwaiter()
-            .GetResult();
+        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+
+        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
         if (string.IsNullOrEmpty(htmlContent))
         {
@@ -151,8 +153,8 @@ public partial class YTJsonParser
     /// 檢查影片是否正在直播中
     /// </summary>
     /// <param name="videoID">字串，影片 ID</param>
-    /// <returns>布林值</returns>
-    public bool IsVideoStreaming(string videoID)
+    /// <returns>Task&lt;bool&gt;</returns>
+    public async Task<bool> IsVideoStreamingAsync(string videoID)
     {
         string url = $"{StringSet.Origin}/live_chat?v={videoID}";
 
@@ -163,13 +165,14 @@ public partial class YTJsonParser
             SetHttpRequestMessageHeader(httpRequestMessage);
         }
 
-        HttpResponseMessage? httpResponseMessage = SharedHttpClient?.SendAsync(httpRequestMessage)
-            .GetAwaiter()
-            .GetResult();
+        if (SharedHttpClient == null)
+        {
+            Init();
+        }
 
-        string? htmlContent = httpResponseMessage?.Content.ReadAsStringAsync()
-            .GetAwaiter()
-            .GetResult();
+        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+
+        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
         if (htmlContent == null)
         {

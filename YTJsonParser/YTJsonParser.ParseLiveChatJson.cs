@@ -18,7 +18,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>YTConfigData</returns>
-    private YTConfigData ParseYtCfg(JsonElement? jsonElement)
+    private static YTConfigData ParseYtCfg(JsonElement? jsonElement)
     {
         bool useDelegatedSessionID = false;
 
@@ -356,10 +356,18 @@ public partial class YTJsonParser
                         .Value
                         .ElementAtOrDefault(SharedLiveChatType.ToInt32());
 
+                    RaiseOnLogOutput(
+                        EnumSet.LogType.Debug,
+                        $"[YTJsonParser.ParseSubMenuItemsContinuation()] SharedLiveChatType：{SharedLiveChatType} | {SharedLiveChatType.ToInt32()}");
+
                     JsonElement? title = subMenuItem.Get("title");
 
                     if (title.HasValue)
                     {
+                        RaiseOnLogOutput(
+                            EnumSet.LogType.Debug,
+                            $"[YTJsonParser.ParseSubMenuItemsContinuation()] 吻合 SharedLiveChatType 的 title：{title?.GetString()}");
+
                         JsonElement? continuation = subMenuItem.Get("continuation")
                             ?.Get("reloadContinuationData")
                             ?.Get("continuation");
@@ -801,7 +809,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>AuthorBadgesData</returns>
-    private AuthorBadgesData ParseAuthorBadges(JsonElement jsonElement)
+    private static AuthorBadgesData ParseAuthorBadges(JsonElement jsonElement)
     {
         AuthorBadgesData output = new();
 
@@ -1351,7 +1359,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetID(JsonElement? jsonElement)
+    private static string GetID(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1370,7 +1378,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetAuthorName(JsonElement? jsonElement)
+    private static string GetAuthorName(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1396,7 +1404,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetAuthorPhoto(JsonElement? jsonElement)
+    private static string GetAuthorPhoto(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1420,7 +1428,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetAuthorExternalChannelId(JsonElement? jsonElement)
+    private static string GetAuthorExternalChannelId(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1444,7 +1452,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetTimestampUsec(JsonElement? jsonElement)
+    private static string GetTimestampUsec(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1478,7 +1486,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetTimestampText(JsonElement? jsonElement)
+    private static string GetTimestampText(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1504,7 +1512,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetPurchaseAmountText(JsonElement? jsonElement)
+    private static string GetPurchaseAmountText(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1530,7 +1538,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetBackgroundColor(JsonElement? jsonElement)
+    private static string GetBackgroundColor(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1561,7 +1569,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetVideoOffsetTimeMsec(JsonElement? jsonElement)
+    private static string GetVideoOffsetTimeMsec(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1582,7 +1590,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private string GetThumbnailUrl(JsonElement? jsonElement)
+    private static string GetThumbnailUrl(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
