@@ -304,7 +304,7 @@ public partial class YTJsonParser
         IConfiguration configuration = Configuration.Default.WithDefaultLoader();
         IBrowsingContext browsingContext = BrowsingContext.New(configuration);
         IDocument document = await browsingContext.OpenAsync(channelUrl);
-        IElement? element = document?.Body?.Children
+        IElement? element = document?.Head?.Children
             .FirstOrDefault(n => n.LocalName == "meta" &&
                 n.GetAttribute("property") == "og:url");
 

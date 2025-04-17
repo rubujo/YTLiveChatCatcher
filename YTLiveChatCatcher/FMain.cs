@@ -184,30 +184,30 @@ public partial class FMain : Form
 
                     TBVideoID.Text = videoID;
                 }
+
+                if (string.IsNullOrEmpty(videoID))
+                {
+                    MessageBox.Show(
+                        "請輸入頻道 ID 或是影片 ID。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    BtnStop_Click(null, new EventArgs());
+
+                    return;
+                }
+
+                // 設定控制項的狀態。
+                SetControlsState(false);
+
+                // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
+                SetUseCookie();
+
+                SharedYTJsonParser.StartFetchLiveChatData(videoID);
+
+                WriteLog("開始取得聊天室的內容。");
             });
-
-            if (string.IsNullOrEmpty(videoID))
-            {
-                MessageBox.Show(
-                    "請輸入頻道 ID 或是影片 ID。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-
-                BtnStop_Click(null, new EventArgs());
-
-                return;
-            }
-
-            // 設定控制項的狀態。
-            SetControlsState(false);
-
-            // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
-            SetUseCookie();
-
-            SharedYTJsonParser.StartFetchLiveChatData(videoID);
-
-            WriteLog("開始取得聊天室的內容。");
         }
         catch (Exception ex)
         {
