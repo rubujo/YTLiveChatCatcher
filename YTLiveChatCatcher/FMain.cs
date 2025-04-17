@@ -3,6 +3,7 @@ using NLog;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Extensions;
 using YTLiveChatCatcher.Common;
+using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
 
@@ -255,27 +256,93 @@ public partial class FMain : Form
     {
         try
         {
+            if (LVLiveChatList.Items.Count <= 0)
+            {
+                MessageBox.Show(
+                  "匯出失敗，請先確認聊天室內容是否有資料。",
+                  Text,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Error);
+
+                return;
+            }
+
             if (CBExportAuthorPhoto.Checked)
             {
-                DialogResult dialogResult = MessageBox.Show(
+                DialogResult dialogResult1 = MessageBox.Show(
                     "注意，啟用匯出頭像會花費大量的時間，如您欲繼續作業請按「確定」按鈕。",
                     Text,
                     MessageBoxButtons.OKCancel,
                     MessageBoxIcon.Warning);
 
-                if (dialogResult == DialogResult.OK)
+                if (dialogResult1 != DialogResult.OK)
                 {
-                    await DoExportTask(LVLiveChatList);
+                    return;
                 }
             }
-            else
+
+            SaveFileDialog saveFileDialog = new()
             {
-                await DoExportTask(LVLiveChatList);
+                Filter = "Excel 活頁簿|*.xlsx",
+                Title = "儲存檔案",
+                FileName = $"{StringSet.SheetName1}_{DateTime.Now:yyyyMMdd}"
+            };
+
+            string videoID = string.Empty;
+
+            TBVideoID.InvokeIfRequired(() =>
+            {
+                videoID = TBVideoID.Text.Trim();
+            });
+
+            // 取得影片的標題。
+            string videoTitle = await SharedYTJsonParser.GetVideoTitleAsync(videoID);
+
+            if (!string.IsNullOrEmpty(videoTitle))
+            {
+                string optFileName = $"{videoTitle}_{saveFileDialog.FileName}";
+                string cleanedFileName = CustomFunction.RemoveInvalidFilePathCharacters(optFileName, "_");
+
+                saveFileDialog.FileName = cleanedFileName;
             }
+
+            DialogResult dialogResult2 = saveFileDialog.ShowDialog();
+
+            if (dialogResult2 != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(saveFileDialog.FileName))
+            {
+                MessageBox.Show(
+                    "請選擇有效的檔案名稱。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return;
+            }
+
+            List<ListViewItem> listAllData = [.. LVLiveChatList.GetListViewItems()];
+
+            RunLongTask();
+
+            await DoExportTask(
+                    LVLiveChatList,
+                    listAllData,
+                    saveFileDialog,
+                    videoID)
+                .ContinueWith(_ =>
+                {
+                    TerminateLongTask(isImport: false);
+                });
         }
         catch (Exception ex)
         {
             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+
+            TerminateLongTask(isImport: false);
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -551,41 +618,56 @@ public partial class FMain : Form
 
     private void BtnImport_Click(object sender, EventArgs e)
     {
-        OpenFileDialog openFileDialog = new()
+        try
         {
-            Filter = "Excel 活頁簿|*.xlsx",
-            Title = "匯入檔案"
-        };
-
-        DialogResult dialogResult = openFileDialog.ShowDialog();
-
-        if (dialogResult == DialogResult.OK)
-        {
-            string filePath = openFileDialog.FileName;
-
-            if (!string.IsNullOrEmpty(filePath))
+            OpenFileDialog openFileDialog = new()
             {
-                if (File.Exists(filePath))
+                Filter = "Excel 活頁簿|*.xlsx",
+                Title = "匯入檔案"
+            };
+
+            DialogResult dialogResult = openFileDialog.ShowDialog();
+
+            if (dialogResult == DialogResult.OK)
+            {
+                string filePath = openFileDialog.FileName;
+
+                if (string.IsNullOrEmpty(filePath))
                 {
-                    DoImportData(filePath);
+                    MessageBox.Show(
+                        "請選擇有效的檔案。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    return;
                 }
-                else
+
+                if (!File.Exists(filePath))
                 {
                     MessageBox.Show(
                         "請確認選擇的檔案已存在。",
                         Text,
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
+
+                    return;
                 }
+
+                RunLongTask();
+
+                LoadXLSX(filePath: filePath)
+                    .ContinueWith(_ =>
+                    {
+                        TerminateLongTask(isImport: true);
+                    });
             }
-            else
-            {
-                MessageBox.Show(
-                    "請選擇有效的檔案。",
-                    Text,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);
-            }
+        }
+        catch (Exception ex)
+        {
+            WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
+
+            TerminateLongTask(isImport: true);
         }
     }
 
@@ -651,7 +733,13 @@ public partial class FMain : Form
 
                     foreach (string filePath in fileList)
                     {
-                        DoImportData(filePath);
+                        RunLongTask();
+
+                        LoadXLSX(filePath: filePath)
+                            .ContinueWith(_ =>
+                            {
+                                TerminateLongTask(isImport: true);
+                            });
                     }
                 }
             }
@@ -660,11 +748,15 @@ public partial class FMain : Form
         {
             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
+            WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
+
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
+
+            TerminateLongTask(isImport: true);
         }
     }
 

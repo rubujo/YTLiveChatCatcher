@@ -20,7 +20,7 @@ public partial class FMain
     /// <summary>
     /// 共用的 ILogger&lt;FMain&gt;
     /// </summary>
-    public readonly ILogger<FMain> SharedLogger;
+    private readonly ILogger<FMain> SharedLogger;
 
     /// <summary>
     /// 共用的 IHttpClientFactory

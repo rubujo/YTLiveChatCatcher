@@ -1,6 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
+using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Extensions;
 using System.Data;
+using YTLiveChatCatcher.Common;
+using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
@@ -39,7 +42,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -60,7 +63,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -130,7 +133,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -161,7 +164,7 @@ public partial class FSearch : Form
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -202,98 +205,111 @@ public partial class FSearch : Form
     {
         try
         {
+            if (LVFilteredList.Items.Count <= 0)
+            {
+                MessageBox.Show(
+                  "匯出失敗，請先確認聊天室內容是否有資料。",
+                  Text,
+                  MessageBoxButtons.OK,
+                  MessageBoxIcon.Error);
+
+                return;
+            }
+
             if (_CBExportAuthorPhoto.Checked)
             {
-                DialogResult dialogResult = MessageBox.Show(
-                        "注意，啟用匯出頭像會花費大量的時間，如您欲繼續作業請按「確定」按鈕。",
-                        Text,
-                        MessageBoxButtons.OKCancel,
-                        MessageBoxIcon.Warning);
+                DialogResult dialogResult1 = MessageBox.Show(
+                    "注意，啟用匯出頭像會花費大量的時間，如您欲繼續作業請按「確定」按鈕。",
+                    Text,
+                    MessageBoxButtons.OKCancel,
+                    MessageBoxIcon.Warning);
 
-                if (dialogResult == DialogResult.OK)
+                if (dialogResult1 != DialogResult.OK)
                 {
-                    BtnExport.InvokeIfRequired(() =>
-                    {
-                        BtnExport.Enabled = false;
-                    });
-
-                    TBKeyword.InvokeIfRequired(() =>
-                    {
-                        TBKeyword.Enabled = false;
-                    });
-
-                    BtnSearch.InvokeIfRequired(() =>
-                    {
-                        BtnSearch.Enabled = false;
-                    });
-
-                    BtnClear.InvokeIfRequired(() =>
-                    {
-                        BtnClear.Enabled = false;
-                    });
-
-                    PBProgress.InvokeIfRequired(() =>
-                    {
-                        PBProgress.Style = ProgressBarStyle.Marquee;
-                    });
-
-                    await _FMain.DoExportTask(LVFilteredList).ContinueWith(task =>
-                    {
-                        BtnExport.InvokeIfRequired(() =>
-                        {
-                            BtnExport.Enabled = true;
-                        });
-
-                        TBKeyword.InvokeIfRequired(() =>
-                        {
-                            TBKeyword.Enabled = true;
-                        });
-
-                        BtnSearch.InvokeIfRequired(() =>
-                        {
-                            BtnSearch.Enabled = true;
-                        });
-
-                        BtnClear.InvokeIfRequired(() =>
-                        {
-                            BtnClear.Enabled = true;
-                        });
-
-                        PBProgress.InvokeIfRequired(() =>
-                        {
-                            PBProgress.Style = ProgressBarStyle.Blocks;
-                        });
-                    });
+                    return;
                 }
             }
-            else
+
+            SaveFileDialog saveFileDialog = new()
             {
-                BtnExport.InvokeIfRequired(() =>
-                {
-                    BtnExport.Enabled = false;
-                });
+                Filter = "Excel 活頁簿|*.xlsx",
+                Title = "儲存檔案",
+                FileName = $"{StringSet.SheetName1}_{DateTime.Now:yyyyMMdd}"
+            };
 
-                TBKeyword.InvokeIfRequired(() =>
-                {
-                    TBKeyword.Enabled = false;
-                });
+            string videoID = string.Empty;
 
-                BtnSearch.InvokeIfRequired(() =>
-                {
-                    BtnSearch.Enabled = false;
-                });
+            TextBox TBVideoID = _FMain.GetTBVideoID();
 
-                BtnClear.InvokeIfRequired(() =>
-                {
-                    BtnClear.Enabled = false;
-                });
+            TBVideoID.InvokeIfRequired(() =>
+            {
+                videoID = TBVideoID.Text.Trim();
+            });
 
-                PBProgress.InvokeIfRequired(() =>
-                {
-                    PBProgress.Style = ProgressBarStyle.Marquee;
-                });
+            // 取得影片的標題。
+            string videoTitle = await _FMain.GetSharedYTJsonParser().GetVideoTitleAsync(videoID);
 
-                await _FMain.DoExportTask(LVFilteredList).ContinueWith(task =>
+            if (!string.IsNullOrEmpty(videoTitle))
+            {
+                string optFileName = $"{videoTitle}_{saveFileDialog.FileName}";
+                string cleanedFileName = CustomFunction.RemoveInvalidFilePathCharacters(optFileName, "_");
+
+                saveFileDialog.FileName = cleanedFileName;
+            }
+
+            DialogResult dialogResult2 = saveFileDialog.ShowDialog();
+
+            if (dialogResult2 != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(saveFileDialog.FileName))
+            {
+                MessageBox.Show(
+                    "請選擇有效的檔案名稱。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return;
+            }
+
+            using FileStream fileStream = (FileStream)saveFileDialog.OpenFile();
+
+            List<ListViewItem> listAllData = [.. LVFilteredList.GetListViewItems()];
+
+            BtnExport.InvokeIfRequired(() =>
+            {
+                BtnExport.Enabled = false;
+            });
+
+            TBKeyword.InvokeIfRequired(() =>
+            {
+                TBKeyword.Enabled = false;
+            });
+
+            BtnSearch.InvokeIfRequired(() =>
+            {
+                BtnSearch.Enabled = false;
+            });
+
+            BtnClear.InvokeIfRequired(() =>
+            {
+                BtnClear.Enabled = false;
+            });
+
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Style = ProgressBarStyle.Marquee;
+            });
+
+            await _FMain.DoExportTask(
+                    LVFilteredList,
+                    listAllData,
+                    saveFileDialog,
+                    videoID)
+                .ContinueWith(_ =>
                 {
                     BtnExport.InvokeIfRequired(() =>
                     {
@@ -319,12 +335,38 @@ public partial class FSearch : Form
                     {
                         PBProgress.Style = ProgressBarStyle.Blocks;
                     });
+
+                    _FMain.WriteLog($"*.xlsx 匯出作業完成。");
                 });
-            }
         }
         catch (Exception ex)
         {
-            _FMain.SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
+
+            BtnExport.InvokeIfRequired(() =>
+            {
+                BtnExport.Enabled = true;
+            });
+
+            TBKeyword.InvokeIfRequired(() =>
+            {
+                TBKeyword.Enabled = true;
+            });
+
+            BtnSearch.InvokeIfRequired(() =>
+            {
+                BtnSearch.Enabled = true;
+            });
+
+            BtnClear.InvokeIfRequired(() =>
+            {
+                BtnClear.Enabled = true;
+            });
+
+            PBProgress.InvokeIfRequired(() =>
+            {
+                PBProgress.Style = ProgressBarStyle.Blocks;
+            });
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
