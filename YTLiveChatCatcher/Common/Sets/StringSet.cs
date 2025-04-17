@@ -7,6 +7,7 @@ public class StringSet
 {
     public static readonly string AppName = "YouTube 聊天室捕手";
     public static readonly string Member = "會員";
+    public static readonly string NonCommercialOrganization = "垃圾桶";
 
     #region 活頁簿名稱
 

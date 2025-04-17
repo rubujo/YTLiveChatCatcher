@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Company>DD們的避難所</Company>
+    <Company>垃圾桶</Company>
     <Authors>perditavojo</Authors>
     <Version>0.0.1</Version>
     <Description>用於獲取並解析 YouTube 的 JSON 資料的函式庫。</Description>
@@ -21,13 +21,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.1.2" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
-    <PackageReference Include="Microsoft.Maui.Graphics" Version="8.0.92" />
-    <PackageReference Include="Microsoft.Maui.Graphics.Skia" Version="8.0.92" />
+    <PackageReference Include="AngleSharp" Version="1.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Maui.Graphics" Version="9.0.60" />
+    <PackageReference Include="Microsoft.Maui.Graphics.Skia" Version="9.0.60" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
-    <PackageReference Include="System.Runtime.Caching" Version="8.0.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Runtime.Caching" Version="9.0.4" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
