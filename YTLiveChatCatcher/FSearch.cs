@@ -275,8 +275,6 @@ public partial class FSearch : Form
                 return;
             }
 
-            using FileStream fileStream = (FileStream)saveFileDialog.OpenFile();
-
             List<ListViewItem> listAllData = [.. LVFilteredList.GetListViewItems()];
 
             BtnExport.InvokeIfRequired(() =>

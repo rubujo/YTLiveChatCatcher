@@ -899,8 +899,6 @@ public partial class FMain
             workbook.Properties.Author = $"{StringSet.AppName} {version}";
 
             package.SaveAs(stream);
-
-            stream.Close();
         });
     }
 
