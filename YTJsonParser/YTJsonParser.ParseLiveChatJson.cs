@@ -242,6 +242,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
+    [Obsolete("2025/10 YouTube 有調整過相關機制，此方法不再有效。")]
     private string ParseReplayContinuation(JsonElement? jsonElement)
     {
         string output = string.Empty;

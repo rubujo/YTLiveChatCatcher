@@ -44,7 +44,7 @@ internal static class Program
                 LoggingConfiguration config = new();
 
                 // Targets where to log to: File and Console.
-                FileTarget logFile = new("logFile")
+                ConcurrentFileTarget logFile = new("logFile")
                 {
                     FileName = Path.Combine(AppContext.BaseDirectory, @"Logs\log.txt"),
                     ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
