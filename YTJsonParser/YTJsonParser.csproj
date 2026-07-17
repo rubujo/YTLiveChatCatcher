@@ -21,7 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="1.2.0" />
+    <PackageReference Include="AngleSharp" Version="1.5.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.4" />
     <PackageReference Include="Microsoft.Maui.Graphics" Version="9.0.60" />
     <PackageReference Include="Microsoft.Maui.Graphics.Skia" Version="9.0.60" />
