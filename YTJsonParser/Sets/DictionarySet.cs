@@ -686,6 +686,12 @@ public class DictionarySet
                 { KeySet.ChatReceivedMemberGift, "Received Member Gift" },
                 { KeySet.ChatRedirect, "Redirect" },
                 { KeySet.ChatPinned, "Pinned" },
+                { KeySet.ChatMessageDeleted, "Message Deleted" },
+                { KeySet.ChatUserBanned, "User Banned" },
+                { KeySet.ChatPoll, "Poll" },
+                { KeySet.ChatGift, "Gift" },
+                { KeySet.ChatDonation, "Donation" },
+                { KeySet.ChatModeration, "Moderation" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "Upgraded membership to" },
                 { KeySet.MemberMilestone, "Member for" }
@@ -705,6 +711,12 @@ public class DictionarySet
                 { KeySet.ChatReceivedMemberGift, "接收會員贈送" },
                 { KeySet.ChatRedirect, "重新導向" },
                 { KeySet.ChatPinned, "置頂留言" },
+                { KeySet.ChatMessageDeleted, "留言已被刪除" },
+                { KeySet.ChatUserBanned, "使用者已被封鎖" },
+                { KeySet.ChatPoll, "投票" },
+                { KeySet.ChatGift, "禮物" },
+                { KeySet.ChatDonation, "捐款／購買" },
+                { KeySet.ChatModeration, "版主訊息" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "頻道會員等級已升級至" },
                 { KeySet.MemberMilestone, "已加入會員" }
@@ -724,6 +736,12 @@ public class DictionarySet
                 { KeySet.ChatReceivedMemberGift, "接收会员赠送" },
                 { KeySet.ChatRedirect, "重新导向" },
                 { KeySet.ChatPinned, "置顶留言" },
+                { KeySet.ChatMessageDeleted, "留言已被删除" },
+                { KeySet.ChatUserBanned, "用户已被封锁" },
+                { KeySet.ChatPoll, "投票" },
+                { KeySet.ChatGift, "礼物" },
+                { KeySet.ChatDonation, "捐款／购买" },
+                { KeySet.ChatModeration, "版主消息" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "会员级别已升至" },
                 { KeySet.MemberMilestone, "会龄" }
@@ -743,6 +761,12 @@ public class DictionarySet
                 { KeySet.ChatReceivedMemberGift, "会員プレゼントを受け取る" },
                 { KeySet.ChatRedirect, "リダイレクト" },
                 { KeySet.ChatPinned, "ピン留め" },
+                { KeySet.ChatMessageDeleted, "メッセージ削除" },
+                { KeySet.ChatUserBanned, "ユーザーBAN" },
+                { KeySet.ChatPoll, "投票" },
+                { KeySet.ChatGift, "ギフト" },
+                { KeySet.ChatDonation, "寄付／購入" },
+                { KeySet.ChatModeration, "モデレーション" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "にアップグレードされました" },
                 { KeySet.MemberMilestone, "メンバー歴" }
@@ -762,6 +786,12 @@ public class DictionarySet
                 { KeySet.ChatReceivedMemberGift, "회원 선물 받기" },
                 { KeySet.ChatRedirect, "리디렉션" },
                 { KeySet.ChatPinned, "고정" },
+                { KeySet.ChatMessageDeleted, "메시지 삭제됨" },
+                { KeySet.ChatUserBanned, "사용자 차단됨" },
+                { KeySet.ChatPoll, "투표" },
+                { KeySet.ChatGift, "선물" },
+                { KeySet.ChatDonation, "후원／구매" },
+                { KeySet.ChatModeration, "운영자 메시지" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "멤버십을" },
                 { KeySet.MemberMilestone, "회원 가입 기간" }

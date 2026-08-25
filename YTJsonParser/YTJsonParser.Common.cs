@@ -16,7 +16,7 @@ public partial class YTJsonParser
     {
         HttpClient httpClient = new();
 
-        string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+        string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 
         httpClient.DefaultRequestHeaders.UserAgent.Clear();
         httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(userAgent);
@@ -24,7 +24,7 @@ public partial class YTJsonParser
         Dictionary<string, string> dictKeyValues = new()
         {
             { "Sec-CH-Prefers-Reduced-Motion", string.Empty },
-            { "Sec-CH-UA", "\"Google Chrome\";v=\"125\", \"Chromium\";v=\"125\", \"Not.A/Brand\";v=\"24\"" },
+            { "Sec-CH-UA", "\"Chromium\";v=\"142\", \"Google Chrome\";v=\"142\", \"Not_A Brand\";v=\"99\"" },
             { "Sec-CH-UA-Arch", string.Empty },
             { "Sec-CH-UA-Bitness",string.Empty },
             { "Sec-CH-UA-Full-Version-List", string.Empty },
@@ -57,6 +57,32 @@ public partial class YTJsonParser
     }
 
     /// <summary>
+    /// 取得已遮蔽敏感標頭（Cookie、Authorization）的 HttpRequestMessage 摘要，供記錄使用
+    /// </summary>
+    /// <param name="httpRequestMessage">HttpRequestMessage</param>
+    /// <returns>字串</returns>
+    private static string GetRedactedRequestSummary(HttpRequestMessage httpRequestMessage)
+    {
+        IEnumerable<string> headerLines = httpRequestMessage.Headers
+            .Select(header => IsSensitiveHeaderName(header.Key) ?
+                $"{header.Key}: [REDACTED]" :
+                $"{header.Key}: {string.Join(", ", header.Value)}");
+
+        return $"Method: {httpRequestMessage.Method}, RequestUri: '{httpRequestMessage.RequestUri}', " +
+            $"Headers:{Environment.NewLine}{{{Environment.NewLine}  " +
+            $"{string.Join($"{Environment.NewLine}  ", headerLines)}{Environment.NewLine}}}";
+    }
+
+    /// <summary>
+    /// 判斷是否為記錄時應遮蔽內容的敏感標頭
+    /// </summary>
+    /// <param name="headerName">字串，標頭名稱</param>
+    /// <returns>布林值</returns>
+    private static bool IsSensitiveHeaderName(string headerName) =>
+        headerName.Equals("Cookie", StringComparison.OrdinalIgnoreCase) ||
+        headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// 取得 Hex 色碼
     /// </summary>
     /// <param name="value">Int64</param>
@@ -75,7 +101,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="rendererName">字串，*Renderer 的名稱</param>
     /// <returns>字串</returns>
-    private static string GetRendererDataType(string rendererName)
+    private string GetRendererDataType(string rendererName)
     {
         return rendererName switch
         {
@@ -89,6 +115,12 @@ public partial class YTJsonParser
             "liveChatSponsorshipsGiftRedemptionAnnouncementRenderer" => GetLocalizeString(KeySet.ChatReceivedMemberGift),
             "liveChatBannerHeaderRenderer" => GetLocalizeString(KeySet.ChatPinned),
             "liveChatBannerRedirectRenderer" => GetLocalizeString(KeySet.ChatRedirect),
+            "giftMessageViewModel" => GetLocalizeString(KeySet.ChatGift),
+            "liveChatDonationAnnouncementRenderer" => GetLocalizeString(KeySet.ChatDonation),
+            "liveChatPurchasedProductMessageRenderer" => GetLocalizeString(KeySet.ChatDonation),
+            "liveChatLegacyPaidMessageRenderer" => GetLocalizeString(KeySet.ChatDonation),
+            "liveChatModerationMessageRenderer" => GetLocalizeString(KeySet.ChatModeration),
+            "liveChatAutoModMessageRenderer" => GetLocalizeString(KeySet.ChatModeration),
             _ => string.Empty
         };
     }

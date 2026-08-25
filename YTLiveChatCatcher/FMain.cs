@@ -2,6 +2,8 @@
 using NLog;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Extensions;
+using Rubujo.YouTube.Utility.Models.LiveChat;
+using Rubujo.YouTube.Utility.Utils;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Sets;
 using YTLiveChatCatcher.Common.Utils;
@@ -14,12 +16,16 @@ namespace YTLiveChatCatcher;
 /// </summary>
 public partial class FMain : Form
 {
-    public FMain(IHttpClientFactory httpClientFactory, ILogger<FMain> logger)
+    public FMain(
+        IHttpClientFactory httpClientFactory,
+        ILogger<FMain> logger,
+        ILogger<YTJsonParser> ytJsonParserLogger)
     {
         InitializeComponent();
 
         SharedHttpClientFactory = httpClientFactory;
         SharedLogger = logger;
+        SharedYTJsonParserLogger = ytJsonParserLogger;
     }
 
     private void FMain_Load(object sender, EventArgs e)
@@ -66,6 +72,10 @@ public partial class FMain : Form
         {
             LogManager.Shutdown();
 
+            // 取消尚在執行中的擷取工作，並釋放 SharedYTJsonParser。
+            SharedFetchCancellationTokenSource?.Cancel();
+            SharedYTJsonParser?.Dispose();
+
             // 釋放以及清除 SharedHttpClient。
             SharedHttpClient?.Dispose();
             SharedHttpClient = null;
@@ -93,8 +103,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(async () =>
         {
-            textBox.Text = await YTJsonParser
-                .GetYouTubeChannelID(textBox.Text.Trim());
+            textBox.Text = await YouTubeUrlUtil.GetYouTubeChannelID(textBox.Text.Trim());
         });
     }
 
@@ -109,8 +118,7 @@ public partial class FMain : Form
 
         textBox.InvokeIfRequired(() =>
         {
-            textBox.Text = YTJsonParser
-                .GetYouTubeVideoID(textBox.Text.Trim());
+            textBox.Text = YouTubeUrlUtil.GetYouTubeVideoID(textBox.Text.Trim());
         });
     }
 
@@ -204,7 +212,7 @@ public partial class FMain : Form
                 // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
                 SetUseCookie();
 
-                SharedYTJsonParser.StartFetchLiveChatData(videoID);
+                StartFetchLiveChatData(videoID);
 
                 WriteLog("開始取得聊天室的內容。");
             });
@@ -223,11 +231,64 @@ public partial class FMain : Form
         }
     }
 
+    /// <summary>
+    /// 以背景 Task 搭配 IAsyncEnumerable 持續串流獲取即時聊天資料，直到被取消或發生例外為止
+    /// </summary>
+    /// <param name="videoID">字串，YouTube 影片的 ID 值</param>
+    private void StartFetchLiveChatData(string videoID)
+    {
+        SharedFetchCancellationTokenSource?.Cancel();
+        SharedFetchCancellationTokenSource = new CancellationTokenSource();
+
+        CancellationToken cancellationToken = SharedFetchCancellationTokenSource.Token;
+
+        Progress<int> intervalProgress = new(intervalMs =>
+        {
+            TBInterval.InvokeIfRequired(() =>
+            {
+                string seconds = (intervalMs / 1000).ToString();
+
+                if (seconds != TBInterval.Text)
+                {
+                    TBInterval.Text = seconds;
+                }
+            });
+        });
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (IReadOnlyList<RendererData> batch in SharedYTJsonParser.StreamLiveChatDataAsync(
+                    videoID,
+                    intervalProgress: intervalProgress,
+                    cancellationToken: cancellationToken))
+                {
+                    TBUserAgent.InvokeIfRequired(() => DoProcessMessages(batch));
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 使用者主動停止，不視為錯誤。
+            }
+            catch (Exception ex)
+            {
+                SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+
+                TBUserAgent.InvokeIfRequired(() => WriteLog(ex.GetExceptionMessage()));
+            }
+            finally
+            {
+                TBUserAgent.InvokeIfRequired(() => BtnStop_Click(this, new EventArgs()));
+            }
+        }, cancellationToken);
+    }
+
     private void BtnStop_Click(object? sender, EventArgs e)
     {
         try
         {
-            YTJsonParser.Stop();
+            SharedFetchCancellationTokenSource?.Cancel();
 
             // 設定控制項的狀態。
             SetControlsState(true);

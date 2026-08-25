@@ -159,11 +159,11 @@ public partial class FMain
                     }
                 }
 
-                if (type == YTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) ||
-                   type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
-                   type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) ||
-                   type == YTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) ||
-                   type == YTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift))
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) ||
+                   type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) ||
+                   type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) ||
+                   type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) ||
+                   type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -172,8 +172,8 @@ public partial class FMain
                     }
                 }
 
-                if (type == YTJsonParser.GetLocalizeString(KeySet.ChatRedirect) ||
-                    type == YTJsonParser.GetLocalizeString(KeySet.ChatPinned))
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect) ||
+                    type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
@@ -266,7 +266,7 @@ public partial class FMain
                                 // 2025/4/17 取消在匯入時下載圖片。
                                 //string errorMessage = await emojiData.SetImage(
                                 //    SharedHttpClient,
-                                //    YTJsonParser.FetchLargePicture());
+                                //    SharedYTJsonParser.FetchLargePicture());
 
                                 //if (!string.IsNullOrEmpty(errorMessage))
                                 //{
@@ -326,7 +326,7 @@ public partial class FMain
                             //{
                             //    string errorMessage = await badgeData.SetImage(
                             //        SharedHttpClient,
-                            //        YTJsonParser.FetchLargePicture());
+                            //        SharedYTJsonParser.FetchLargePicture());
 
                             //    if (!string.IsNullOrEmpty(errorMessage))
                             //    {
@@ -377,7 +377,7 @@ public partial class FMain
                             //{
                             //    string errorMessage = await stickerData.SetImage(
                             //        SharedHttpClient,
-                            //        YTJsonParser.FetchLargePicture());
+                            //        SharedYTJsonParser.FetchLargePicture());
 
                             //    if (!string.IsNullOrEmpty(errorMessage))
                             //    {

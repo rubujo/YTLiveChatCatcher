@@ -179,7 +179,7 @@ public partial class FSearch : Form
         switch (e.Button)
         {
             case MouseButtons.Left:
-                FMain.TtsSpeak(LVFilteredList);
+                _FMain.TtsSpeak(LVFilteredList);
                 break;
             case MouseButtons.Right:
                 _FMain.OpenYTChannelUrl(LVFilteredList, e);

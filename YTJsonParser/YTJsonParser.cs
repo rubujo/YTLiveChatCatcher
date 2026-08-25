@@ -1,162 +1,112 @@
-﻿using System.Text.Json;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Models.Community;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using Rubujo.YouTube.Utility.Sets;
+using Rubujo.YouTube.Utility.Utils;
 
 namespace Rubujo.YouTube.Utility;
 
 /// <summary>
 /// YTJsonParser
 /// </summary>
-public partial class YTJsonParser
+public partial class YTJsonParser : IDisposable
 {
     /// <summary>
-    /// 初始化
+    /// 未設定強制間隔毫秒值時，輪詢間隔的安全下限（毫秒）。
+    /// <para>避免因回應內容解析失敗等異常狀況，導致間隔值意外變成 0 而對 YouTube 形成近乎無間隔的高頻輪詢。</para>
     /// </summary>
-    /// <param name="httpClient">HttpClient，預設值為 null</param>
-    public static void Init(HttpClient? httpClient = null)
-    {
-        SharedTask = null;
-        SharedCancellationTokenSource = null;
-        SharedHttpClient = httpClient;
-        SharedCookies = string.Empty;
-        SharedIsStreaming = false;
-        SharedIsFetchLargePicture = true;
-        SharedFetchWholeCommunityPosts = true;
-        SharedDisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional;
-        SharedLiveChatType = EnumSet.LiveChatType.All;
-        SharedCustomLiveChatType = string.Empty;
-        SharedIntervalMs = 0;
-        SharedForceIntervalMs = -1;
+    private const int MinimumIntervalMs = 1000;
 
-        // 當傳入的 httpClient 為 null 時，則自動建立 HttpClient。
-        SharedHttpClient ??= CreateHttpClient();
+    /// <summary>
+    /// 建構 YTJsonParser
+    /// </summary>
+    /// <param name="options">YTJsonParserOptions，預設值為 null（使用預設設定）</param>
+    /// <param name="logger">ILogger&lt;YTJsonParser&gt;，預設值為 null（不記錄）</param>
+    public YTJsonParser(YTJsonParserOptions? options = null, ILogger<YTJsonParser>? logger = null)
+    {
+        options ??= new YTJsonParserOptions();
+
+        _logger = logger ?? NullLogger<YTJsonParser>.Instance;
+
+        SharedCookies = options.Cookies ?? string.Empty;
+        SharedIsFetchLargePicture = options.FetchLargePicture;
+        SharedDisplayLanguage = options.DisplayLanguage;
+
+        // 當未指定 HttpClient 時，自動建立並記錄該 HttpClient 為本實例所擁有。
+        OwnsHttpClient = options.HttpClient == null;
+        SharedHttpClient = options.HttpClient ?? CreateHttpClient();
     }
 
     /// <summary>
-    /// 開始獲取即時聊天資料
+    /// 釋放本實例自動建立的 HttpClient（透過建構子傳入的 HttpClient 則不會被釋放）
+    /// </summary>
+    private void DisposeOwnedHttpClient()
+    {
+        if (OwnsHttpClient)
+        {
+            SharedHttpClient?.Dispose();
+        }
+
+        OwnsHttpClient = false;
+    }
+
+    /// <summary>
+    /// 釋放資源
+    /// </summary>
+    public void Dispose()
+    {
+        DisposeOwnedHttpClient();
+
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// 串流獲取即時聊天資料，直到列舉結束或 <paramref name="cancellationToken"/> 被取消為止
     /// </summary>
     /// <param name="videoUrlOrID">字串，YouTube 影片網址或是 ID 值</param>
-    public void StartFetchLiveChatData(string videoUrlOrID)
+    /// <param name="options">LiveChatStreamOptions，預設值為 null（使用預設設定）</param>
+    /// <param name="intervalProgress">IProgress&lt;int&gt;，每次輪詢間隔更新時回報目前的間隔毫秒值，預設值為 null</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>IAsyncEnumerable&lt;IReadOnlyList&lt;RendererData&gt;&gt;，每次列舉為一次輪詢取得的批次訊息</returns>
+    public async IAsyncEnumerable<IReadOnlyList<RendererData>> StreamLiveChatDataAsync(
+        string videoUrlOrID,
+        LiveChatStreamOptions? options = null,
+        IProgress<int>? intervalProgress = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (SharedTask != null && !SharedTask.IsCompleted)
-        {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Warn,
-                "[YTJsonParser.StartFetchLiveChatData()] Task 正在執行中。");
+        options ??= new LiveChatStreamOptions();
 
-            return;
-        }
+        string videoID = YouTubeUrlUtil.GetYouTubeVideoID(videoUrlOrID);
 
-        if (SharedHttpClient == null)
-        {
-            RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.StartFetchLiveChatData()] 發生錯誤，變數 \"SharedHttpClient\" 是 null！");
-
-            return;
-        }
-
-        SharedCancellationTokenSource = new CancellationTokenSource();
-
-        // 開始 Task。
-        SharedTask = Task.Run(async () =>
-        {
-            string videoID = GetYouTubeVideoID(videoUrl: videoUrlOrID);
-
-            SharedIsStreaming = await IsVideoStreamingAsync(videoID: videoID);
-
-            await FetchLiveChatDataAsync(videoID: videoID);
-        },
-        SharedCancellationTokenSource.Token);
-
-        SharedTask?.ContinueWith(
-            TaskCompleted,
-            CancellationToken.None);
-    }
-
-    /// <summary>
-    /// 開始獲取社群貼文資料
-    /// </summary>
-    /// <param name="channelUrlOrID">字串，YouTube 頻道網址或是 ID 值</param>
-    public void StartFetchCommunityPosts(string channelUrlOrID)
-    {
-        if (SharedTask != null && !SharedTask.IsCompleted)
-        {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Warn,
-                "[YTJsonParser.StartFetchCommunityPosts()] Task 正在執行中。");
-
-            return;
-        }
-
-        if (SharedHttpClient == null)
-        {
-            RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.StartFetchCommunityPosts()] 發生錯誤，變數 \"SharedHttpClient\" 是 null！");
-
-            return;
-        }
-
-        SharedCancellationTokenSource = new CancellationTokenSource();
-
-        // 開始 Task。
-        SharedTask = Task.Run(async () =>
-        {
-            string channelID = await GetYouTubeChannelID(channelUrl: channelUrlOrID);
-
-            await FetchCommunityPostsAsync(channelID: channelID);
-        },
-        SharedCancellationTokenSource.Token);
-
-        SharedTask?.ContinueWith(
-            TaskCompleted,
-            CancellationToken.None);
-    }
-
-    /// <summary>
-    /// 獲取即時聊天資料
-    /// </summary>
-    /// <param name="videoID">字串，YouTube 影片的 ID 值</param>
-    /// <returns>Task</returns>
-    private async Task FetchLiveChatDataAsync(string videoID)
-    {
-        RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Running);
-
-        InitialData initialData = await GetYTConfigDataAsync(videoID, EnumSet.DataType.LiveChat);
+        InitialData initialData = await GetYTConfigDataAsync(videoID, EnumSet.DataType.LiveChat, options, cancellationToken);
 
         YTConfigData? ytConfigData = initialData.YTConfigData;
 
         if (ytConfigData == null)
         {
-            RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.FetchLiveChatData()] 發生錯誤，變數 \"ytConfigData\" 是 null！");
+            LogMessages.YtConfigDataIsNull(_logger, nameof(StreamLiveChatDataAsync));
 
-            return;
+            yield break;
         }
 
-        // 處理直播中頁面內的影片聊天室的內容。
-        if (initialData.Messages != null &&
-            initialData.Messages.Count > 0)
+        // 處理初始頁面內的聊天室內容。
+        if (initialData.Messages != null && initialData.Messages.Count > 0)
         {
-            RaiseOnFecthLiveChatData(initialData.Messages);
+            yield return initialData.Messages;
         }
+
+        int intervalMs = MinimumIntervalMs;
 
         // 持續取得即時聊天資料。
-        while (SharedCancellationTokenSource?.IsCancellationRequested == false)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat);
+            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat, cancellationToken);
 
-            // 判斷是否有取得有效的內容。
             if (string.IsNullOrEmpty(jsonElement.ToString()))
             {
                 break;
@@ -165,110 +115,117 @@ public partial class YTJsonParser
             // 0：continuation、1：timeoutMs 或 timeUntilLastMessageMsec。
             string[] continuationData = ParseContinuation(jsonElement);
 
-            // 更新 continuation。
             ytConfigData.Continuation = continuationData[0];
 
-            if (int.TryParse(continuationData[1], out int timeoutMs))
-            {
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Info,
-                    $"接收到的間隔毫秒值：{timeoutMs}");
+            int.TryParse(continuationData[1], out int parsedIntervalMs);
 
-                // 更新間隔值。
-                IntervalMs(timeoutMs);
-            }
+            intervalMs = GetEffectiveIntervalMs(parsedIntervalMs, options.ForceIntervalMs);
+
+            intervalProgress?.Report(intervalMs);
 
             List<RendererData> messages = ParseActions(jsonElement);
 
             if (messages.Count > 0)
             {
-                RaiseOnFecthLiveChatData(messages);
+                yield return messages;
             }
 
-            RaiseOnLogOutput(
-                EnumSet.LogType.Info,
-                $"於 {IntervalMs() / 1000} 秒後，獲取下一批次的即時聊天資料。");
-
-            SpinWait.SpinUntil(() => false, IntervalMs());
+            if (!await DelayOrBreakAsync(intervalMs, cancellationToken))
+            {
+                break;
+            }
         }
     }
 
     /// <summary>
-    /// 獲取社群貼文資料
+    /// 串流獲取社群貼文資料，直到列舉結束或 <paramref name="cancellationToken"/> 被取消為止
     /// </summary>
-    /// <param name="channelID">字串，YouTube 頻道的 ID 值</param>
-    /// <returns>Task</returns>
-    private async Task FetchCommunityPostsAsync(string channelID)
+    /// <param name="channelUrlOrID">字串，YouTube 頻道網址或是 ID 值</param>
+    /// <param name="options">CommunityPostStreamOptions，預設值為 null（使用預設設定）</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>IAsyncEnumerable&lt;IReadOnlyList&lt;PostData&gt;&gt;，每次列舉為一次輪詢取得的批次貼文</returns>
+    public async IAsyncEnumerable<IReadOnlyList<PostData>> StreamCommunityPostsAsync(
+        string channelUrlOrID,
+        CommunityPostStreamOptions? options = null,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Running);
+        options ??= new CommunityPostStreamOptions();
 
-        InitialData initialData = await GetYTConfigDataAsync(channelID, EnumSet.DataType.Community);
+        string channelID = await YouTubeUrlUtil.GetYouTubeChannelID(channelUrlOrID);
+
+        InitialData initialData = await GetYTConfigDataAsync(
+            channelID,
+            EnumSet.DataType.Community,
+            cancellationToken: cancellationToken);
+
+        if (initialData.Posts == null || initialData.Posts.Count == 0)
+        {
+            LogMessages.NoInitialPosts(_logger);
+        }
 
         YTConfigData? ytConfigData = initialData.YTConfigData;
 
         if (ytConfigData == null)
         {
-            RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.FetchCommunityPosts()] 發生錯誤，變數 \"ytConfigData\" 是 null！");
+            LogMessages.YtConfigDataIsNull(_logger, nameof(StreamCommunityPostsAsync));
 
-            return;
+            yield break;
         }
 
-        // 處理初始的社群貼文資料。
-        if (initialData.Posts != null &&
-            initialData.Posts.Count > 0)
+        if (initialData.Posts != null && initialData.Posts.Count > 0)
         {
-            RaiseOnFecthCommunityPosts(initialData.Posts);
+            yield return initialData.Posts;
         }
 
-        if (SharedCancellationTokenSource?.IsCancellationRequested != false)
+        if (!options.FetchWholeCommunityPosts)
         {
-            return;
+            yield break;
         }
 
-        // 判斷是否要獲取全部的社群貼文。
-        if (SharedFetchWholeCommunityPosts)
+        // 持續取得社群資料。
+        while (!cancellationToken.IsCancellationRequested &&
+            !string.IsNullOrEmpty(ytConfigData.Continuation))
         {
-            // 持續取得社群資料。
-            while (SharedCancellationTokenSource?.IsCancellationRequested == false &&
-                !string.IsNullOrEmpty(ytConfigData?.Continuation))
+            List<PostData> posts = await GetEarlierPostsAsync(ytConfigData, cancellationToken);
+
+            if (posts.Count > 0)
             {
-                List<PostData> posts = await GetEarlierPostsAsync(ytConfigData: ytConfigData);
+                yield return posts;
+            }
 
-                if (posts.Count > 0)
-                {
-                    RaiseOnFecthCommunityPosts(posts);
-                }
-
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Info,
-                    $"於 {IntervalMs() / 1000} 秒後，獲取下一批次的社群貼文資料。");
-
-                SpinWait.SpinUntil(() => false, IntervalMs());
+            if (!await DelayOrBreakAsync(GetEffectiveIntervalMs(0, options.ForceIntervalMs), cancellationToken))
+            {
+                break;
             }
         }
     }
 
     /// <summary>
-    /// 已完成任務
+    /// 計算輪詢的有效間隔毫秒值
     /// </summary>
-    /// <param name="task">Task</param>
-    private void TaskCompleted(Task task)
+    /// <param name="parsedIntervalMs">數值，從 YouTube 回應解析出的間隔值</param>
+    /// <param name="forceIntervalMs">數值，強制間隔毫秒值，未設定時為 null</param>
+    /// <returns>數值</returns>
+    private static int GetEffectiveIntervalMs(int parsedIntervalMs, int? forceIntervalMs) =>
+        forceIntervalMs is >= 0 ? forceIntervalMs.Value : Math.Max(parsedIntervalMs, MinimumIntervalMs);
+
+    /// <summary>
+    /// 等待指定的毫秒數，若被取消則回傳 false
+    /// </summary>
+    /// <param name="delayMs">數值，等待毫秒數</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>Task&lt;bool&gt;</returns>
+    private static async Task<bool> DelayOrBreakAsync(int delayMs, CancellationToken cancellationToken)
     {
-        if (task.IsFaulted)
+        try
         {
-            RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.ErrorOccured);
+            await Task.Delay(delayMs, cancellationToken);
 
-            RaiseOnLogOutput(EnumSet.LogType.Error, task.Exception.GetExceptionMessage());
+            return true;
         }
-
-        RaiseOnRunningStatusUpdate(EnumSet.RunningStatus.Stopped);
-
-        // 清除 SharedCancellationTokenSource。
-        SharedCancellationTokenSource = null;
-        // 清除 SharedTask。
-        SharedTask = null;
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 }

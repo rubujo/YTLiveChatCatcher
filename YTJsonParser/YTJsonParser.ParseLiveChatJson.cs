@@ -20,81 +20,53 @@ public partial class YTJsonParser
     /// <returns>YTConfigData</returns>
     private static YTConfigData ParseYtCfg(JsonElement? jsonElement)
     {
-        bool useDelegatedSessionID = false;
-
         YTConfigData ytConfigData = new();
 
-        if (jsonElement.HasValue)
+        YtCfgDto? ytCfgDto = jsonElement?.Deserialize<YtCfgDto>();
+
+        if (ytCfgDto == null)
         {
-            JsonElement? jejeInnertubeApiKey = jsonElement?.Get("INNERTUBE_API_KEY");
-            JsonElement? jeIDToken = jsonElement?.Get("ID_TOKEN");
-            JsonElement? jeSessionIndex = jsonElement?.Get("SESSION_INDEX");
-            JsonElement? jeInnertubeContextClientName = jsonElement?.Get("INNERTUBE_CONTEXT_CLIENT_NAME");
-            JsonElement? jeInnertubeContextClientVersion = jsonElement?.Get("INNERTUBE_CONTEXT_CLIENT_VERSION");
-            JsonElement? jeInnertubeClientVersion = jsonElement?.Get("INNERTUBE_CLIENT_VERSION");
-            JsonElement? jeDataSyncID = jsonElement?.Get("DATASYNC_ID");
-            JsonElement? jeDelegatedSessionID = jsonElement?.Get("DELEGATED_SESSION_ID");
-            JsonElement? jeInnertubeContext = jsonElement?.Get("INNERTUBE_CONTEXT");
-            JsonElement? jeClient = jeInnertubeContext?.Get("client");
-            JsonElement? jeBrowserName = jeClient?.Get("browserName");
-            JsonElement? jeBrowserVersion = jeClient?.Get("browserVersion");
-            JsonElement? jeClientFormFactor = jeClient?.Get("clientFormFactor");
-            JsonElement? jeClientName = jeClient?.Get("clientName");
-            JsonElement? jeClientVersion = jeClient?.Get("clientVersion");
-            JsonElement? jeDeviceMake = jeClient?.Get("deviceMake");
-            JsonElement? jeDeviceModel = jeClient?.Get("deviceModel");
-            JsonElement? jeGl = jeClient?.Get("gl");
-            JsonElement? jeHl = jeClient?.Get("hl");
-            JsonElement? jeOriginalUrl = jeClient?.Get("originalUrl");
-            JsonElement? jeOsName = jeClient?.Get("osName");
-            JsonElement? jeOsVersion = jeClient?.Get("osVersion");
-            JsonElement? jePlatform = jeClient?.Get("platform");
-            JsonElement? jeRemoteHost = jeClient?.Get("remoteHost");
-            JsonElement? jeUserAgent = jeClient?.Get("userAgent");
-            JsonElement? jeVisitorData = jeClient?.Get("visitorData");
+            return ytConfigData;
+        }
 
-            ytConfigData.APIKey = jejeInnertubeApiKey?.GetString();
-            ytConfigData.IDToken = jeIDToken?.GetString();
-            ytConfigData.SessionIndex = jeSessionIndex?.GetString();
-            ytConfigData.InnetrubeContextClientName = jeInnertubeContextClientName?.GetInt32() ?? 0;
-            ytConfigData.InnetrubeContextClientVersion = jeInnertubeContextClientVersion?.GetString();
-            ytConfigData.InnetrubeClientVersion = jeInnertubeClientVersion?.GetString();
-            ytConfigData.DataSyncID = jeDataSyncID?.GetString();
-            ytConfigData.DelegatedSessionID = jeDelegatedSessionID?.GetString();
-            ytConfigData.BrowserName = jeBrowserName?.GetString();
-            ytConfigData.BrowserVersion = jeBrowserVersion?.GetString();
-            ytConfigData.ClientFormFactor = jeClientFormFactor?.GetString();
-            ytConfigData.ClientName = jeClientName?.GetString();
-            ytConfigData.ClientVersion = jeClientVersion?.GetString();
-            ytConfigData.DeviceMake = jeDeviceMake?.GetString();
-            ytConfigData.DeviceModel = jeDeviceModel?.GetString();
-            ytConfigData.Gl = jeGl?.GetString();
-            ytConfigData.Hl = jeHl?.GetString();
-            ytConfigData.OriginalUrl = jeOriginalUrl?.GetString();
-            ytConfigData.OsName = jeOsName?.GetString();
-            ytConfigData.OsVersion = jeOsVersion?.GetString();
-            ytConfigData.Platform = jePlatform?.GetString();
-            ytConfigData.RemoteHost = jeRemoteHost?.GetString();
-            ytConfigData.UserAgent = jeUserAgent?.GetString();
-            ytConfigData.VisitorData = jeVisitorData?.GetString();
+        YtCfgClientDto? client = ytCfgDto.InnertubeContext?.Client;
 
-            // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
-            string[]? arrayDataSyncID = ytConfigData.DataSyncID
-                ?.Split("||".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+        ytConfigData.APIKey = ytCfgDto.InnertubeApiKey;
+        ytConfigData.IDToken = ytCfgDto.IdToken;
+        ytConfigData.SessionIndex = ytCfgDto.SessionIndex;
+        ytConfigData.InnetrubeContextClientName = ytCfgDto.InnertubeContextClientName;
+        ytConfigData.InnetrubeContextClientVersion = ytCfgDto.InnertubeContextClientVersion;
+        ytConfigData.InnetrubeClientVersion = ytCfgDto.InnertubeClientVersion;
+        ytConfigData.DataSyncID = ytCfgDto.DataSyncId;
+        ytConfigData.DelegatedSessionID = ytCfgDto.DelegatedSessionId;
+        ytConfigData.BrowserName = client?.BrowserName;
+        ytConfigData.BrowserVersion = client?.BrowserVersion;
+        ytConfigData.ClientFormFactor = client?.ClientFormFactor;
+        ytConfigData.ClientName = client?.ClientName;
+        ytConfigData.ClientVersion = client?.ClientVersion;
+        ytConfigData.DeviceMake = client?.DeviceMake;
+        ytConfigData.DeviceModel = client?.DeviceModel;
+        ytConfigData.Gl = client?.Gl;
+        ytConfigData.Hl = client?.Hl;
+        ytConfigData.OriginalUrl = client?.OriginalUrl;
+        ytConfigData.OsName = client?.OsName;
+        ytConfigData.OsVersion = client?.OsVersion;
+        ytConfigData.Platform = client?.Platform;
+        ytConfigData.RemoteHost = client?.RemoteHost;
+        ytConfigData.UserAgent = client?.UserAgent;
+        ytConfigData.VisitorData = client?.VisitorData;
 
-            if (arrayDataSyncID?.Length >= 2 && !string.IsNullOrEmpty(arrayDataSyncID[1]))
-            {
-                ytConfigData.DataSyncID = arrayDataSyncID[0];
-            }
-            else
-            {
-                useDelegatedSessionID = true;
-            }
+        // 參考：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L1629
+        string[]? arrayDataSyncID = ytConfigData.DataSyncID
+            ?.Split("||".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
-            if (useDelegatedSessionID)
-            {
-                ytConfigData.DataSyncID = ytConfigData.DelegatedSessionID;
-            }
+        if (arrayDataSyncID?.Length >= 2 && !string.IsNullOrEmpty(arrayDataSyncID[1]))
+        {
+            ytConfigData.DataSyncID = arrayDataSyncID[0];
+        }
+        else
+        {
+            ytConfigData.DataSyncID = ytConfigData.DelegatedSessionID;
         }
 
         return ytConfigData;
@@ -104,8 +76,9 @@ public partial class YTJsonParser
     /// 解析直播時的 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
+    /// <param name="options">LiveChatStreamOptions</param>
     /// <returns>string[]</returns>
-    private string[] ParseStreamingContinuation(JsonElement? jsonElement)
+    private string[] ParseStreamingContinuation(JsonElement? jsonElement, LiveChatStreamOptions options)
     {
         string[] output = new string[2];
 
@@ -117,7 +90,7 @@ public partial class YTJsonParser
 
             if (liveChatRenderer.HasValue)
             {
-                output[0] = ParseSubMenuItemsContinuation(liveChatRenderer);
+                output[0] = ParseSubMenuItemsContinuation(liveChatRenderer, options);
 
                 // Fallback 機制。
                 JsonElement.ArrayEnumerator? continuations = liveChatRenderer
@@ -217,72 +190,12 @@ public partial class YTJsonParser
                         if (playerSeekContinuationData.HasValue)
                         {
                             // 略過不進行任何的處理。
-                            RaiseOnLogOutput(
-                                EnumSet.LogType.Debug,
-                                $"方法：GetFirstTimeContinuation() -> playerSeekContinuationData -> " +
-                                $"略過不處理的內容：{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
+                            LogMessages.Trace(_logger, "ParseStreamingContinuation -> playerSeekContinuationData", playerSeekContinuationData.Value.GetRawText());
                         }
 
                         #endregion
 
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"方法：GetFirstTimeContinuation() -> " +
-                            $"尚未支援的內容：{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
-                    }
-                }
-            }
-        }
-
-        return output;
-    }
-
-    /// <summary>
-    /// 解析重播時的 continuation
-    /// </summary>
-    /// <param name="jsonElement">JsonElement</param>
-    /// <returns>字串</returns>
-    [Obsolete("2025/10 YouTube 有調整過相關機制，此方法不再有效。")]
-    private string ParseReplayContinuation(JsonElement? jsonElement)
-    {
-        string output = string.Empty;
-
-        if (jsonElement.HasValue)
-        {
-            JsonElement? liveChatRenderer = jsonElement
-                ?.Get("contents")
-                ?.Get("twoColumnWatchNextResults")
-                ?.Get("conversationBar")
-                ?.Get("liveChatRenderer");
-
-            if (liveChatRenderer.HasValue)
-            {
-                output = ParseSubMenuItemsContinuation(liveChatRenderer);
-
-                // 當從 "subMenuItem" 取不到 "continuation" 時，
-                // 才使用此處的 "continuation"。
-                if (string.IsNullOrEmpty(output))
-                {
-                    JsonElement.ArrayEnumerator? continuations = liveChatRenderer
-                        ?.Get("continuations")
-                        ?.ToArrayEnumerator();
-
-                    if (continuations.HasValue)
-                    {
-                        foreach (JsonElement singleContinuation in continuations)
-                        {
-                            // 用此 "continuation" 可能無法抓到全部的訊息。
-                            JsonElement? continuation = singleContinuation
-                                .Get("reloadContinuationData")
-                                ?.Get("continuation");
-
-                            if (continuation.HasValue)
-                            {
-                                output = continuation.Value.GetString() ?? string.Empty;
-
-                                break;
-                            }
-                        }
+                        LogMessages.Trace(_logger, "ParseStreamingContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
                     }
                 }
             }
@@ -295,8 +208,9 @@ public partial class YTJsonParser
     /// 解析 subMenuItems 下的 continuation
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
+    /// <param name="options">LiveChatStreamOptions</param>
     /// <returns>字串</returns>
-    private string ParseSubMenuItemsContinuation(JsonElement? jsonElement)
+    private string ParseSubMenuItemsContinuation(JsonElement? jsonElement, LiveChatStreamOptions options)
     {
         string output = string.Empty;
 
@@ -317,27 +231,19 @@ public partial class YTJsonParser
                 // 0：熱門
                 // 1：全部
 
-                // 當 SharedCustomTitle 不為 null 或空白時，則使用使用者自行帶入的值。
-                if (!string.IsNullOrEmpty(SharedCustomLiveChatType))
+                // 當 CustomLiveChatType 不為 null 或空白時，則使用使用者自行帶入的值。
+                if (!string.IsNullOrEmpty(options.CustomLiveChatType))
                 {
-                    RaiseOnLogOutput(
-                        EnumSet.LogType.Debug,
-                        $"[YTJsonParser.ParseSubMenuItemsContinuation()] SharedCustomTitle：{SharedCustomLiveChatType}");
+                    LogMessages.SubMenuCustomTitle(_logger, options.CustomLiveChatType);
 
                     foreach (JsonElement subMenuItem in subMenuItems)
                     {
                         JsonElement? title = subMenuItem.Get("title");
 
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"[YTJsonParser.ParseSubMenuItemsContinuation()] title：{title?.GetString()}");
+                        LogMessages.SubMenuTitle(_logger, title?.GetString());
 
-                        if (title.HasValue && title?.GetString() == SharedCustomLiveChatType)
+                        if (title.HasValue && title?.GetString() == options.CustomLiveChatType)
                         {
-                            RaiseOnLogOutput(
-                                EnumSet.LogType.Debug,
-                                $"[YTJsonParser.ParseSubMenuItemsContinuation()] 吻合 SharedCustomTitle 的 title：{title?.GetString()}");
-
                             JsonElement? continuation = subMenuItem.Get("continuation")
                                 ?.Get("reloadContinuationData")
                                 ?.Get("continuation");
@@ -355,20 +261,12 @@ public partial class YTJsonParser
                 {
                     JsonElement subMenuItem = subMenuItems
                         .Value
-                        .ElementAtOrDefault(SharedLiveChatType.ToInt32());
-
-                    RaiseOnLogOutput(
-                        EnumSet.LogType.Debug,
-                        $"[YTJsonParser.ParseSubMenuItemsContinuation()] SharedLiveChatType：{SharedLiveChatType} | {SharedLiveChatType.ToInt32()}");
+                        .ElementAtOrDefault(options.LiveChatType.ToInt32());
 
                     JsonElement? title = subMenuItem.Get("title");
 
                     if (title.HasValue)
                     {
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"[YTJsonParser.ParseSubMenuItemsContinuation()] 吻合 SharedLiveChatType 的 title：{title?.GetString()}");
-
                         JsonElement? continuation = subMenuItem.Get("continuation")
                             ?.Get("reloadContinuationData")
                             ?.Get("continuation");
@@ -487,19 +385,13 @@ public partial class YTJsonParser
                     if (playerSeekContinuationData.HasValue)
                     {
                         // 略過不進行任何的處理。
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"方法：GetContinuation() -> playerSeekContinuationData -> " +
-                            $"略過不處理的內容：{Environment.NewLine}{playerSeekContinuationData.Value.GetRawText()}{Environment.NewLine}");
+                        LogMessages.Trace(_logger, "ParseContinuation -> playerSeekContinuationData", playerSeekContinuationData.Value.GetRawText());
                     }
 
                     #endregion
 
                     // 尚未支援的內容。
-                    RaiseOnLogOutput(
-                        EnumSet.LogType.Debug,
-                        $"方法：GetContinuation() -> " +
-                        $"尚未支援的內容：{Environment.NewLine}{singleContinuation.GetRawText()}{Environment.NewLine}");
+                    LogMessages.Trace(_logger, "ParseContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
                 }
             }
         }
@@ -537,10 +429,7 @@ public partial class YTJsonParser
                 foreach (JsonElement singleAction in actions)
                 {
                     // TODO: 2023/5/29 測試如何解析 addBannerToLiveChatCommand。
-                    RaiseOnLogOutput(
-                        EnumSet.LogType.Debug,
-                        $"singleAction：" +
-                        $"{Environment.NewLine}{singleAction.GetRawText()}{Environment.NewLine}");
+                    LogMessages.Trace(_logger, "ParseActions -> singleAction", singleAction.GetRawText());
 
                     JsonElement? item = singleAction.Get("addChatItemAction")?.Get("item");
 
@@ -558,6 +447,8 @@ public partial class YTJsonParser
                     {
                         output.AddRange(ParseRenderer(singleBannerRenderer.Value));
                     }
+
+                    ParseNonMessageAction(output, singleAction);
 
                     JsonElement? videoOffsetTimeMsec = singleAction
                         .Get("addChatItemAction")
@@ -612,25 +503,254 @@ public partial class YTJsonParser
 
                                 output.AddRange(rendererDatas);
                             }
+
+                            ParseNonMessageAction(output, replayAction);
                         }
                     }
 
-                    // TODO: 2023/5/29 用於取得 replaceChatItemAction 使用。
+                    // 訊息內容被取代／修改（例如超級留言／超級貼圖淡出時，會被替換成較小的顯示樣式）。
                     JsonElement? replaceAction = singleAction
                         .Get("replaceChatItemAction");
 
                     if (replaceAction.HasValue)
                     {
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"replaceChatItemAction：" +
-                            $"{Environment.NewLine}{replaceAction.Value.GetRawText()}{Environment.NewLine}");
+                        output.AddRange(ParseReplaceChatItemAction(replaceAction.Value));
                     }
                 }
             }
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// 解析非訊息類型的 action（留言刪除、使用者封鎖、投票）
+    /// </summary>
+    /// <param name="output">List&lt;RendererData&gt;</param>
+    /// <param name="singleAction">JsonElement</param>
+    private void ParseNonMessageAction(List<RendererData> output, JsonElement singleAction)
+    {
+        JsonElement? removeChatItemAction = singleAction.Get("removeChatItemAction");
+
+        if (removeChatItemAction.HasValue)
+        {
+            output.Add(ParseRemoveChatItemAction(removeChatItemAction.Value));
+        }
+
+        JsonElement? removeChatItemByAuthorAction = singleAction.Get("removeChatItemByAuthorAction");
+
+        if (removeChatItemByAuthorAction.HasValue)
+        {
+            output.Add(ParseRemoveChatItemByAuthorAction(removeChatItemByAuthorAction.Value));
+        }
+
+        JsonElement? pollRenderer = singleAction
+            .Get("showLiveChatActionPanelAction")
+            ?.Get("panelToShow")
+            ?.Get("liveChatActionPanelRenderer")
+            ?.Get("contents")
+            ?.Get("pollRenderer");
+
+        if (pollRenderer.HasValue)
+        {
+            output.Add(ParsePollRenderer(pollRenderer.Value));
+        }
+    }
+
+    /// <summary>
+    /// 解析 replaceChatItemAction（既有留言的內容被取代／修改，例如超級留言／超級貼圖淡出後改為較小的顯示樣式）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>List&lt;RendererData&gt;</returns>
+    private List<RendererData> ParseReplaceChatItemAction(JsonElement jsonElement)
+    {
+        string targetItemId = jsonElement.Get("targetItemId")?.GetString() ?? string.Empty;
+
+        JsonElement? replacementItem = jsonElement.Get("replacementItem");
+
+        if (!replacementItem.HasValue)
+        {
+            return [];
+        }
+
+        List<RendererData> rendererDatas = ParseRenderer(replacementItem.Value);
+
+        foreach (RendererData rendererData in rendererDatas)
+        {
+            // 被取代後的內容通常仍會帶有相同的 id，這裡僅在缺漏時補上，讓呼叫端能以 ID 對應到原留言。
+            if (string.IsNullOrEmpty(rendererData.ID) && !string.IsNullOrEmpty(targetItemId))
+            {
+                rendererData.ID = targetItemId;
+            }
+        }
+
+        return rendererDatas;
+    }
+
+    /// <summary>
+    /// 解析 removeChatItemAction（留言被刪除）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>RendererData</returns>
+    private RendererData ParseRemoveChatItemAction(JsonElement jsonElement)
+    {
+        string targetItemId = jsonElement.Get("targetItemId")?.GetString() ?? string.Empty;
+
+        return new RendererData()
+        {
+            ID = targetItemId,
+            Type = GetLocalizeString(KeySet.ChatMessageDeleted),
+            AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
+            AuthorBadges = KeySet.NoAuthorBadges,
+            AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
+            MessageContent = string.IsNullOrEmpty(targetItemId) ? KeySet.NoMessageContent : targetItemId,
+            PurchaseAmountText = KeySet.NoPurchaseAmountText,
+            ForegroundColor = KeySet.NoForegroundColor,
+            BackgroundColor = KeySet.NoBackgroundColor,
+            TimestampText = KeySet.NoTimestampText,
+            AuthorExternalChannelID = KeySet.NoAuthorExternalChannelID
+        };
+    }
+
+    /// <summary>
+    /// 解析 removeChatItemByAuthorAction（使用者被封鎖，其留言全數移除）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>RendererData</returns>
+    private RendererData ParseRemoveChatItemByAuthorAction(JsonElement jsonElement)
+    {
+        string externalChannelId = jsonElement.Get("externalChannelId")?.GetString() ?? string.Empty;
+
+        return new RendererData()
+        {
+            ID = string.Empty,
+            Type = GetLocalizeString(KeySet.ChatUserBanned),
+            AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
+            AuthorBadges = KeySet.NoAuthorBadges,
+            AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
+            MessageContent = string.IsNullOrEmpty(externalChannelId) ? KeySet.NoMessageContent : externalChannelId,
+            PurchaseAmountText = KeySet.NoPurchaseAmountText,
+            ForegroundColor = KeySet.NoForegroundColor,
+            BackgroundColor = KeySet.NoBackgroundColor,
+            TimestampText = KeySet.NoTimestampText,
+            AuthorExternalChannelID = string.IsNullOrEmpty(externalChannelId) ?
+                KeySet.NoAuthorExternalChannelID :
+                externalChannelId
+        };
+    }
+
+    /// <summary>
+    /// 解析 pollRenderer（創作者投票）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>RendererData</returns>
+    private RendererData ParsePollRenderer(JsonElement jsonElement)
+    {
+        string pollId = jsonElement.Get("liveChatPollId")?.GetString() ?? string.Empty;
+
+        RunsData questionRunsData = ParseRunData(
+            jsonElement.Get("header")
+                ?.Get("pollHeaderRenderer")
+                ?.Get("pollQuestion") ?? default);
+
+        List<string> choiceTexts = [];
+
+        JsonElement.ArrayEnumerator? choices = jsonElement.Get("choices")?.ToArrayEnumerator();
+
+        if (choices.HasValue)
+        {
+            foreach (JsonElement choice in choices)
+            {
+                RunsData choiceRunsData = ParseRunData(choice.Get("text") ?? default);
+
+                if (!string.IsNullOrEmpty(choiceRunsData.Text))
+                {
+                    choiceTexts.Add(choiceRunsData.Text);
+                }
+            }
+        }
+
+        string message = !string.IsNullOrEmpty(questionRunsData.Text) ?
+            $"{questionRunsData.Text}：{string.Join("、", choiceTexts)}" :
+            string.Join("、", choiceTexts);
+
+        return new RendererData()
+        {
+            ID = pollId,
+            Type = GetLocalizeString(KeySet.ChatPoll),
+            AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
+            AuthorBadges = KeySet.NoAuthorBadges,
+            AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
+            MessageContent = string.IsNullOrEmpty(message) ? KeySet.NoMessageContent : message,
+            PurchaseAmountText = KeySet.NoPurchaseAmountText,
+            ForegroundColor = KeySet.NoForegroundColor,
+            BackgroundColor = KeySet.NoBackgroundColor,
+            TimestampText = KeySet.NoTimestampText,
+            AuthorExternalChannelID = KeySet.NoAuthorExternalChannelID
+        };
+    }
+
+    /// <summary>
+    /// 解析 giftMessageViewModel（新版 ViewModel 結構的贈禮訊息）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>RendererData</returns>
+    private RendererData ParseGiftMessageViewModel(JsonElement jsonElement)
+    {
+        string id = jsonElement.Get("id")?.GetString() ?? string.Empty;
+
+        string authorName = jsonElement.Get("authorName")?.Get("content")?.GetString() ?? KeySet.NoAuthorName;
+
+        string messageText = jsonElement.Get("text")?.Get("content")?.GetString() ?? string.Empty;
+
+        string authorPhotoUrl = jsonElement
+            .Get("authorAvatar")
+            ?.Get("avatarViewModel")
+            ?.Get("image")
+            ?.Get("sources")
+            ?.ToArrayEnumerator()
+            ?.LastOrDefault()
+            .Get("url")
+            ?.GetString() ?? KeySet.NoAuthorPhotoUrl;
+
+        return new RendererData()
+        {
+            ID = id,
+            Type = GetLocalizeString(KeySet.ChatGift),
+            AuthorName = authorName,
+            AuthorPhotoUrl = authorPhotoUrl,
+            AuthorBadges = KeySet.NoAuthorBadges,
+            MessageContent = string.IsNullOrEmpty(messageText) ? KeySet.NoMessageContent : messageText,
+            PurchaseAmountText = KeySet.NoPurchaseAmountText,
+            ForegroundColor = KeySet.NoForegroundColor,
+            BackgroundColor = KeySet.NoBackgroundColor,
+            TimestampText = KeySet.NoTimestampText,
+            AuthorExternalChannelID = KeySet.NoAuthorExternalChannelID
+        };
+    }
+
+    /// <summary>
+    /// 解析 ticker（跑馬燈）項目，取出其內嵌的完整原始 *Renderer 內容
+    /// </summary>
+    /// <param name="output">List&lt;RendererData&gt;</param>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <param name="innerRendererName">字串，跑馬燈內嵌的原始 *Renderer 名稱</param>
+    private void ParseTickerRenderer(List<RendererData> output, JsonElement jsonElement, string innerRendererName)
+    {
+        JsonElement? innerRenderer = jsonElement
+            .Get("showItemEndpoint")
+            ?.Get("showLiveChatItemEndpoint")
+            ?.Get("renderer")
+            ?.Get(innerRendererName);
+
+        if (innerRenderer.HasValue)
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: innerRenderer.Value,
+                rendererName: innerRendererName,
+                customRendererName: $"[ticker] {innerRendererName}");
+        }
     }
 
     /// <summary>
@@ -719,20 +839,14 @@ public partial class YTJsonParser
             "liveChatBannerRenderer",
             out JsonElement liveChatBannerRenderer))
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                $"liveChatBannerRenderer：" +
-                $"{Environment.NewLine}{liveChatBannerRenderer.GetRawText()}{Environment.NewLine}");
+            LogMessages.Trace(_logger, "ParseRenderer -> liveChatBannerRenderer", liveChatBannerRenderer.GetRawText());
 
             // TODO: 2023/5/29 有插入時間順序的問題。
             if (liveChatBannerRenderer.TryGetProperty(
                 "header",
                 out JsonElement header))
             {
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Debug,
-                    $"liveChatBannerRenderer -> header：" +
-                    $"{Environment.NewLine}{header.GetRawText()}{Environment.NewLine}");
+                LogMessages.Trace(_logger, "ParseRenderer -> liveChatBannerRenderer -> header", header.GetRawText());
 
                 if (header.TryGetProperty(
                     "liveChatBannerHeaderRenderer",
@@ -750,10 +864,7 @@ public partial class YTJsonParser
                 "contents",
                 out JsonElement contents))
             {
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Debug,
-                    $"liveChatBannerRenderer -> contents：" +
-                    $"{Environment.NewLine}{contents.GetRawText()}{Environment.NewLine}");
+                LogMessages.Trace(_logger, "ParseRenderer -> liveChatBannerRenderer -> contents", contents.GetRawText());
 
                 if (contents.TryGetProperty(
                     "liveChatTextMessageRenderer",
@@ -777,29 +888,83 @@ public partial class YTJsonParser
                 }
             }
         }
-        else if (jsonElement.TryGetProperty("liveChatTickerPaidMessageItemRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatTickerPaidStickerItemRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatTickerSponsorItemRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatPlaceholderItemRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatDonationAnnouncementRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatPurchasedProductMessageRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatLegacyPaidMessageRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatModerationMessageRenderer", out _) ||
-            jsonElement.TryGetProperty("liveChatAutoModMessageRenderer", out _))
+        else if (jsonElement.TryGetProperty(
+            "giftMessageViewModel",
+            out JsonElement giftMessageViewModel))
         {
-            // 略過進不行任何處理。
-            // 參考：https://taiyakisun.hatenablog.com/entry/2020/10/13/223443
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                $"方法：GetRenderer() -> 略過不處理的內容：" +
-                $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
+            output.Add(ParseGiftMessageViewModel(giftMessageViewModel));
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatTickerPaidMessageItemRenderer",
+            out JsonElement liveChatTickerPaidMessageItemRenderer))
+        {
+            ParseTickerRenderer(output, liveChatTickerPaidMessageItemRenderer, "liveChatPaidMessageRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatTickerPaidStickerItemRenderer",
+            out JsonElement liveChatTickerPaidStickerItemRenderer))
+        {
+            ParseTickerRenderer(output, liveChatTickerPaidStickerItemRenderer, "liveChatPaidStickerRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatTickerSponsorItemRenderer",
+            out JsonElement liveChatTickerSponsorItemRenderer))
+        {
+            ParseTickerRenderer(output, liveChatTickerSponsorItemRenderer, "liveChatSponsorshipsGiftPurchaseAnnouncementRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatDonationAnnouncementRenderer",
+            out JsonElement liveChatDonationAnnouncementRenderer))
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: liveChatDonationAnnouncementRenderer,
+                rendererName: "liveChatDonationAnnouncementRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatPurchasedProductMessageRenderer",
+            out JsonElement liveChatPurchasedProductMessageRenderer))
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: liveChatPurchasedProductMessageRenderer,
+                rendererName: "liveChatPurchasedProductMessageRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatLegacyPaidMessageRenderer",
+            out JsonElement liveChatLegacyPaidMessageRenderer))
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: liveChatLegacyPaidMessageRenderer,
+                rendererName: "liveChatLegacyPaidMessageRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatModerationMessageRenderer",
+            out JsonElement liveChatModerationMessageRenderer))
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: liveChatModerationMessageRenderer,
+                rendererName: "liveChatModerationMessageRenderer");
+        }
+        else if (jsonElement.TryGetProperty(
+            "liveChatAutoModMessageRenderer",
+            out JsonElement liveChatAutoModMessageRenderer))
+        {
+            SetRendererData(
+                dataSet: output,
+                jsonElement: liveChatAutoModMessageRenderer,
+                rendererName: "liveChatAutoModMessageRenderer");
+        }
+        else if (jsonElement.TryGetProperty("liveChatPlaceholderItemRenderer", out _))
+        {
+            // liveChatPlaceholderItemRenderer 僅為 UI 佔位用途，無實際內容，略過不處理。
+            LogMessages.Trace(_logger, "ParseRenderer -> 略過不處理的內容", jsonElement.GetRawText());
         }
         else
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                $"方法：GetRenderer() -> 尚未支援的內容：" +
-                $"{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
+            LogMessages.Trace(_logger, "ParseRenderer -> 尚未支援的內容", jsonElement.GetRawText());
         }
 
         return output;
@@ -810,7 +975,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>AuthorBadgesData</returns>
-    private static AuthorBadgesData ParseAuthorBadges(JsonElement jsonElement)
+    private AuthorBadgesData ParseAuthorBadges(JsonElement jsonElement)
     {
         AuthorBadgesData output = new();
 
@@ -1033,10 +1198,7 @@ public partial class YTJsonParser
                 stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
                 stickerData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Debug,
-                    $"方法：GetRunData() -> sticker -> " +
-                    $"除錯用的內容：{Environment.NewLine}{sticker?.GetRawText()}{Environment.NewLine}");
+                LogMessages.Trace(_logger, "ParseMessageData -> sticker", sticker?.GetRawText() ?? string.Empty);
 
                 tempStickers.Add(stickerData);
             }
@@ -1088,10 +1250,7 @@ public partial class YTJsonParser
             }
         }
 
-        RaiseOnLogOutput(
-            EnumSet.LogType.Debug,
-            $"方法：GetMessage() -> " +
-            $"除錯用的內容：{Environment.NewLine}{jsonElement.GetRawText()}{Environment.NewLine}");
+        LogMessages.Trace(_logger, "ParseMessageData", jsonElement.GetRawText());
 
         if (string.IsNullOrEmpty(tempText))
         {
@@ -1212,19 +1371,13 @@ public partial class YTJsonParser
                             emojiData.IsCustomEmoji = isCustomEmoji?.GetBoolean() ?? false;
                         }
 
-                        RaiseOnLogOutput(
-                            EnumSet.LogType.Debug,
-                            $"方法：GetRunData() -> emoji -> " +
-                            $"除錯用的內容：{Environment.NewLine}{emoji?.GetRawText()}{Environment.NewLine}");
+                        LogMessages.Trace(_logger, "ParseRunData -> emoji", emoji?.GetRawText() ?? string.Empty);
 
                         tempEmojis.Add(emojiData);
                     }
                 }
 
-                RaiseOnLogOutput(
-                    EnumSet.LogType.Debug,
-                    $"方法：GetRunData() -> " +
-                    $"除錯用的內容：{Environment.NewLine}{singleRun.GetRawText()}{Environment.NewLine}");
+                LogMessages.Trace(_logger, "ParseRunData", singleRun.GetRawText());
             }
 
             output.Text = tempText;
@@ -1250,22 +1403,9 @@ public partial class YTJsonParser
         string rendererName = "",
         string customRendererName = "")
     {
-        if (!string.IsNullOrEmpty(customRendererName))
-        {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                $"*Renderer 的名稱：{customRendererName}");
-        }
-        else
-        {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Debug,
-                $"*Renderer 的名稱：{rendererName}");
-        }
+        string effectiveRendererName = !string.IsNullOrEmpty(customRendererName) ? customRendererName : rendererName;
 
-        RaiseOnLogOutput(
-            EnumSet.LogType.Debug,
-            jsonElement.GetRawText());
+        LogMessages.Trace(_logger, $"SetRendererData -> {effectiveRendererName}", jsonElement.GetRawText());
 
         AuthorBadgesData authorBadgesData = ParseAuthorBadges(jsonElement);
         MessageData messageData = ParseMessageData(jsonElement);
@@ -1405,7 +1545,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private static string GetAuthorPhoto(JsonElement? jsonElement)
+    private string GetAuthorPhoto(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1453,7 +1593,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private static string GetTimestampUsec(JsonElement? jsonElement)
+    private string GetTimestampUsec(JsonElement? jsonElement)
     {
         string output = string.Empty;
 
@@ -1591,7 +1731,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>字串</returns>
-    private static string GetThumbnailUrl(JsonElement? jsonElement)
+    private string GetThumbnailUrl(JsonElement? jsonElement)
     {
         string output = string.Empty;
 

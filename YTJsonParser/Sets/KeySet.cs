@@ -57,6 +57,36 @@ public class KeySet
     /// </summary>
     public const string ChatPinned = "ChatPinned";
 
+    /// <summary>
+    /// 留言已被刪除
+    /// </summary>
+    public const string ChatMessageDeleted = "ChatMessageDeleted";
+
+    /// <summary>
+    /// 使用者已被封鎖
+    /// </summary>
+    public const string ChatUserBanned = "ChatUserBanned";
+
+    /// <summary>
+    /// 投票
+    /// </summary>
+    public const string ChatPoll = "ChatPoll";
+
+    /// <summary>
+    /// 禮物
+    /// </summary>
+    public const string ChatGift = "ChatGift";
+
+    /// <summary>
+    /// 捐款／購買
+    /// </summary>
+    public const string ChatDonation = "ChatDonation";
+
+    /// <summary>
+    /// 版主／自動版主訊息
+    /// </summary>
+    public const string ChatModeration = "ChatModeration";
+
     #endregion
 
     #region 訊息內關鍵字

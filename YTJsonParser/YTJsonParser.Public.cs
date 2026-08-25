@@ -1,11 +1,9 @@
-﻿using AngleSharp.Dom;
+using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Sets;
-using Rubujo.YouTube.Utility.Utils;
 using System.Net;
-using System.Runtime.Versioning;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -24,18 +22,11 @@ public partial class YTJsonParser
     public async Task<string> GetLatestStreamingVideoIDAsync(string channelID)
     {
         string videoID = string.Empty,
-               //url = $"{StringSet.Origin}/embed/live_stream?channel={channelID}",
-               // 2023/12/15 改用其它方式取得最新直播的影片。
                url = $"{StringSet.Origin}/channel/{channelID}/live";
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         SetHttpRequestMessageHeader(httpRequestMessage);
-
-        if (SharedHttpClient == null)
-        {
-            Init();
-        }
 
         HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
 
@@ -43,9 +34,7 @@ public partial class YTJsonParser
 
         if (string.IsNullOrEmpty(htmlContent))
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.GetLatestStreamingVideoID()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
+            LogMessages.Error(_logger, nameof(GetLatestStreamingVideoIDAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
             return videoID;
         }
@@ -78,15 +67,11 @@ public partial class YTJsonParser
         }
         else
         {
-            string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
-                $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
-                $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
-                $"接收到的內容：{Environment.NewLine}" +
-                $"{htmlContent}{Environment.NewLine}";
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                errorMessage);
+            LogMessages.HttpError(
+                _logger,
+                nameof(GetLatestStreamingVideoIDAsync),
+                httpResponseMessage?.StatusCode.ToString(),
+                htmlContent);
         }
 
         return videoID;
@@ -96,7 +81,6 @@ public partial class YTJsonParser
     /// 透過 YouTube 影片的 ID 值取得該影片的標題
     /// </summary>
     /// <param name="videoID">字串，影片 ID 值</param>
-    /// <param name="cookies">字串，Cookies</param>
     /// <returns>Task&lt;string&gt;</returns>
     public async Task<string> GetVideoTitleAsync(string videoID)
     {
@@ -107,20 +91,13 @@ public partial class YTJsonParser
 
         SetHttpRequestMessageHeader(httpRequestMessage);
 
-        if (SharedHttpClient == null)
-        {
-            Init();
-        }
-
         HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
 
         string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
         if (string.IsNullOrEmpty(htmlContent))
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.GetVideoTitle()] 發生錯誤，變數 \"htmlContent\" 為空白或是 null！");
+            LogMessages.Error(_logger, nameof(GetVideoTitleAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
             return videoTitle;
         }
@@ -135,28 +112,30 @@ public partial class YTJsonParser
         }
         else
         {
-            string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
-                $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
-                $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
-                $"接收到的內容：{Environment.NewLine}" +
-                $"{htmlContent}{Environment.NewLine}";
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                errorMessage);
+            LogMessages.HttpError(
+                _logger,
+                nameof(GetVideoTitleAsync),
+                httpResponseMessage?.StatusCode.ToString(),
+                htmlContent);
         }
 
         return videoTitle;
     }
 
     /// <summary>
-    /// 檢查影片是否正在直播中
+    /// 檢查影片是否「目前正在直播中」
+    /// <para>2026/8 更新：改為解析 /watch 頁面內 ytInitialPlayerResponse 的
+    /// microformat.playerMicroformatRenderer.liveBroadcastDetails.isLiveNow（並以
+    /// videoDetails.isLive 為備援）。實測驗證：即使影片曾經是直播（isLiveContent 為 true），
+    /// 只要直播已結束，isLiveNow 就會是 false 並且會多出 endTimestamp 欄位；
+    /// 舊版做法（檢查聊天室頁面是否顯示「聊天室已停用」）無法區分「正在直播」與
+    /// 「已結束但聊天室仍開放的重播」，兩者都會誤判為 true。</para>
     /// </summary>
     /// <param name="videoID">字串，影片 ID</param>
     /// <returns>Task&lt;bool&gt;</returns>
     public async Task<bool> IsVideoStreamingAsync(string videoID)
     {
-        string url = $"{StringSet.Origin}/live_chat?v={videoID}";
+        string url = $"{StringSet.Origin}/watch?v={videoID}";
 
         HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
@@ -165,20 +144,13 @@ public partial class YTJsonParser
             SetHttpRequestMessageHeader(httpRequestMessage);
         }
 
-        if (SharedHttpClient == null)
-        {
-            Init();
-        }
-
         HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
 
         string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
 
-        if (htmlContent == null)
+        if (string.IsNullOrEmpty(htmlContent))
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                "[YTJsonParser.CheckVideoIsStreamingOrNot()] 發生錯誤，變數 \"htmlContent\" 為 null！");
+            LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
             return false;
         }
@@ -188,109 +160,114 @@ public partial class YTJsonParser
             HtmlParser htmlParser = new();
             IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
             IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
-            IElement targetScriptElement = scriptElements
-                .FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] = "))!;
+            IElement? targetScriptElement = scriptElements
+                .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialPlayerResponse = "));
 
-            string scriptContent = targetScriptElement.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty);
-
-            if (scriptContent.EndsWith(';'))
+            if (targetScriptElement == null)
             {
-                scriptContent = scriptContent[0..^1];
+                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "找不到 \"ytInitialPlayerResponse\"！");
+
+                return false;
             }
 
-            #region 非直播中影片的範例資料
+            // ytInitialPlayerResponse 內可能含有巢狀的大型字串（例如 SVG 圖示），
+            // 單純裁切最後一個 ";" 並不可靠，改用括號配對找出完整且獨立的 JSON 物件。
+            string scriptContent = ExtractBalancedJsonObject(targetScriptElement.InnerHtml);
 
-            /*
-            "contents": {
-                "messageRenderer": {
-                    "text": {
-                        "runs": [
-                            {
-                                "text": "這部直播影片的聊天室已停用。"
-                            }
-                        ]
-                    },
-                    "trackingParams": "CAEQljsiEwj4t4bixZCDAxUZYA8CHZS-A8s="
-                }
-            },
-            */
+            if (string.IsNullOrEmpty(scriptContent))
+            {
+                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "無法從 \"ytInitialPlayerResponse\" 取出完整的 JSON 物件！");
 
-            #endregion
+                return false;
+            }
 
             JsonElement jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
-            JsonElement? jeContents = jeRoot.Get("contents");
-            JsonElement? jeMessageRenderer = jeContents?.Get("messageRenderer");
 
-            return !jeMessageRenderer.HasValue;
+            JsonElement? isLiveNow = jeRoot
+                .Get("microformat")
+                ?.Get("playerMicroformatRenderer")
+                ?.Get("liveBroadcastDetails")
+                ?.Get("isLiveNow");
+
+            if (isLiveNow.HasValue)
+            {
+                return isLiveNow.Value.GetBoolean();
+            }
+
+            // 備援：部分影片可能沒有 microformat.liveBroadcastDetails，改用 videoDetails.isLive。
+            JsonElement? isLive = jeRoot.Get("videoDetails")?.Get("isLive");
+
+            return isLive?.GetBoolean() ?? false;
         }
         else
         {
-            string errorMessage = $"[{DateTime.Now}]（{typeof(HttpClient).Name}）：" +
-                $"連線發生錯誤，錯誤碼：{httpResponseMessage?.StatusCode} " +
-                $"{(httpResponseMessage != null ? $"({(int)(httpResponseMessage.StatusCode)})" : string.Empty)}{Environment.NewLine}" +
-                $"接收到的內容：{Environment.NewLine}" +
-                $"{htmlContent}{Environment.NewLine}";
-
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                errorMessage);
+            LogMessages.HttpError(
+                _logger,
+                nameof(IsVideoStreamingAsync),
+                httpResponseMessage?.StatusCode.ToString(),
+                htmlContent);
         }
 
         return false;
     }
 
     /// <summary>
-    /// 取得 YouTube 網站的 Cookie
+    /// 從文字內找出第一個完整、括號配對正確的 JSON 物件（用於從內嵌 &lt;script&gt; 內容中，
+    /// 安全地取出 JSON 賦值語句右側的物件，即使物件內含有巢狀大型字串也不受影響）
     /// </summary>
-    /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
-    /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
-    /// <returns>字串</returns>
-    [SupportedOSPlatform("windows")]
-    public string GetYouTubeCookie(
-        WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
-        string profileFolderName = "")
+    /// <param name="text">字串</param>
+    /// <returns>字串，找不到時回傳空字串</returns>
+    private static string ExtractBalancedJsonObject(string text)
     {
-        return GetCookie(
-            browserType: browserType,
-            profileFolderName: profileFolderName,
-            hostKey: ".youtube.com");
-    }
+        int start = text.IndexOf('{');
 
-    /// <summary>
-    /// 取得 Cookie
-    /// </summary>
-    /// <param name="browserType">WebBrowserUtil.BrowserType，預設值為 WebBrowserUtil.BrowserType.GoogleChrome</param>
-    /// <param name="profileFolderName">字串，設定檔資料夾名稱，預設值為空白</param>
-    /// <param name="hostKey">字串，主機鍵值，預設值為空白</param>
-    /// <returns>字串</returns>
-    [SupportedOSPlatform("windows")]
-    public string GetCookie(
-        WebBrowserUtil.BrowserType browserType = WebBrowserUtil.BrowserType.GoogleChrome,
-        string profileFolderName = "",
-        string? hostKey = null)
-    {
-        List<WebBrowserUtil.CookieData> listCookie = WebBrowserUtil
-            .GetCookies(
-                browserType,
-                profileFolderName,
-                hostKey);
-
-        if (listCookie.Count <= 0)
+        if (start == -1)
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                $"[YTJsonParser.GetCookie()] 主機鍵值 \"{hostKey}\" 找不到 Cookie。");
+            return string.Empty;
         }
 
-        string errorMessage = WebBrowserUtil.GetErrorMessage();
+        int depth = 0;
+        bool inString = false;
+        bool isEscaped = false;
 
-        if (!string.IsNullOrEmpty(errorMessage))
+        for (int i = start; i < text.Length; i++)
         {
-            RaiseOnLogOutput(
-                EnumSet.LogType.Error,
-                errorMessage);
+            char c = text[i];
+
+            if (inString)
+            {
+                if (isEscaped)
+                {
+                    isEscaped = false;
+                }
+                else if (c == '\\')
+                {
+                    isEscaped = true;
+                }
+                else if (c == '"')
+                {
+                    inString = false;
+                }
+            }
+            else if (c == '"')
+            {
+                inString = true;
+            }
+            else if (c == '{')
+            {
+                depth++;
+            }
+            else if (c == '}')
+            {
+                depth--;
+
+                if (depth == 0)
+                {
+                    return text[start..(i + 1)];
+                }
+            }
         }
 
-        return string.Join(";", listCookie.Select(n => $"{n.Name}={n.Value}"));
+        return string.Empty;
     }
 }

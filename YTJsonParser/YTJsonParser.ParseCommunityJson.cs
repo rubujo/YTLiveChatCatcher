@@ -98,13 +98,16 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>
     /// <returns>Task&lt;List&lt;PostData&gt;&gt;</returns>
-    private async Task<List<PostData>> GetEarlierPostsAsync(YTConfigData ytConfigData)
+    private async Task<List<PostData>> GetEarlierPostsAsync(
+        YTConfigData ytConfigData,
+        CancellationToken cancellationToken = default)
     {
         List<PostData> postDatas = [];
 
         JsonElement jsonElement = await GetJsonElementAsync(
             ytConfigData: ytConfigData,
-            EnumSet.DataType.Community);
+            EnumSet.DataType.Community,
+            cancellationToken);
 
         JsonElement.ArrayEnumerator? onResponseReceivedEndpointsArray =
             GetOnResponseReceivedEndpointsArray(jsonElement: jsonElement);
@@ -212,6 +215,10 @@ public partial class YTJsonParser
 
     /// <summary>
     /// 取得社群的 tab
+    /// <para>2026/8 更新：直接以 /community 網址請求時，YouTube 現在只會在 tabs 內回傳「單一、已選取」的
+    /// 分頁（不再像過去一樣把所有分頁都塞進同一份回應，也不再穩定提供可比對 "/community" 的 tabRenderer.endpoint.
+    /// commandMetadata.webCommandMetadata.url）。已實測驗證：無論頻道是否提供 tabIdentifier，tabs 陣列內
+    /// 只會有這一個分頁，因此改以「已選取」的分頁為優先，找不到時才退回原本的網址比對（保留舊格式的相容性）。</para>
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>JsonElement</returns>
@@ -219,24 +226,41 @@ public partial class YTJsonParser
     {
         JsonElement? tabs = GetTabs(jsonElement);
 
-        if (tabs != null && tabs.HasValue && tabs.Value.ValueKind == JsonValueKind.Array)
+        if (tabs == null || !tabs.HasValue || tabs.Value.ValueKind != JsonValueKind.Array)
         {
-            foreach (JsonElement tab in tabs.Value.EnumerateArray())
-            {
-                JsonElement? url = tab.Get("tabRenderer")
-                    ?.Get("endpoint")
-                    ?.Get("commandMetadata")
-                    ?.Get("webCommandMetadata")
-                    ?.Get("url");
+            return null;
+        }
 
-                if (url != null && url.HasValue && url.Value.GetRawText().Contains("/community"))
-                {
-                    return tab;
-                }
+        JsonElement[] tabArray = [.. tabs.Value.EnumerateArray()];
+
+        // 優先找「已選取」的分頁（目前實測的唯一可靠依據）。
+        foreach (JsonElement tab in tabArray)
+        {
+            JsonElement? selected = tab.Get("tabRenderer")?.Get("selected");
+
+            if (selected.HasValue && selected.Value.ValueKind == JsonValueKind.True)
+            {
+                return tab;
             }
         }
 
-        return null;
+        // 退回舊格式：比對網址是否包含 "/community"。
+        foreach (JsonElement tab in tabArray)
+        {
+            JsonElement? url = tab.Get("tabRenderer")
+                ?.Get("endpoint")
+                ?.Get("commandMetadata")
+                ?.Get("webCommandMetadata")
+                ?.Get("url");
+
+            if (url != null && url.HasValue && url.Value.GetRawText().Contains("/community"))
+            {
+                return tab;
+            }
+        }
+
+        // 最後手段：若整份回應僅有單一分頁，直接視為社群分頁。
+        return tabArray.Length == 1 ? tabArray[0] : null;
     }
 
     /// <summary>

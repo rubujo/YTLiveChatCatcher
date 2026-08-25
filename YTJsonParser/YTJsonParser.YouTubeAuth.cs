@@ -20,7 +20,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="httpRequestMessage">HttpRequestMessage</param>
     /// <param name="ytConfigData">YTConfigData</param>
-    private static void SetHttpRequestMessageHeader(
+    private void SetHttpRequestMessageHeader(
         HttpRequestMessage httpRequestMessage,
         YTConfigData? ytConfigData = null)
     {

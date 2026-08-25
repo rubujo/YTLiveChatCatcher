@@ -23,14 +23,25 @@ public partial class FMain
     private readonly ILogger<FMain> SharedLogger;
 
     /// <summary>
+    /// 共用的 ILogger&lt;YTJsonParser&gt;
+    /// </summary>
+    private readonly ILogger<YTJsonParser> SharedYTJsonParserLogger;
+
+    /// <summary>
     /// 共用的 IHttpClientFactory
     /// </summary>
     private readonly IHttpClientFactory SharedHttpClientFactory;
 
     /// <summary>
     /// 共用的 YTJsonParser
+    /// <para>於 InitLiveChatCather() 內建立（需要等待 SharedHttpClient 就緒），並非在此處以欄位初始設定式建立。</para>
     /// </summary>
-    private readonly YTJsonParser SharedYTJsonParser = new();
+    private YTJsonParser SharedYTJsonParser = null!;
+
+    /// <summary>
+    /// 共用的 CancellationTokenSource（用於取消目前的即時聊天擷取工作）
+    /// </summary>
+    private CancellationTokenSource? SharedFetchCancellationTokenSource;
 
     /// <summary>
     /// 共用的 ToolTip

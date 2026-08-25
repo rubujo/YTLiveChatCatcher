@@ -11,15 +11,16 @@ public static class ModelExtension
     /// 設定 PostData 的資料統一資源標識符
     /// </summary>
     /// <param name="postData">PostData</param>
+    /// <param name="ytJsonParser">YTJsonParser</param>
     /// <returns>Task</returns>
-    public static async Task SetDataUri(this PostData postData)
+    public static async Task SetDataUri(this PostData postData, YTJsonParser ytJsonParser)
     {
         if (string.IsNullOrEmpty(postData.AuthorThumbnailUrl))
         {
             return;
         }
 
-        byte[]? imageBytes = await YTJsonParser.GetImageBytes(postData.AuthorThumbnailUrl);
+        byte[]? imageBytes = await ytJsonParser.GetImageBytes(postData.AuthorThumbnailUrl);
 
         if (imageBytes == null)
         {
@@ -33,8 +34,9 @@ public static class ModelExtension
     /// 設定 AttachmentData 的資料統一資源標識符
     /// </summary>
     /// <param name="attachmentData">AttachmentData</param>
+    /// <param name="ytJsonParser">YTJsonParser</param>
     /// <returns>Task</returns>
-    public static async Task SetDataUri(this AttachmentData attachmentData)
+    public static async Task SetDataUri(this AttachmentData attachmentData, YTJsonParser ytJsonParser)
     {
         if (attachmentData.IsVideo)
         {
@@ -43,7 +45,7 @@ public static class ModelExtension
                 return;
             }
 
-            byte[]? imageBytes = await YTJsonParser.GetImageBytes(attachmentData.VideoData?.ThumbnailUrl);
+            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.VideoData?.ThumbnailUrl);
 
             if (imageBytes == null)
             {
@@ -61,7 +63,7 @@ public static class ModelExtension
 
             attachmentData.PollData?.ChoiceDatas?.ForEach(async (ChoiceData choiceData) =>
             {
-                byte[]? imageBytes = await YTJsonParser.GetImageBytes(choiceData.ImageUrl);
+                byte[]? imageBytes = await ytJsonParser.GetImageBytes(choiceData.ImageUrl);
 
                 if (imageBytes == null)
                 {
@@ -78,7 +80,7 @@ public static class ModelExtension
                 return;
             }
 
-            byte[]? imageBytes = await YTJsonParser.GetImageBytes(attachmentData.Url);
+            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.Url);
 
             if (imageBytes == null)
             {
