@@ -68,6 +68,20 @@ public class RendererData
     public string? BackgroundColor { get; set; }
 
     /// <summary>
+    /// 標頭背景顏色（Hex 色碼）
+    /// <para>僅付費類訊息（例如超級留言／超級貼圖）才會有；一般訊息為 null，代表不適用而非資料缺漏。</para>
+    /// </summary>
+    [JsonPropertyName("headerBackgroundColor")]
+    public string? HeaderBackgroundColor { get; set; }
+
+    /// <summary>
+    /// 排行榜徽章的名次文字（例如 "#1"）
+    /// <para>僅出現在有排行榜徽章的付費類訊息上；沒有排行榜徽章時為 null，代表不適用而非資料缺漏。</para>
+    /// </summary>
+    [JsonPropertyName("leaderboardRank")]
+    public string? LeaderboardRank { get; set; }
+
+    /// <summary>
     /// 時間標記（文字格式）
     /// </summary>
     [JsonPropertyName("timestampText")]

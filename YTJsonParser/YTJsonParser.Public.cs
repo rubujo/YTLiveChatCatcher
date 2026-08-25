@@ -18,108 +18,138 @@ public partial class YTJsonParser
     /// 透過 YouTube 頻道的 ID 值取得該頻道最新的直播影片的影片 ID 值
     /// </summary>
     /// <param name="channelID">字串，頻道的 ID 值</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task&lt;string&gt;</returns>
-    public async Task<string> GetLatestStreamingVideoIDAsync(string channelID)
+    public async Task<string> GetLatestStreamingVideoIDAsync(string channelID, CancellationToken cancellationToken = default)
     {
         string videoID = string.Empty,
                url = $"{StringSet.Origin}/channel/{channelID}/live";
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         SetHttpRequestMessageHeader(httpRequestMessage);
 
-        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+        HttpResponseMessage httpResponseMessage;
 
-        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
-
-        if (string.IsNullOrEmpty(htmlContent))
+        try
         {
-            LogMessages.Error(_logger, nameof(GetLatestStreamingVideoIDAsync), "變數 \"htmlContent\" 為空白或是 null！");
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetLatestStreamingVideoIDAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
 
             return videoID;
         }
 
-        if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
+        using (httpResponseMessage)
         {
-            HtmlParser htmlParser = new();
-            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-            IHtmlCollection<IElement> linkElements = htmlDocument.QuerySelectorAll("link");
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
 
-            foreach (IElement element in linkElements)
+            if (string.IsNullOrEmpty(htmlContent))
             {
-                // 取得該頁面的標準網址。
-                if (element.GetAttribute("rel") == "canonical")
+                LogMessages.Error(_logger, nameof(GetLatestStreamingVideoIDAsync), "變數 \"htmlContent\" 為空白或是 null！");
+
+                return videoID;
+            }
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            {
+                HtmlParser htmlParser = new();
+                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+                IHtmlCollection<IElement> linkElements = htmlDocument.QuerySelectorAll("link");
+
+                foreach (IElement element in linkElements)
                 {
-                    string hrefStr = element.GetAttribute("href")!;
-
-                    MatchCollection matches = RegexVideoID().Matches(hrefStr);
-
-                    foreach (Match match in matches.Cast<Match>())
+                    // 取得該頁面的標準網址。
+                    if (element.GetAttribute("rel") == "canonical")
                     {
-                        if (match.Success && match.Groups.Count >= 2)
+                        string hrefStr = element.GetAttribute("href")!;
+
+                        MatchCollection matches = RegexVideoID().Matches(hrefStr);
+
+                        foreach (Match match in matches.Cast<Match>())
                         {
-                            // 取得 "v=" 之後的內容。
-                            videoID = match.Groups[1].Captures[0].Value;
+                            if (match.Success && match.Groups.Count >= 2)
+                            {
+                                // 取得 "v=" 之後的內容。
+                                videoID = match.Groups[1].Captures[0].Value;
+                            }
                         }
                     }
                 }
             }
-        }
-        else
-        {
-            LogMessages.HttpError(
-                _logger,
-                nameof(GetLatestStreamingVideoIDAsync),
-                httpResponseMessage?.StatusCode.ToString(),
-                htmlContent);
-        }
+            else
+            {
+                LogMessages.HttpError(
+                    _logger,
+                    nameof(GetLatestStreamingVideoIDAsync),
+                    httpResponseMessage.StatusCode.ToString(),
+                    htmlContent);
+            }
 
-        return videoID;
+            return videoID;
+        }
     }
 
     /// <summary>
     /// 透過 YouTube 影片的 ID 值取得該影片的標題
     /// </summary>
     /// <param name="videoID">字串，影片 ID 值</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task&lt;string&gt;</returns>
-    public async Task<string> GetVideoTitleAsync(string videoID)
+    public async Task<string> GetVideoTitleAsync(string videoID, CancellationToken cancellationToken = default)
     {
         string videoTitle = string.Empty,
                url = $"{StringSet.Origin}/watch?v={videoID}";
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         SetHttpRequestMessageHeader(httpRequestMessage);
 
-        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+        HttpResponseMessage httpResponseMessage;
 
-        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
-
-        if (string.IsNullOrEmpty(htmlContent))
+        try
         {
-            LogMessages.Error(_logger, nameof(GetVideoTitleAsync), "變數 \"htmlContent\" 為空白或是 null！");
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetVideoTitleAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
 
             return videoTitle;
         }
 
-        if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
+        using (httpResponseMessage)
         {
-            HtmlParser htmlParser = new();
-            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-            IElement titleElement = htmlDocument.QuerySelector("title")!;
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
 
-            videoTitle = titleElement.InnerHtml;
-        }
-        else
-        {
-            LogMessages.HttpError(
-                _logger,
-                nameof(GetVideoTitleAsync),
-                httpResponseMessage?.StatusCode.ToString(),
-                htmlContent);
-        }
+            if (string.IsNullOrEmpty(htmlContent))
+            {
+                LogMessages.Error(_logger, nameof(GetVideoTitleAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
-        return videoTitle;
+                return videoTitle;
+            }
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            {
+                HtmlParser htmlParser = new();
+                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+                IElement titleElement = htmlDocument.QuerySelector("title")!;
+
+                videoTitle = titleElement.InnerHtml;
+            }
+            else
+            {
+                LogMessages.HttpError(
+                    _logger,
+                    nameof(GetVideoTitleAsync),
+                    httpResponseMessage.StatusCode.ToString(),
+                    htmlContent);
+            }
+
+            return videoTitle;
+        }
     }
 
     /// <summary>
@@ -132,94 +162,109 @@ public partial class YTJsonParser
     /// 「已結束但聊天室仍開放的重播」，兩者都會誤判為 true。</para>
     /// </summary>
     /// <param name="videoID">字串，影片 ID</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task&lt;bool&gt;</returns>
-    public async Task<bool> IsVideoStreamingAsync(string videoID)
+    public async Task<bool> IsVideoStreamingAsync(string videoID, CancellationToken cancellationToken = default)
     {
         string url = $"{StringSet.Origin}/watch?v={videoID}";
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         if (!string.IsNullOrEmpty(SharedCookies))
         {
             SetHttpRequestMessageHeader(httpRequestMessage);
         }
 
-        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage);
+        HttpResponseMessage httpResponseMessage;
 
-        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync();
-
-        if (string.IsNullOrEmpty(htmlContent))
+        try
         {
-            LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "變數 \"htmlContent\" 為空白或是 null！");
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
 
             return false;
         }
 
-        if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
+        using (httpResponseMessage)
         {
-            HtmlParser htmlParser = new();
-            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-            IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
-            IElement? targetScriptElement = scriptElements
-                .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialPlayerResponse = "));
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
 
-            if (targetScriptElement == null)
+            if (string.IsNullOrEmpty(htmlContent))
             {
-                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "找不到 \"ytInitialPlayerResponse\"！");
+                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
                 return false;
             }
 
-            // ytInitialPlayerResponse 內可能含有巢狀的大型字串（例如 SVG 圖示），
-            // 單純裁切最後一個 ";" 並不可靠，改用括號配對找出完整且獨立的 JSON 物件。
-            string scriptContent = ExtractBalancedJsonObject(targetScriptElement.InnerHtml);
-
-            if (string.IsNullOrEmpty(scriptContent))
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
-                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "無法從 \"ytInitialPlayerResponse\" 取出完整的 JSON 物件！");
+                HtmlParser htmlParser = new();
+                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+                IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+                IElement? targetScriptElement = scriptElements
+                    .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialPlayerResponse = "));
 
-                return false;
+                if (targetScriptElement == null)
+                {
+                    LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "找不到 \"ytInitialPlayerResponse\"！");
+
+                    return false;
+                }
+
+                // ytInitialPlayerResponse 內可能含有巢狀的大型字串（例如 SVG 圖示），
+                // 單純裁切最後一個 ";" 並不可靠，改用括號配對找出完整且獨立的 JSON 物件。
+                string scriptContent = ExtractBalancedJsonObject(targetScriptElement.InnerHtml);
+
+                if (string.IsNullOrEmpty(scriptContent))
+                {
+                    LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), "無法從 \"ytInitialPlayerResponse\" 取出完整的 JSON 物件！");
+
+                    return false;
+                }
+
+                JsonElement jeRoot;
+
+                try
+                {
+                    jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), $"解析 ytInitialPlayerResponse JSON 失敗：{ex.GetExceptionMessage()}");
+
+                    return false;
+                }
+
+                JsonElement? isLiveNow = jeRoot
+                    .Get("microformat")
+                    ?.Get("playerMicroformatRenderer")
+                    ?.Get("liveBroadcastDetails")
+                    ?.Get("isLiveNow");
+
+                if (isLiveNow.HasValue)
+                {
+                    return isLiveNow.Value.GetBoolean();
+                }
+
+                // 備援：部分影片可能沒有 microformat.liveBroadcastDetails，改用 videoDetails.isLive。
+                JsonElement? isLive = jeRoot.Get("videoDetails")?.Get("isLive");
+
+                return isLive?.GetBoolean() ?? false;
+            }
+            else
+            {
+                LogMessages.HttpError(
+                    _logger,
+                    nameof(IsVideoStreamingAsync),
+                    httpResponseMessage.StatusCode.ToString(),
+                    htmlContent);
             }
 
-            JsonElement jeRoot;
-
-            try
-            {
-                jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
-            }
-            catch (JsonException ex)
-            {
-                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), $"解析 ytInitialPlayerResponse JSON 失敗：{ex.GetExceptionMessage()}");
-
-                return false;
-            }
-
-            JsonElement? isLiveNow = jeRoot
-                .Get("microformat")
-                ?.Get("playerMicroformatRenderer")
-                ?.Get("liveBroadcastDetails")
-                ?.Get("isLiveNow");
-
-            if (isLiveNow.HasValue)
-            {
-                return isLiveNow.Value.GetBoolean();
-            }
-
-            // 備援：部分影片可能沒有 microformat.liveBroadcastDetails，改用 videoDetails.isLive。
-            JsonElement? isLive = jeRoot.Get("videoDetails")?.Get("isLive");
-
-            return isLive?.GetBoolean() ?? false;
+            return false;
         }
-        else
-        {
-            LogMessages.HttpError(
-                _logger,
-                nameof(IsVideoStreamingAsync),
-                httpResponseMessage?.StatusCode.ToString(),
-                htmlContent);
-        }
-
-        return false;
     }
 
     /// <summary>

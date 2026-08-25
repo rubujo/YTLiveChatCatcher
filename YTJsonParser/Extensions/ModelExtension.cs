@@ -12,15 +12,16 @@ public static class ModelExtension
     /// </summary>
     /// <param name="postData">PostData</param>
     /// <param name="ytJsonParser">YTJsonParser</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task</returns>
-    public static async Task SetDataUri(this PostData postData, YTJsonParser ytJsonParser)
+    public static async Task SetDataUri(this PostData postData, YTJsonParser ytJsonParser, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(postData.AuthorThumbnailUrl))
         {
             return;
         }
 
-        byte[]? imageBytes = await ytJsonParser.GetImageBytes(postData.AuthorThumbnailUrl);
+        byte[]? imageBytes = await ytJsonParser.GetImageBytes(postData.AuthorThumbnailUrl, cancellationToken);
 
         if (imageBytes == null)
         {
@@ -35,8 +36,9 @@ public static class ModelExtension
     /// </summary>
     /// <param name="attachmentData">AttachmentData</param>
     /// <param name="ytJsonParser">YTJsonParser</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task</returns>
-    public static async Task SetDataUri(this AttachmentData attachmentData, YTJsonParser ytJsonParser)
+    public static async Task SetDataUri(this AttachmentData attachmentData, YTJsonParser ytJsonParser, CancellationToken cancellationToken = default)
     {
         if (attachmentData.IsVideo)
         {
@@ -45,7 +47,7 @@ public static class ModelExtension
                 return;
             }
 
-            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.VideoData?.ThumbnailUrl);
+            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.VideoData?.ThumbnailUrl, cancellationToken);
 
             if (imageBytes == null)
             {
@@ -65,7 +67,7 @@ public static class ModelExtension
             // 圖片真正下載完成，例外也沒人接），改用 Task.WhenAll 讓呼叫端能確實等到全部選項圖片下載完成。
             await Task.WhenAll(attachmentData.PollData.ChoiceDatas.Select(async choiceData =>
             {
-                byte[]? imageBytes = await ytJsonParser.GetImageBytes(choiceData.ImageUrl);
+                byte[]? imageBytes = await ytJsonParser.GetImageBytes(choiceData.ImageUrl, cancellationToken);
 
                 if (imageBytes != null)
                 {
@@ -80,7 +82,7 @@ public static class ModelExtension
                 return;
             }
 
-            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.Url);
+            byte[]? imageBytes = await ytJsonParser.GetImageBytes(attachmentData.Url, cancellationToken);
 
             if (imageBytes == null)
             {

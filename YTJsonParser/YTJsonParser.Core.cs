@@ -1,10 +1,12 @@
 using AngleSharp.Dom;
 using AngleSharp.Html.Dom;
 using AngleSharp.Html.Parser;
+using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Sets;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -55,7 +57,7 @@ public partial class YTJsonParser
                 break;
         }
 
-        HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
 
         if (!string.IsNullOrEmpty(SharedCookies))
         {
@@ -76,168 +78,195 @@ public partial class YTJsonParser
 
         LogMessages.Debug(_logger, nameof(GetYTConfigDataAsync), GetRedactedRequestSummary(httpRequestMessage));
 
-        HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+        HttpResponseMessage httpResponseMessage;
 
-        LogMessages.Debug(_logger, nameof(GetYTConfigDataAsync), httpResponseMessage.ToString());
-
-        string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
-
-        if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+        try
         {
-            if (string.IsNullOrEmpty(htmlContent))
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
+
+            return initialData;
+        }
+
+        using (httpResponseMessage)
+        {
+            LogMessages.Debug(_logger, nameof(GetYTConfigDataAsync), httpResponseMessage.ToString());
+
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
-                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "變數 \"htmlContent\" 為空白或是 null！");
+                if (string.IsNullOrEmpty(htmlContent))
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "變數 \"htmlContent\" 為空白或是 null！");
 
-                return initialData;
-            }
+                    return initialData;
+                }
 
-            HtmlParser htmlParser = new();
-            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-            IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
-            IElement elementYtCfg = scriptElements
-                .FirstOrDefault(n => n.InnerHtml.Contains("ytcfg.set({"))!;
+                HtmlParser htmlParser = new();
+                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+                IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+                IElement? elementYtCfg = scriptElements
+                    .FirstOrDefault(n => n.InnerHtml.Contains("ytcfg.set({"));
 
-            if (elementYtCfg == null)
-            {
-                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "變數 \"elementYtCfg\" 為 null！");
+                if (elementYtCfg == null)
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "變數 \"elementYtCfg\" 為 null！");
 
-                return initialData;
-            }
+                    return initialData;
+                }
 
-            // TODO: 2023/6/13 考慮是否待修改。
-            // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v2.0.3/yt_chat.go#L147
-            // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
-            string jsonYtCfg = elementYtCfg.InnerHtml;
+                // TODO: 2023/6/13 考慮是否待修改。
+                // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v2.0.3/yt_chat.go#L147
+                // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
+                string jsonYtCfg = elementYtCfg.InnerHtml;
 
-            switch (dataType)
-            {
-                default:
-                case EnumSet.DataType.LiveChat:
-                    {
-                        // popout 頁面（直播／重播皆同）一律採此格式擷取。
-                        jsonYtCfg = jsonYtCfg.Replace("ytcfg.set(", string.Empty);
-
-                        int endTokenIndex = jsonYtCfg.LastIndexOf("});");
-
-                        // 要補回最後一個 "}"。
-                        jsonYtCfg = jsonYtCfg[..(endTokenIndex + 1)];
-
-                        break;
-                    }
-                case EnumSet.DataType.Community:
-                    // 使用正則表達式抓取 ytcfg.set({ ... }) 括號內的 JSON。
-                    Match match = Regex.Match(jsonYtCfg, @"ytcfg\.set\s*\(\s*({.*?})\s*\)\s*;");
-
-                    if (match.Success)
-                    {
-                        jsonYtCfg = match.Groups[1].Value;
-                    }
-                    else
-                    {
-                        // 如果正則失敗，至少也要檢查 IndexOf 是否抓到有效值。
-                        int start = jsonYtCfg.IndexOf('{');
-                        int end = jsonYtCfg.LastIndexOf('}');
-
-                        if (start != -1 && end != -1)
+                switch (dataType)
+                {
+                    default:
+                    case EnumSet.DataType.LiveChat:
                         {
-                            jsonYtCfg = jsonYtCfg.Substring(start, end - start + 1);
+                            // popout 頁面（直播／重播皆同）一律採此格式擷取。
+                            jsonYtCfg = jsonYtCfg.Replace("ytcfg.set(", string.Empty);
+
+                            int endTokenIndex = jsonYtCfg.LastIndexOf("});");
+
+                            // 要補回最後一個 "}"。
+                            jsonYtCfg = jsonYtCfg[..(endTokenIndex + 1)];
+
+                            break;
+                        }
+                    case EnumSet.DataType.Community:
+                        // 使用正則表達式抓取 ytcfg.set({ ... }) 括號內的 JSON。
+                        Match match = RegexYtCfgCommunity().Match(jsonYtCfg);
+
+                        if (match.Success)
+                        {
+                            jsonYtCfg = match.Groups[1].Value;
                         }
                         else
                         {
-                            LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法解析 ytcfg JSON 結構。");
+                            // 如果正則失敗，至少也要檢查 IndexOf 是否抓到有效值。
+                            int start = jsonYtCfg.IndexOf('{');
+                            int end = jsonYtCfg.LastIndexOf('}');
 
-                            return initialData;
+                            if (start != -1 && end != -1)
+                            {
+                                jsonYtCfg = jsonYtCfg.Substring(start, end - start + 1);
+                            }
+                            else
+                            {
+                                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法解析 ytcfg JSON 結構。");
+
+                                return initialData;
+                            }
                         }
-                    }
 
-                    break;
-            }
+                        break;
+                }
 
-            JsonElement jeYtCfg;
+                JsonElement jeYtCfg;
 
-            try
-            {
-                jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
-            }
-            catch (JsonException ex)
-            {
-                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytcfg JSON 失敗：{ex.GetExceptionMessage()}");
+                try
+                {
+                    jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytcfg JSON 失敗：{ex.GetExceptionMessage()}");
 
-                return initialData;
-            }
+                    return initialData;
+                }
 
-            initialData.YTConfigData = ParseYtCfg(jeYtCfg);
+                initialData.YTConfigData = ParseYtCfg(jeYtCfg);
 
-            // 套用設定的語系。
-            if (hasRegionData)
-            {
-                initialData.YTConfigData.Gl = regionData?.Gl;
-                initialData.YTConfigData.Hl = regionData?.Hl;
-                initialData.YTConfigData.TimeZone = regionData?.TimeZone;
-            }
+                // 套用設定的語系。
+                if (hasRegionData)
+                {
+                    initialData.YTConfigData.Gl = regionData?.Gl;
+                    initialData.YTConfigData.Hl = regionData?.Hl;
+                    initialData.YTConfigData.TimeZone = regionData?.TimeZone;
+                }
 
-            LogMessages.Trace(_logger, nameof(GetYTConfigDataAsync), jeYtCfg.GetRawText());
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    LogMessages.Trace(
+                        _logger,
+                        nameof(GetYTConfigDataAsync),
+                        RedactJsonProperty(jeYtCfg.GetRawText(), "ID_TOKEN", "SESSION_INDEX", "DATASYNC_ID", "DELEGATED_SESSION_ID"));
+                }
 
-            IElement elementYtInitialData = dataType switch
-            {
-                EnumSet.DataType.Community => scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialData ="))!,
-                _ => scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] ="))!,
-            };
+                IElement? elementYtInitialData = dataType switch
+                {
+                    EnumSet.DataType.Community => scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialData =")),
+                    _ => scriptElements.FirstOrDefault(n => n.InnerHtml.Contains("window[\"ytInitialData\"] =")),
+                };
 
-            string jsonYtInitialData = dataType switch
-            {
-                EnumSet.DataType.Community => elementYtInitialData.InnerHtml.Replace("var ytInitialData = ", string.Empty),
-                _ => elementYtInitialData.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty),
-            };
+                if (elementYtInitialData == null)
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "變數 \"elementYtInitialData\" 為 null！");
 
-            if (jsonYtInitialData.EndsWith(';'))
-            {
-                jsonYtInitialData = jsonYtInitialData[0..^1];
-            }
+                    return initialData;
+                }
 
-            JsonElement jeYtInitialData;
+                string jsonYtInitialData = dataType switch
+                {
+                    EnumSet.DataType.Community => elementYtInitialData.InnerHtml.Replace("var ytInitialData = ", string.Empty),
+                    _ => elementYtInitialData.InnerHtml.Replace("window[\"ytInitialData\"] = ", string.Empty),
+                };
 
-            try
-            {
-                jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
-            }
-            catch (JsonException ex)
-            {
-                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytInitialData JSON 失敗：{ex.GetExceptionMessage()}");
+                if (jsonYtInitialData.EndsWith(';'))
+                {
+                    jsonYtInitialData = jsonYtInitialData[0..^1];
+                }
 
-                return initialData;
-            }
+                JsonElement jeYtInitialData;
 
-            switch (dataType)
-            {
-                default:
-                case EnumSet.DataType.LiveChat:
-                    {
-                        // 2026/8 更新：popout 頁面（/live_chat?is_popout=1&v=）在直播與重播下，
-                        // 皆直接於 contents.liveChatRenderer 提供 continuation 與初始訊息，
-                        // 不再需要額外的中繼請求（該中繼請求已於 2025/10 API 變更後失效）。
-                        // 已實測驗證：直播與重播兩種情境皆可經由 ParseStreamingContinuation／ParseActions 取得資料。
-                        string[] continuationData = ParseStreamingContinuation(jeYtInitialData, liveChatOptions ?? new LiveChatStreamOptions());
+                try
+                {
+                    jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytInitialData JSON 失敗：{ex.GetExceptionMessage()}");
 
-                        initialData.YTConfigData.Continuation = continuationData[0];
-                        initialData.Messages = ParseActions(jeYtInitialData);
+                    return initialData;
+                }
 
-                        if (string.IsNullOrEmpty(initialData.YTConfigData.Continuation))
+                switch (dataType)
+                {
+                    default:
+                    case EnumSet.DataType.LiveChat:
                         {
-                            LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法從 ytInitialData 取得 continuation 權杖。");
+                            // 2026/8 更新：popout 頁面（/live_chat?is_popout=1&v=）在直播與重播下，
+                            // 皆直接於 contents.liveChatRenderer 提供 continuation 與初始訊息，
+                            // 不再需要額外的中繼請求（該中繼請求已於 2025/10 API 變更後失效）。
+                            // 已實測驗證：直播與重播兩種情境皆可經由 ParseStreamingContinuation／ParseActions 取得資料。
+                            string[] continuationData = ParseStreamingContinuation(jeYtInitialData, liveChatOptions ?? new LiveChatStreamOptions());
+
+                            initialData.YTConfigData.Continuation = continuationData[0];
+                            initialData.Messages = ParseActions(jeYtInitialData);
+
+                            if (string.IsNullOrEmpty(initialData.YTConfigData.Continuation))
+                            {
+                                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法從 ytInitialData 取得 continuation 權杖。");
+                            }
                         }
-                    }
 
-                    break;
-                case EnumSet.DataType.Community:
-                    initialData.Posts = GetInitialPosts(jeYtInitialData, initialData.YTConfigData);
+                        break;
+                    case EnumSet.DataType.Community:
+                        initialData.Posts = GetInitialPosts(jeYtInitialData, initialData.YTConfigData);
 
-                    break;
+                        break;
+                }
             }
-        }
-        else
-        {
-            LogMessages.HttpError(_logger, nameof(GetYTConfigDataAsync), httpResponseMessage.StatusCode.ToString(), htmlContent);
+            else
+            {
+                LogMessages.HttpError(_logger, nameof(GetYTConfigDataAsync), httpResponseMessage.StatusCode.ToString(), htmlContent);
+            }
         }
 
         return initialData;
@@ -303,61 +332,111 @@ public partial class YTJsonParser
 
             string jsonContent = GetRequestPayloadData(ytConfigData);
 
-            LogMessages.Trace(_logger, nameof(GetJsonElementAsync), jsonContent);
-
-            HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
-
-            if (!string.IsNullOrEmpty(SharedCookies))
+            if (_logger.IsEnabled(LogLevel.Trace))
             {
-                SetHttpRequestMessageHeader(httpRequestMessage, ytConfigData);
+                LogMessages.Trace(_logger, nameof(GetJsonElementAsync), RedactJsonProperty(jsonContent, "visitorData"));
             }
 
-            // 套用設定的語系。
-            if (hasRegionData)
+            // 對 HTTP 429（限速）最多做一次禮貌重試，遵循伺服器回應的 Retry-After（沒有就用保守預設值）；
+            // 重試後仍失敗才照原本邏輯記錄並回傳預設值，讓串流自然結束，不做無限重試／指數退避。
+            const int maxAttempts = 2;
+
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                httpRequestMessage.Headers.AcceptLanguage.Clear();
-                httpRequestMessage.Headers.AcceptLanguage.TryParseAdd(regionData?.AcceptLanguage);
-            }
+                using HttpRequestMessage httpRequestMessage = new(HttpMethod.Post, url);
 
-            HttpContent httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+                if (!string.IsNullOrEmpty(SharedCookies))
+                {
+                    SetHttpRequestMessageHeader(httpRequestMessage, ytConfigData);
+                }
 
-            httpRequestMessage.Content = httpContent;
+                // 套用設定的語系。
+                if (hasRegionData)
+                {
+                    httpRequestMessage.Headers.AcceptLanguage.Clear();
+                    httpRequestMessage.Headers.AcceptLanguage.TryParseAdd(regionData?.AcceptLanguage);
+                }
 
-            LogMessages.Debug(_logger, nameof(GetJsonElementAsync), GetRedactedRequestSummary(httpRequestMessage));
+                httpRequestMessage.Content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+                LogMessages.Debug(_logger, nameof(GetJsonElementAsync), GetRedactedRequestSummary(httpRequestMessage));
 
-            LogMessages.Debug(_logger, nameof(GetJsonElementAsync), httpResponseMessage.ToString());
+                HttpResponseMessage httpResponseMessage;
 
-            string? receivedJsonContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
-
-            if (string.IsNullOrEmpty(receivedJsonContent))
-            {
-                LogMessages.Error(_logger, nameof(GetJsonElementAsync), "變數 \"receivedJsonContent\" 為空白或是 null！");
-
-                return jsonElement;
-            }
-
-            if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
-            {
                 try
                 {
-                    jsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
+                    httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
                 }
-                catch (JsonException ex)
+                catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    LogMessages.Error(_logger, nameof(GetJsonElementAsync), $"解析回應 JSON 失敗：{ex.GetExceptionMessage()}");
+                    LogMessages.Error(_logger, nameof(GetJsonElementAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
 
                     return jsonElement;
                 }
-            }
-            else
-            {
-                LogMessages.HttpError(
-                    _logger,
-                    nameof(GetJsonElementAsync),
-                    httpResponseMessage?.StatusCode.ToString(),
-                    receivedJsonContent);
+
+                using (httpResponseMessage)
+                {
+                    LogMessages.Debug(_logger, nameof(GetJsonElementAsync), httpResponseMessage.ToString());
+
+                    if (httpResponseMessage.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxAttempts)
+                    {
+                        TimeSpan retryAfter = TimeSpan.FromSeconds(10);
+
+                        RetryConditionHeaderValue? retryAfterHeader = httpResponseMessage.Headers.RetryAfter;
+
+                        if (retryAfterHeader?.Delta is { } delta)
+                        {
+                            retryAfter = delta;
+                        }
+                        else if (retryAfterHeader?.Date is { } date && date - DateTimeOffset.Now is { } untilDate && untilDate > TimeSpan.Zero)
+                        {
+                            retryAfter = untilDate;
+                        }
+
+                        LogMessages.Warning(
+                            _logger,
+                            nameof(GetJsonElementAsync),
+                            $"收到 HTTP 429（Too Many Requests），將於 {retryAfter.TotalSeconds:0} 秒後重試一次。");
+
+                        if (!await DelayOrBreakAsync((int)retryAfter.TotalMilliseconds, cancellationToken))
+                        {
+                            return jsonElement;
+                        }
+
+                        continue;
+                    }
+
+                    string? receivedJsonContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+
+                    if (string.IsNullOrEmpty(receivedJsonContent))
+                    {
+                        LogMessages.Error(_logger, nameof(GetJsonElementAsync), "變數 \"receivedJsonContent\" 為空白或是 null！");
+
+                        return jsonElement;
+                    }
+
+                    if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+                    {
+                        try
+                        {
+                            jsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
+                        }
+                        catch (JsonException ex)
+                        {
+                            LogMessages.Error(_logger, nameof(GetJsonElementAsync), $"解析回應 JSON 失敗：{ex.GetExceptionMessage()}");
+                        }
+                    }
+                    else
+                    {
+                        LogMessages.HttpError(
+                            _logger,
+                            nameof(GetJsonElementAsync),
+                            httpResponseMessage.StatusCode.ToString(),
+                            receivedJsonContent);
+                    }
+
+                    return jsonElement;
+                }
             }
         }
 
@@ -405,4 +484,11 @@ public partial class YTJsonParser
 
         return JsonSerializer.Serialize(requestPayloadData);
     }
+
+    /// <summary>
+    /// 正規表示式（社群頁面的 ytcfg.set({ ... }) 括號內的 JSON）
+    /// </summary>
+    /// <returns>Regex</returns>
+    [GeneratedRegex(@"ytcfg\.set\s*\(\s*({.*?})\s*\)\s*;")]
+    private static partial Regex RegexYtCfgCommunity();
 }

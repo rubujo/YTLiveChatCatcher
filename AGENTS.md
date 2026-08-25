@@ -73,12 +73,12 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 
 ## 已確認支援的 LiveChat 元素種類（2026/8 實測）
 
-`YTJsonParser.ParseLiveChatJson.cs` 目前會解析：一般留言、超級留言、超級貼圖、加入／升級／里程碑會員、贈送會員（`liveChatSponsorshipsGiftPurchaseAnnouncementRenderer`）、接收會員贈送、新版個別小禮物（`giftMessageViewModel`，ViewModel 結構）、置頂／導向橫幅、跑馬燈（ticker，會取出內嵌的完整原始 Renderer）、捐款／購買／版主／自動版主訊息、創作者投票（`showLiveChatActionPanelAction` -> `pollRenderer`）、留言刪除（`removeChatItemAction`）、使用者被封鎖（`removeChatItemByAuthorAction`）、留言被取代／修改（`replaceChatItemAction`，例如超級留言淡出後改為較小樣式）。已於多支真實直播（VTuber、遊戲台、新聞台）上實測驗證。**注意**：判斷「是否已結束」請一律用 `IsVideoStreamingAsync` 或直接查 `liveBroadcastDetails.isLiveNow`，不要只憑「有 Top chat／Live chat 篩選選單」判斷（長時間常態直播與已結束重播都可能同時有這個選單）。「重播」情境目前驗證覆蓋範圍見下方「已知技術債」。
+`YTJsonParser.ParseLiveChatJson.cs` 目前會解析：一般留言、超級留言、超級貼圖、加入／升級／里程碑會員、贈送會員（`liveChatSponsorshipsGiftPurchaseAnnouncementRenderer`）、接收會員贈送、新版個別小禮物（`giftMessageViewModel`，ViewModel 結構）、置頂／導向橫幅（`addBannerToLiveChatCommand` -> `bannerRenderer`，2026/8 已對真實直播驗證）、跑馬燈（ticker，會取出內嵌的完整原始 Renderer）、捐款／購買／版主／自動版主訊息、創作者投票（`showLiveChatActionPanelAction` -> `pollRenderer`）、留言刪除（`removeChatItemAction`）、使用者被封鎖（`removeChatItemByAuthorAction`）、留言被取代／修改（`replaceChatItemAction`，例如超級留言淡出後改為較小樣式）、超級留言／貼圖的排行榜徽章（`leaderboardBadge`，2026/8 新發現，掛在訊息上而非獨立 action，解析出的名次文字對應 `RendererData.LeaderboardRank`）。已於多支真實直播（VTuber、遊戲台、新聞台）上實測驗證。**注意**：判斷「是否已結束」請一律用 `IsVideoStreamingAsync` 或直接查 `liveBroadcastDetails.isLiveNow`，不要只憑「有 Top chat／Live chat 篩選選單」判斷（長時間常態直播與已結束重播都可能同時有這個選單）。「重播」情境目前驗證覆蓋範圍見下方「已知技術債」。
 
-尚未實作、且**尚未在真實資料中觀察到具體內容**，僅在頁面內的型別註冊清單看到名稱、須等實際觀察到再補上解析的項目：
+尚未實作的項目：
 
-- `creatorHeartViewModel`：疑似「創作者已 Heart 該留言」的裝飾標記（可能附加在既有訊息上，而非獨立的 action），尚未在實測中捕捉到實際觸發的 JSON 內容。
-- `pointsButton` / `liveViewerLeaderboardChatEntryPointViewModel`（"Top fans" 觀眾排行榜進入點）：這是聊天室**標頭**的靜態導覽按鈕（點擊會開啟 `ENGAGEMENT_PANEL_SURFACE_LIVE_CHAT` 面板），不是逐則訊息的 action，本身沒有「訊息內容」可解析，不在 `ParseActions`／`ParseRenderer` 的處理範圍內。
+- `creatorHeartViewModel`：2026/8 已在真實資料中觀察到，結構掛在 `liveChatPaidMessageRenderer.creatorHeartButton.creatorHeartViewModel` 底下（如先前猜測，附加在既有超級留言訊息上而非獨立 action）。但目前只確認得到「這則訊息具備愛心按鈕」的靜態定義（`heartedIcon`／`unheartedIcon`／`heartedHoverText` 等），抓不到「這則訊息現在是否已被創作者比愛心」這個動態狀態——推測是由另一個尚未觀察到的後續 action 更新，且這個靜態定義幾乎每則超級留言都有，本身沒有區分度，因此**刻意不實作**。之後若要補上，重點是先找出「創作者按下愛心」那個瞬間對應的 action 種類與欄位。
+- `pointsButton` / `liveViewerLeaderboardChatEntryPointViewModel`（"Top fans" 觀眾排行榜進入點）：這是聊天室**標頭**的靜態導覽按鈕（點擊會開啟 `ENGAGEMENT_PANEL_SURFACE_LIVE_CHAT` 面板），不是逐則訊息的 action，本身沒有「訊息內容」可解析，不在 `ParseActions`／`ParseRenderer` 的處理範圍內（跟上面 `leaderboardBadge` 這個掛在個別訊息上的排行榜徽章是兩回事，不要混淆）。
 
 ## 社群貼文分頁尋找機制（`GetCommunityTab`，2026/8 修正）
 

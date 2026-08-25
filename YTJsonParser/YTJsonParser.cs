@@ -151,7 +151,7 @@ public partial class YTJsonParser : IDisposable
     {
         options ??= new CommunityPostStreamOptions();
 
-        string channelID = await YouTubeUrlUtil.GetYouTubeChannelID(channelUrlOrID);
+        string channelID = await YouTubeUrlUtil.GetYouTubeChannelID(channelUrlOrID, cancellationToken);
 
         InitialData initialData = await GetYTConfigDataAsync(
             channelID,

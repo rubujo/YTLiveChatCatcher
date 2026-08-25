@@ -45,30 +45,34 @@ public partial class YTJsonParser
     /// 取得圖片的 byte[]
     /// </summary>
     /// <param name="url">字串，圖片的網址</param>
-    /// <returns>Task&lt;byte[]&gt;</returns>
-    public async Task<byte[]?> GetImageBytes(string? url)
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
+    /// <returns>Task&lt;byte[]?&gt;，找不到或下載失敗時為 null</returns>
+    public async Task<byte[]?> GetImageBytes(string? url, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(url) || SharedHttpClient == null)
         {
             return null;
         }
 
-        byte[] imageBytes = await BetterCacheManager.GetCachableData(url, async () =>
+        try
         {
-            try
+            // 這裡刻意不在快取的 callback 內攔截例外——BetterCacheManager 在 callback 拋出例外時
+            // 會自動移除該筆快取再重新拋出，避免下載失敗被誤記成「成功」快取 10 分鐘，
+            // 導致網路短暫斷線恢復後還要等快取過期才會重新嘗試下載。
+            byte[] imageBytes = await BetterCacheManager.GetCachableData(url, async () =>
             {
-                using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url);
+                using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url, cancellationToken);
 
-                return await httpResponseMessage.Content.ReadAsByteArrayAsync();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.GetExceptionMessage());
+                return await httpResponseMessage.Content.ReadAsByteArrayAsync(cancellationToken);
+            }, 10);
 
-                return [];
-            }
-        }, 10);
+            return imageBytes.Length == 0 ? null : imageBytes;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetImageBytes), ex.GetExceptionMessage());
 
-        return imageBytes.Length == 0 ? null : imageBytes;
+            return null;
+        }
     }
 }

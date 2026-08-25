@@ -22,6 +22,7 @@ internal static class ImageDataUtil
     /// <param name="url">字串，影像檔的網址</param>
     /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片（決定失敗時佔位圖的尺寸）</param>
     /// <param name="entityDisplayName">字串，用於錯誤訊息內的實體名稱（例如「會員徽章」）</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
     /// <returns>Task&lt;(IImage Image, string ErrorMessage)&gt;</returns>
     internal static async Task<(IImage Image, string ErrorMessage)> DownloadOrPlaceholderAsync(
         HttpClient httpClient,
@@ -29,53 +30,64 @@ internal static class ImageDataUtil
         string? displayIdentifier,
         string url,
         bool isFetchLargePicture,
-        string entityDisplayName)
+        string entityDisplayName,
+        CancellationToken cancellationToken = default)
     {
-        string errorMessage = string.Empty;
-
-        IImage image = await BetterCacheManager.GetCachableData(cacheKey, async () =>
+        try
         {
-            try
+            // 這裡刻意不在快取的 callback 內攔截例外——BetterCacheManager 在 callback 拋出例外時
+            // 會自動移除該筆快取再重新拋出，避免下載失敗被誤記成「成功」快取 10 分鐘，
+            // 導致網路短暫斷線恢復後還要等快取過期才會重新嘗試下載。
+            IImage image = await BetterCacheManager.GetCachableData(cacheKey, async () =>
             {
-                byte[] bytes = await httpClient.GetByteArrayAsync(url);
+                byte[] bytes = await httpClient.GetByteArrayAsync(url, cancellationToken);
 
                 using MemoryStream memoryStream = new(bytes);
 
                 return PlatformImage.FromStream(memoryStream);
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"無法下載{entityDisplayName}「{displayIdentifier}」。{Environment.NewLine}" +
-                    $"{entityDisplayName}的網址：{url}{Environment.NewLine}" +
-                    $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
+            }, 10);
 
-                // isFetchLargePicture 為 true 時建立 48x48、否則建立 24x24 的白色佔位圖。
-                int placeholderSize = isFetchLargePicture ? 48 : 24;
+            return (image, string.Empty);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            string errorMessage = $"無法下載{entityDisplayName}「{displayIdentifier}」。{Environment.NewLine}" +
+                $"{entityDisplayName}的網址：{url}{Environment.NewLine}" +
+                $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
 
-                SkiaBitmapExportContext skiaBitmapExportContext = new(
-                    width: placeholderSize,
-                    height: placeholderSize,
-                    displayScale: 1.0f);
+            return (CreatePlaceholderImage(isFetchLargePicture), errorMessage);
+        }
+    }
 
-                ICanvas canvas = skiaBitmapExportContext.Canvas;
+    /// <summary>
+    /// 建立指定尺寸的白色佔位圖
+    /// </summary>
+    /// <param name="isFetchLargePicture">布林值，true 建立 48x48、false 建立 24x24</param>
+    /// <returns>IImage</returns>
+    private static IImage CreatePlaceholderImage(bool isFetchLargePicture)
+    {
+        int placeholderSize = isFetchLargePicture ? 48 : 24;
 
-                Rect rect = new(
-                    x: 0,
-                    y: 0,
-                    width: skiaBitmapExportContext.Width,
-                    height: skiaBitmapExportContext.Height);
+        SkiaBitmapExportContext skiaBitmapExportContext = new(
+            width: placeholderSize,
+            height: placeholderSize,
+            displayScale: 1.0f);
 
-                canvas.FillColor = Color.FromArgb(Colors.White.ToHex());
-                canvas.FillRectangle(rect);
+        ICanvas canvas = skiaBitmapExportContext.Canvas;
 
-                using MemoryStream memoryStream = new();
+        Rect rect = new(
+            x: 0,
+            y: 0,
+            width: skiaBitmapExportContext.Width,
+            height: skiaBitmapExportContext.Height);
 
-                skiaBitmapExportContext.WriteToStream(memoryStream);
+        canvas.FillColor = Color.FromArgb(Colors.White.ToHex());
+        canvas.FillRectangle(rect);
 
-                return PlatformImage.FromStream(memoryStream);
-            }
-        }, 10);
+        using MemoryStream memoryStream = new();
 
-        return (image, errorMessage);
+        skiaBitmapExportContext.WriteToStream(memoryStream);
+
+        return PlatformImage.FromStream(memoryStream);
     }
 }

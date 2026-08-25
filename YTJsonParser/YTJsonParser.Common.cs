@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Text.RegularExpressions;
 using Rubujo.YouTube.Utility.Sets;
 
 namespace Rubujo.YouTube.Utility;
@@ -44,7 +45,7 @@ public partial class YTJsonParser
             if (!string.IsNullOrEmpty(item.Value))
             {
                 // 先移除再新增。
-                if (httpClient.DefaultRequestHeaders.Contains(item.Key) == true)
+                if (httpClient.DefaultRequestHeaders.Contains(item.Key))
                 {
                     httpClient.DefaultRequestHeaders.Remove(item.Key);
                 }
@@ -83,17 +84,50 @@ public partial class YTJsonParser
         headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// 遮蔽 JSON 字串內指定屬性名稱的值，供記錄使用
+    /// <para>用於 Trace 等級記錄 ytcfg／請求 body 等內容前，先遮蔽 ID_TOKEN、SESSION_INDEX、visitorData
+    /// 等機密欄位，避免這些值被原封不動地寫進 log 檔案。</para>
+    /// </summary>
+    /// <param name="json">字串，JSON 內容</param>
+    /// <param name="propertyNames">字串陣列，要遮蔽的屬性名稱</param>
+    /// <returns>字串</returns>
+    private static string RedactJsonProperty(string json, params string[] propertyNames)
+    {
+        string result = json;
+
+        foreach (string propertyName in propertyNames)
+        {
+            result = Regex.Replace(
+                result,
+                $"(\"{Regex.Escape(propertyName)}\"\\s*:\\s*\")(?:[^\"\\\\]|\\\\.)*(\")",
+                "$1[REDACTED]$2");
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// 取得 Hex 色碼
     /// </summary>
     /// <param name="value">Int64</param>
-    /// <returns>字串</returns>
+    /// <returns>字串，數值超出色彩範圍等異常情況時為空字串</returns>
     private static string GetColorHexCode(long value)
     {
-        string hex = string.Format("{0:X}", value);
+        try
+        {
+            string hex = string.Format("{0:X}", value);
 
-        int integer = Convert.ToInt32(hex, 16);
+            int integer = Convert.ToInt32(hex, 16);
 
-        return ColorTranslator.ToHtml(Color.FromArgb(integer));
+            return ColorTranslator.ToHtml(Color.FromArgb(integer));
+        }
+        catch (Exception)
+        {
+            // 此方法為 static，呼叫鏈上有多處同為 static、拿不到 _logger 的情境，
+            // 比照同檔案其餘 static 解析輔助方法遇錯靜默回傳空字串的慣例，避免單一則訊息的
+            // 顏色值異常就讓整批 ParseActions 中斷。
+            return string.Empty;
+        }
     }
 
     /// <summary>

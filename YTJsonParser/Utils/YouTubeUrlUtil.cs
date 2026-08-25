@@ -14,8 +14,9 @@ public static partial class YouTubeUrlUtil
     /// 從 YouTube 頻道網址取得頻道 ID 值
     /// </summary>
     /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
-    /// <returns>字串</returns>
-    public static async Task<string> GetYouTubeChannelID(string channelUrl)
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
+    /// <returns>Task&lt;string&gt;</returns>
+    public static async Task<string> GetYouTubeChannelID(string channelUrl, CancellationToken cancellationToken = default)
     {
         string channelID = string.Empty;
 
@@ -27,17 +28,17 @@ public static partial class YouTubeUrlUtil
         else if (channelUrl.Contains($"{StringSet.Origin}/c/"))
         {
             // 自訂網址。
-            channelID = await ParseYouTubeChannelID(channelUrl);
+            channelID = await ParseYouTubeChannelID(channelUrl, cancellationToken);
         }
         else if (channelUrl.Contains($"{StringSet.Origin}/user/"))
         {
             // 舊有使用者名稱網址。
-            channelID = await ParseYouTubeChannelID(channelUrl);
+            channelID = await ParseYouTubeChannelID(channelUrl, cancellationToken);
         }
         else if (channelUrl.Contains('@'))
         {
             // 帳號代碼網址。
-            channelID = await ParseYouTubeChannelID(channelUrl);
+            channelID = await ParseYouTubeChannelID(channelUrl, cancellationToken);
         }
 
         if (string.IsNullOrEmpty(channelID))
@@ -52,21 +53,30 @@ public static partial class YouTubeUrlUtil
     /// 解析 YouTube 頻道網址取得頻道 ID 值
     /// </summary>
     /// <param name="channelUrl">字串，YouTube 頻道的網址</param>
-    /// <returns>Task&lt;string&gt;</returns>
-    public static async Task<string> ParseYouTubeChannelID(string channelUrl)
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
+    /// <returns>Task&lt;string&gt;，解析失敗時為空字串</returns>
+    public static async Task<string> ParseYouTubeChannelID(string channelUrl, CancellationToken cancellationToken = default)
     {
         string channelID = string.Empty;
 
-        IConfiguration configuration = Configuration.Default.WithDefaultLoader();
-        using IBrowsingContext browsingContext = BrowsingContext.New(configuration);
-        using IDocument document = await browsingContext.OpenAsync(channelUrl);
-        IElement? element = document?.Head?.Children
-            .FirstOrDefault(n => n.LocalName == "meta" &&
-                n.GetAttribute("property") == "og:url");
-
-        if (element != null)
+        try
         {
-            channelID = element.GetAttribute("content") ?? string.Empty;
+            IConfiguration configuration = Configuration.Default.WithDefaultLoader();
+            using IBrowsingContext browsingContext = BrowsingContext.New(configuration);
+            using IDocument document = await browsingContext.OpenAsync(channelUrl, cancellationToken);
+            IElement? element = document?.Head?.Children
+                .FirstOrDefault(n => n.LocalName == "meta" &&
+                    n.GetAttribute("property") == "og:url");
+
+            if (element != null)
+            {
+                channelID = element.GetAttribute("content") ?? string.Empty;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // 此類別為靜態、無 logger 可用，比照同檔案其餘解析方法遇錯靜默回傳空字串的慣例。
+            channelID = string.Empty;
         }
 
         if (!string.IsNullOrEmpty(channelID))

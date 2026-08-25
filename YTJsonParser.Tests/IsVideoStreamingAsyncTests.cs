@@ -22,7 +22,7 @@ public class IsVideoStreamingAsyncTests
         using HttpClient httpClient = new(handler);
         using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
 
-        bool actual = await ytJsonParser.IsVideoStreamingAsync("TEST_VIDEO_ID");
+        bool actual = await ytJsonParser.IsVideoStreamingAsync("TEST_VIDEO_ID", TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, actual);
     }
@@ -40,7 +40,7 @@ public class IsVideoStreamingAsyncTests
         using HttpClient httpClient = new(handler);
         using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
 
-        bool actual = await ytJsonParser.IsVideoStreamingAsync("TEST_VIDEO_ID");
+        bool actual = await ytJsonParser.IsVideoStreamingAsync("TEST_VIDEO_ID", TestContext.Current.CancellationToken);
 
         Assert.False(actual);
     }

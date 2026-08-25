@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Models.LiveChat;
@@ -34,9 +35,9 @@ public partial class YTJsonParser
         ytConfigData.APIKey = ytCfgDto.InnertubeApiKey;
         ytConfigData.IDToken = ytCfgDto.IdToken;
         ytConfigData.SessionIndex = ytCfgDto.SessionIndex;
-        ytConfigData.InnetrubeContextClientName = ytCfgDto.InnertubeContextClientName;
-        ytConfigData.InnetrubeContextClientVersion = ytCfgDto.InnertubeContextClientVersion;
-        ytConfigData.InnetrubeClientVersion = ytCfgDto.InnertubeClientVersion;
+        ytConfigData.InnertubeContextClientName = ytCfgDto.InnertubeContextClientName;
+        ytConfigData.InnertubeContextClientVersion = ytCfgDto.InnertubeContextClientVersion;
+        ytConfigData.InnertubeClientVersion = ytCfgDto.InnertubeClientVersion;
         ytConfigData.DataSyncID = ytCfgDto.DataSyncId;
         ytConfigData.DelegatedSessionID = ytCfgDto.DelegatedSessionId;
         ytConfigData.BrowserName = client?.BrowserName;
@@ -428,8 +429,10 @@ public partial class YTJsonParser
             {
                 foreach (JsonElement singleAction in actions)
                 {
-                    // TODO: 2023/5/29 測試如何解析 addBannerToLiveChatCommand。
-                    LogMessages.Trace(_logger, "ParseActions -> singleAction", singleAction.GetRawText());
+                    if (_logger.IsEnabled(LogLevel.Trace))
+                    {
+                        LogMessages.Trace(_logger, "ParseActions -> singleAction", singleAction.GetRawText());
+                    }
 
                     JsonElement? item = singleAction.Get("addChatItemAction")?.Get("item");
 
@@ -841,6 +844,8 @@ public partial class YTJsonParser
         {
             LogMessages.Trace(_logger, "ParseRenderer -> liveChatBannerRenderer", liveChatBannerRenderer.GetRawText());
 
+            // 2026/8 已對真實直播的置頂橫幅（addBannerToLiveChatCommand -> bannerRenderer）驗證過，
+            // 底下的 header/contents 解析路徑與真實 JSON 結構一致。
             // TODO: 2023/5/29 有插入時間順序的問題。
             if (liveChatBannerRenderer.TryGetProperty(
                 "header",
@@ -1176,7 +1181,7 @@ public partial class YTJsonParser
 
                 if (label.HasValue)
                 {
-                    tempText += $":{label?.GetString()}:" ?? string.Empty;
+                    tempText += $":{label?.GetString()}:";
                 }
 
                 // 是第一次購買超級留言或貼圖才會有。
@@ -1190,7 +1195,7 @@ public partial class YTJsonParser
                 if (content.HasValue)
                 {
                     // 手動在前後補一個空白跟 []。
-                    tempText += $" [{content?.GetString()}] " ?? string.Empty;
+                    tempText += $" [{content?.GetString()}] ";
                 }
 
                 stickerData.ID = label.HasValue ? label?.GetString() : string.Empty;
@@ -1198,7 +1203,10 @@ public partial class YTJsonParser
                 stickerData.Text = label.HasValue ? $":{label?.GetString()}:" : string.Empty;
                 stickerData.Label = label.HasValue ? label?.GetString() : string.Empty;
 
-                LogMessages.Trace(_logger, "ParseMessageData -> sticker", sticker?.GetRawText() ?? string.Empty);
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    LogMessages.Trace(_logger, "ParseMessageData -> sticker", sticker?.GetRawText() ?? string.Empty);
+                }
 
                 tempStickers.Add(stickerData);
             }
@@ -1250,7 +1258,10 @@ public partial class YTJsonParser
             }
         }
 
-        LogMessages.Trace(_logger, "ParseMessageData", jsonElement.GetRawText());
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            LogMessages.Trace(_logger, "ParseMessageData", jsonElement.GetRawText());
+        }
 
         if (string.IsNullOrEmpty(tempText))
         {
@@ -1371,13 +1382,19 @@ public partial class YTJsonParser
                             emojiData.IsCustomEmoji = isCustomEmoji?.GetBoolean() ?? false;
                         }
 
-                        LogMessages.Trace(_logger, "ParseRunData -> emoji", emoji?.GetRawText() ?? string.Empty);
+                        if (_logger.IsEnabled(LogLevel.Trace))
+                        {
+                            LogMessages.Trace(_logger, "ParseRunData -> emoji", emoji?.GetRawText() ?? string.Empty);
+                        }
 
                         tempEmojis.Add(emojiData);
                     }
                 }
 
-                LogMessages.Trace(_logger, "ParseRunData", singleRun.GetRawText());
+                if (_logger.IsEnabled(LogLevel.Trace))
+                {
+                    LogMessages.Trace(_logger, "ParseRunData", singleRun.GetRawText());
+                }
             }
 
             output.Text = tempText;
@@ -1405,7 +1422,10 @@ public partial class YTJsonParser
     {
         string effectiveRendererName = !string.IsNullOrEmpty(customRendererName) ? customRendererName : rendererName;
 
-        LogMessages.Trace(_logger, $"SetRendererData -> {effectiveRendererName}", jsonElement.GetRawText());
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            LogMessages.Trace(_logger, $"SetRendererData -> {effectiveRendererName}", jsonElement.GetRawText());
+        }
 
         AuthorBadgesData authorBadgesData = ParseAuthorBadges(jsonElement);
         MessageData messageData = ParseMessageData(jsonElement);
@@ -1422,6 +1442,9 @@ public partial class YTJsonParser
             backgroundColor = GetBackgroundColor(jsonElement),
             timestampText = GetTimestampText(jsonElement),
             authorExternalChannelID = GetAuthorExternalChannelId(jsonElement);
+
+        string? headerBackgroundColor = GetHeaderBackgroundColor(jsonElement);
+        string? leaderboardRank = GetLeaderboardRank(jsonElement);
 
         #region 處理特例
 
@@ -1487,6 +1510,8 @@ public partial class YTJsonParser
             PurchaseAmountText = purchaseAmountText,
             ForegroundColor = forgroundColor,
             BackgroundColor = backgroundColor,
+            HeaderBackgroundColor = headerBackgroundColor,
+            LeaderboardRank = leaderboardRank,
             TimestampText = timestampText,
             AuthorExternalChannelID = authorExternalChannelID,
             Stickers = messageData?.Stickers,
@@ -1704,6 +1729,34 @@ public partial class YTJsonParser
         }
 
         return output;
+    }
+
+    /// <summary>
+    /// 取得標頭背景顏色（僅付費類 Renderer，例如超級留言／超級貼圖才會有）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串，找不到時為 null（代表此訊息類型不適用，非資料缺漏）</returns>
+    private static string? GetHeaderBackgroundColor(JsonElement? jsonElement)
+    {
+        JsonElement? headerBackgroundColor = jsonElement?.Get("headerBackgroundColor");
+
+        return headerBackgroundColor.HasValue ?
+            GetColorHexCode(headerBackgroundColor.Value.GetInt64()) :
+            null;
+    }
+
+    /// <summary>
+    /// 取得排行榜徽章的名次文字（例如 "#1"，掛在超級留言／超級貼圖上的排行榜皇冠徽章）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串，找不到時為 null（代表此訊息沒有排行榜徽章，非資料缺漏）</returns>
+    private static string? GetLeaderboardRank(JsonElement? jsonElement)
+    {
+        JsonElement? title = jsonElement?.Get("leaderboardBadge")
+            ?.Get("buttonViewModel")
+            ?.Get("title");
+
+        return title?.GetString();
     }
 
     /// <summary>

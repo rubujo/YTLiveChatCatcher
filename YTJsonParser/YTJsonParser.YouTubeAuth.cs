@@ -24,11 +24,15 @@ public partial class YTJsonParser
         HttpRequestMessage httpRequestMessage,
         YTConfigData? ytConfigData = null)
     {
-        if (!string.IsNullOrEmpty(SharedCookies))
-        {
-            httpRequestMessage.Headers.Add("Cookie", SharedCookies);
+        // 快照到區域變數，避免另一個執行緒中途呼叫 Cookies setter，
+        // 導致下面的 Cookie 標頭跟 SAPISIDHASH 是用兩個不同的 Cookie 字串算出來的。
+        string? cookiesSnapshot = SharedCookies;
 
-            string[] SharedCookiesArray = SharedCookies.Split(
+        if (!string.IsNullOrEmpty(cookiesSnapshot))
+        {
+            httpRequestMessage.Headers.Add("Cookie", cookiesSnapshot);
+
+            string[] SharedCookiesArray = cookiesSnapshot.Split(
                 ';',
                 StringSplitOptions.RemoveEmptyEntries);
 
@@ -82,9 +86,26 @@ public partial class YTJsonParser
             }
 
             httpRequestMessage.Headers.Add("X-Goog-Authuser", xGoogAuthuser);
-            httpRequestMessage.Headers.Add("X-Goog-Visitor-Id", ytConfigData.VisitorData);
-            httpRequestMessage.Headers.Add("X-Youtube-Client-Name", ytConfigData.InnetrubeContextClientName.ToString());
-            httpRequestMessage.Headers.Add("X-Youtube-Client-Version", ytConfigData.InnetrubeClientVersion);
+
+            if (!string.IsNullOrEmpty(ytConfigData.VisitorData))
+            {
+                httpRequestMessage.Headers.Add("X-Goog-Visitor-Id", ytConfigData.VisitorData);
+            }
+            else
+            {
+                LogMessages.Warning(_logger, nameof(SetHttpRequestMessageHeader), "變數 \"ytConfigData.VisitorData\" 為 null 或空白，未附加 X-Goog-Visitor-Id 標頭。");
+            }
+
+            httpRequestMessage.Headers.Add("X-Youtube-Client-Name", ytConfigData.InnertubeContextClientName.ToString());
+
+            if (!string.IsNullOrEmpty(ytConfigData.InnertubeClientVersion))
+            {
+                httpRequestMessage.Headers.Add("X-Youtube-Client-Version", ytConfigData.InnertubeClientVersion);
+            }
+            else
+            {
+                LogMessages.Warning(_logger, nameof(SetHttpRequestMessageHeader), "變數 \"ytConfigData.InnertubeClientVersion\" 為 null 或空白，未附加 X-Youtube-Client-Version 標頭。");
+            }
 
             if (!string.IsNullOrEmpty(ytConfigData.InitPage))
             {
@@ -118,13 +139,6 @@ public partial class YTJsonParser
     {
         byte[] bytes = SHA1.HashData(Encoding.UTF8.GetBytes(value));
 
-        StringBuilder builder = new();
-
-        for (int i = 0; i < bytes.Length; i++)
-        {
-            builder.Append(bytes[i].ToString("x2"));
-        }
-
-        return builder.ToString();
+        return Convert.ToHexStringLower(bytes);
     }
 }

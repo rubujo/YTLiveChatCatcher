@@ -41,19 +41,19 @@ public class YTConfigData
     /// INNERTUBE_CONTEXT_CLIENT_NAME
     /// </summary>
     [JsonPropertyName("INNERTUBE_CONTEXT_CLIENT_NAME")]
-    public int InnetrubeContextClientName { get; set; }
+    public int InnertubeContextClientName { get; set; }
 
     /// <summary>
     /// INNERTUBE_CONTEXT_CLIENT_VERSION
     /// </summary>
     [JsonPropertyName("INNERTUBE_CONTEXT_CLIENT_VERSION")]
-    public string? InnetrubeContextClientVersion { get; set; }
+    public string? InnertubeContextClientVersion { get; set; }
 
     /// <summary>
     /// INNERTUBE_CLIENT_VERSION
     /// </summary>
     [JsonPropertyName("INNERTUBE_CLIENT_VERSION")]
-    public string? InnetrubeClientVersion { get; set; }
+    public string? InnertubeClientVersion { get; set; }
 
     /// <summary>
     /// DATASYNC_ID

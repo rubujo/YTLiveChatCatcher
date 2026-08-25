@@ -57,8 +57,9 @@ public class EmojiData
     /// </summary>
     /// <param name="httpClient">HttpClient</param>
     /// <param name="isFetchLargePicture">布林值，是否獲取大張圖片</param>
-    /// <returns>Task&lt;string&gt;</returns>
-    public async Task<string> SetImage(HttpClient? httpClient, bool isFetchLargePicture)
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
+    /// <returns>Task&lt;string&gt;，回傳的是錯誤訊息字串（成功時為空字串），不是影像資料本身</returns>
+    public async Task<string> SetImage(HttpClient? httpClient, bool isFetchLargePicture, CancellationToken cancellationToken = default)
     {
         if (httpClient == null)
         {
@@ -76,7 +77,8 @@ public class EmojiData
             displayIdentifier: Label,
             url: Url,
             isFetchLargePicture: isFetchLargePicture,
-            entityDisplayName: "自定義表情符號");
+            entityDisplayName: "自定義表情符號",
+            cancellationToken: cancellationToken);
 
         Image = image;
         Format = image.AsStream().GetImageFormat().ToString();

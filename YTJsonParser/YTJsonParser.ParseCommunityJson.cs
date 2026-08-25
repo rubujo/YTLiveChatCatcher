@@ -253,7 +253,7 @@ public partial class YTJsonParser
                 ?.Get("webCommandMetadata")
                 ?.Get("url");
 
-            if (url != null && url.HasValue && url.Value.GetRawText().Contains("/community"))
+            if (url.HasValue && url.Value.GetRawText().Contains("/community"))
             {
                 return tab;
             }
@@ -342,7 +342,7 @@ public partial class YTJsonParser
     {
         JsonElement? postId = jsonElement?.Get("postId");
 
-        if (postId != null && postId.HasValue)
+        if (postId.HasValue)
         {
             return postId.Value.GetString() ?? string.Empty;
         }
@@ -829,11 +829,11 @@ public partial class YTJsonParser
             // 理論上只會有一筆。
             foreach (JsonElement run in runs)
             {
-                RunsData? RunsData = GetRuns(run);
+                RunsData? runsData = GetRuns(run);
 
-                if (RunsData != null)
+                if (runsData != null)
                 {
-                    runText += $"{RunsData.Text} ";
+                    runText += $"{runsData.Text} ";
                 }
             }
         }
@@ -1030,7 +1030,7 @@ public partial class YTJsonParser
             ?.Get("continuationCommand")
             ?.Get("token");
 
-        if (token != null && token.HasValue)
+        if (token.HasValue)
         {
             return token.Value.GetString() ?? string.Empty;
         }
