@@ -88,7 +88,13 @@ public static class ListViewExtension
             }
         }, 10);
 
-        imageCollection.Add(key, image);
+        // 因為多筆訊息可能各自觸發下載（download 期間會讓出執行緒給其他佇列中的呼叫），
+        // 開頭的 ContainsKey 檢查與這裡的 Add 之間並非原子操作，
+        // 所以寫入前要再檢查一次，避免對同一個 key 重複 Add 而拋出例外。
+        if (!imageCollection.ContainsKey(key))
+        {
+            imageCollection.Add(key, image);
+        }
 
         return errorMessage;
     }

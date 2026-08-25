@@ -25,7 +25,8 @@ public sealed record YTJsonParserOptions
 
     /// <summary>
     /// Cookies 字串
-    /// <para>可透過 <see cref="Utils.YouTubeCookieUtil"/> 取得。</para>
+    /// <para>本函式庫不提供讀取／解密瀏覽器 Cookie 資料庫的方法，
+    /// 請透過官方支援的介面（例如專屬登入視窗＋ CoreWebView2CookieManager，或使用者手動貼上）取得。</para>
     /// </summary>
     public string? Cookies { get; init; }
 }

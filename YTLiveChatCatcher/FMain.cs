@@ -92,8 +92,11 @@ public partial class FMain : Form
         }
     }
 
-    private void TBChannelID_TextChanged(object sender, EventArgs e)
+    private async void TBChannelID_TextChanged(object sender, EventArgs e)
     {
+        // 此事件必定於 UI 執行緒觸發，不需要透過 InvokeIfRequired 轉送
+        // （InvokeIfRequired 吃的是 void 委派，若傳入 async lambda 會變成 async void，
+        // 第一個 await 之後拋出的例外無法被這裡的 try/catch 攔截）。
         TextBox? textBox = (TextBox?)sender;
 
         if (textBox == null)
@@ -101,10 +104,14 @@ public partial class FMain : Form
             return;
         }
 
-        textBox.InvokeIfRequired(async () =>
+        try
         {
             textBox.Text = await YouTubeUrlUtil.GetYouTubeChannelID(textBox.Text.Trim());
-        });
+        }
+        catch (Exception ex)
+        {
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+        }
     }
 
     private void TBVideoID_TextChanged(object sender, EventArgs e)
@@ -167,55 +174,56 @@ public partial class FMain : Form
         }
     }
 
-    private void BtnStart_Click(object sender, EventArgs e)
+    private async void BtnStart_Click(object sender, EventArgs e)
     {
+        // 此事件必定於 UI 執行緒觸發，不需要透過 InvokeIfRequired 轉送
+        // （InvokeIfRequired 吃的是 void 委派，若傳入 async lambda 會變成 async void，
+        // 第一個 await 之後拋出的例外無法被下方的 try/catch 攔截）。
+
+        // 立即停用開始按鈕：避免在下方 GetLatestStreamingVideoIDAsync（僅在未填影片 ID 時才 await）
+        // 完成前，使用者快速連點造成本方法被重入，進而讓兩個背景輪詢迴圈同時搶用
+        // SharedFetchCancellationTokenSource。
+        BtnStart.Enabled = false;
+
         try
         {
-            string videoID = string.Empty;
+            string videoID = TBVideoID.Text;
 
-            TBVideoID.InvokeIfRequired(async () =>
+            if (string.IsNullOrEmpty(videoID))
             {
-                videoID = TBVideoID.Text;
+                videoID = await SharedYTJsonParser.GetLatestStreamingVideoIDAsync(TBChannelID.Text.Trim());
 
-                if (string.IsNullOrEmpty(videoID))
+                if (!string.IsNullOrEmpty(videoID))
                 {
-                    videoID = await SharedYTJsonParser.GetLatestStreamingVideoIDAsync(TBChannelID.Text.Trim());
-
-                    if (!string.IsNullOrEmpty(videoID))
-                    {
-                        WriteLog($"透過頻道 ID 取得的影片 ID：{videoID}");
-                    }
-                    else
-                    {
-                        WriteLog("透過頻道 ID 取得影片 ID 失敗。");
-                    }
-
-                    TBVideoID.Text = videoID;
+                    WriteLog($"透過頻道 ID 取得的影片 ID：{videoID}");
+                }
+                else
+                {
+                    WriteLog("透過頻道 ID 取得影片 ID 失敗。");
                 }
 
-                if (string.IsNullOrEmpty(videoID))
-                {
-                    MessageBox.Show(
-                        "請輸入頻道 ID 或是影片 ID。",
-                        Text,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
+                TBVideoID.Text = videoID;
+            }
 
-                    BtnStop_Click(null, new EventArgs());
+            if (string.IsNullOrEmpty(videoID))
+            {
+                MessageBox.Show(
+                    "請輸入頻道 ID 或是影片 ID。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
 
-                    return;
-                }
+                BtnStop_Click(null, new EventArgs());
 
-                // 設定控制項的狀態。
-                SetControlsState(false);
+                return;
+            }
 
-                // 在 LiveChatCatcher 開始前，再設定一次 Cookie。
-                SetUseCookie();
+            // 設定控制項的狀態。
+            SetControlsState(false);
 
-                StartFetchLiveChatData(videoID);
+            StartFetchLiveChatData(videoID);
 
-                WriteLog("開始取得聊天室的內容。");
-            });
+            WriteLog("開始取得聊天室的內容。");
         }
         catch (Exception ex)
         {
@@ -238,9 +246,15 @@ public partial class FMain : Form
     private void StartFetchLiveChatData(string videoID)
     {
         SharedFetchCancellationTokenSource?.Cancel();
-        SharedFetchCancellationTokenSource = new CancellationTokenSource();
 
-        CancellationToken cancellationToken = SharedFetchCancellationTokenSource.Token;
+        // 局部保留這次專屬的 CancellationTokenSource 參照，
+        // 讓下方背景工作結束時只 Dispose 自己這一份，
+        // 不會誤 Dispose 掉之後某次重新開始擷取所建立的新實例。
+        CancellationTokenSource fetchCancellationTokenSource = new();
+
+        SharedFetchCancellationTokenSource = fetchCancellationTokenSource;
+
+        CancellationToken cancellationToken = fetchCancellationTokenSource.Token;
 
         Progress<int> intervalProgress = new(intervalMs =>
         {
@@ -280,8 +294,10 @@ public partial class FMain : Form
             finally
             {
                 TBUserAgent.InvokeIfRequired(() => BtnStop_Click(this, new EventArgs()));
+
+                fetchCancellationTokenSource.Dispose();
             }
-        }, cancellationToken);
+        });
     }
 
     private void BtnStop_Click(object? sender, EventArgs e)
@@ -542,80 +558,37 @@ public partial class FMain : Form
         }
     }
 
-    private void CBLoadCookie_CheckedChanged(object sender, EventArgs e)
+    /// <summary>
+    /// 開啟應用程式專屬的 WebView2 登入視窗，取得聊天室擷取用的 Cookie
+    /// </summary>
+    private void BtnCookieLogin_Click(object sender, EventArgs e)
     {
-        CheckBox? checkBox = (CheckBox?)sender;
-
-        if (checkBox == null)
+        try
         {
-            return;
-        }
+            using FCookieLogin fCookieLogin = new(this);
 
-        checkBox.InvokeIfRequired(() =>
-        {
-            if (checkBox.Checked != Properties.Settings.Default.LoadCookie)
+            if (fCookieLogin.ShowDialog(this) == DialogResult.OK &&
+                fCookieLogin.ResultCookies != null)
             {
-                Properties.Settings.Default.LoadCookie = checkBox.Checked;
-                Properties.Settings.Default.Save();
+                SharedYTJsonParser.Cookies = fCookieLogin.ResultCookies;
+
+                UpdateCookieStatus();
+
+                WriteLog(!string.IsNullOrEmpty(fCookieLogin.ResultCookies) ?
+                    "已更新登入用的 Cookie。" :
+                    "已清除登入用的 Cookie。");
             }
-
-            SetUseCookie();
-        });
-    }
-
-    private void CBBrowser_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        ComboBox? comboBox = (ComboBox?)sender;
-
-        if (comboBox == null)
-        {
-            return;
         }
-
-        comboBox.InvokeIfRequired(() =>
+        catch (Exception ex)
         {
-            if (comboBox.SelectedIndex != Properties.Settings.Default.BrowserItemIndex)
-            {
-                Properties.Settings.Default.BrowserItemIndex = comboBox.SelectedIndex;
-                Properties.Settings.Default.Save();
-            }
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
-            SetUseCookie();
-        });
-    }
-
-    private void TBProfileFolderName_TextChanged(object sender, EventArgs e)
-    {
-        TextBox? textBox = (TextBox?)sender;
-
-        if (textBox == null)
-        {
-            return;
+            MessageBox.Show(
+                $"發生錯誤：{ex.GetExceptionMessage()}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
         }
-
-        textBox.InvokeIfRequired(() =>
-        {
-            if (textBox.Text != Properties.Settings.Default.ProfileFolderName)
-            {
-                string path = $@"C:\Users\{Environment.UserName}\AppData\Local\" +
-                    $@"{CBBrowser.SelectedItem?.ToString()!.Replace(" ", "\\")}" +
-                    $@"\User Data\{textBox.Text}\";
-
-                if (!Directory.Exists(path))
-                {
-                    WriteLog($"請輸入有效的設定檔資料夾名稱。{Environment.NewLine}路徑：{path}");
-
-                    return;
-                }
-
-                WriteLog($"設定檔資料夾名稱設定成功。{Environment.NewLine}路徑：{path}");
-
-                Properties.Settings.Default.ProfileFolderName = textBox.Text;
-                Properties.Settings.Default.Save();
-
-                SetUseCookie();
-            }
-        });
     }
 
     private void TBSecChUa_TextChanged(object sender, EventArgs e)

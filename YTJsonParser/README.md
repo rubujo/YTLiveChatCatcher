@@ -11,8 +11,7 @@
 ## 二、注意事項
 
 1. `YTJsonParser` 的設定（`HttpClient`、顯示語言等）在**建構時**透過 `YTJsonParserOptions` 傳入、建立後不可變，不需要（也沒有）額外呼叫 `Init()` 之類的初始化方法。
-2. 取得 Cookie 的相關方法（`YouTubeCookieUtil`），`僅限於` Microsoft Windows 平臺可以使用。
-   - ※使用相關方法時，請先確認目標的網頁瀏覽器是否處於`關閉`的狀態，否則會有可能無法成功的取得該網頁瀏覽器的 Cookie 資料。
+2. 若要帶入 Cookie（例如會員限定內容），本函式庫**不提供**任何直接讀取／解密瀏覽器 Cookie 資料庫的方法——請透過官方支援的介面（例如專屬登入視窗＋ `CoreWebView2CookieManager`，或使用者手動貼上）取得 Cookie 字串後，指派給 `Cookies` 屬性。
 3. `StreamLiveChatDataAsync`／`StreamCommunityPostsAsync` 是 `IAsyncEnumerable`，取消由呼叫端自己持有的 `CancellationTokenSource` 負責，函式庫不會替您保管背景工作或計時器。
 
 ## 三、使用範例
@@ -67,14 +66,14 @@ async Task Main()
 
 	// 建立 YTJsonParser 實例。
 	// ※不指定 HttpClient 時，會自動建立一個並由本實例負責釋放（Dispose 時一併釋放）。
-	// ※若要帶入 Cookie（例如會員限定內容），先用 YouTubeCookieUtil.GetYouTubeCookie(...)
-	//   （僅限 Windows，且目標瀏覽器須已關閉）取得字串後填入 Cookies。
+	// ※若要帶入 Cookie（例如會員限定內容），請透過官方支援的介面（例如專屬登入視窗＋
+	//   CoreWebView2CookieManager，或使用者手動貼上）取得 Cookie 字串後再指派給 Cookies。
 	using YTJsonParser ytJsonParser = new(
 		new YTJsonParserOptions
 		{
 			DisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional,
 			FetchLargePicture = true,
-			//Cookies = YouTubeCookieUtil.GetYouTubeCookie(WebBrowserUtil.BrowserType.GoogleChrome)
+			//Cookies = "{取得的 Cookie 字串}"
 		});
 
 	// 用來取消串流的 CancellationTokenSource，例如「於 5 秒後停止獲取即時聊天資料」。

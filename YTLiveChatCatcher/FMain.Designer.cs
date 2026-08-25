@@ -56,10 +56,8 @@ namespace YTLiveChatCatcher
             LTempIncome = new Label();
             LUserAgent = new Label();
             TBUserAgent = new TextBox();
-            CBLoadCookie = new CheckBox();
-            LProfileFolderName = new Label();
-            TBProfileFolderName = new TextBox();
-            CBBrowser = new ComboBox();
+            BtnCookieLogin = new Button();
+            LCookieStatus = new Label();
             LNotice = new Label();
             CBEnableDebug = new CheckBox();
             BtnSearchUserAgent = new Button();
@@ -335,48 +333,27 @@ namespace YTLiveChatCatcher
             TBUserAgent.Size = new Size(613, 23);
             TBUserAgent.TabIndex = 15;
             TBUserAgent.TextChanged += TBUserAgent_TextChanged;
-            // 
-            // CBLoadCookie
-            // 
-            CBLoadCookie.AutoSize = true;
-            CBLoadCookie.Location = new Point(792, 8);
-            CBLoadCookie.Name = "CBLoadCookie";
-            CBLoadCookie.Size = new Size(93, 19);
-            CBLoadCookie.TabIndex = 10;
-            CBLoadCookie.Text = "載入 Cookie";
-            CBLoadCookie.UseVisualStyleBackColor = true;
-            CBLoadCookie.CheckedChanged += CBLoadCookie_CheckedChanged;
-            // 
-            // LProfileFolderName
-            // 
-            LProfileFolderName.AutoSize = true;
-            LProfileFolderName.Font = new Font("Microsoft JhengHei UI", 9F, FontStyle.Bold);
-            LProfileFolderName.Location = new Point(791, 59);
-            LProfileFolderName.Name = "LProfileFolderName";
-            LProfileFolderName.Size = new Size(103, 15);
-            LProfileFolderName.TabIndex = 12;
-            LProfileFolderName.Text = "設定檔資料夾名稱";
-            // 
-            // TBProfileFolderName
-            // 
-            TBProfileFolderName.Location = new Point(791, 80);
-            TBProfileFolderName.Name = "TBProfileFolderName";
-            TBProfileFolderName.Size = new Size(182, 23);
-            TBProfileFolderName.TabIndex = 13;
-            TBProfileFolderName.TextChanged += TBProfileFolderName_TextChanged;
-            // 
-            // CBBrowser
-            // 
-            CBBrowser.DropDownStyle = ComboBoxStyle.DropDownList;
-            CBBrowser.FormattingEnabled = true;
-            CBBrowser.ItemHeight = 15;
-            CBBrowser.Items.AddRange(new object[] { "Brave", "Brave Beta", "Brave Nightly", "Google Chrome", "Google Chrome Beta", "Google Chrome Canary", "Chromium", "Microsoft Edge", "Microsoft Edge Insider Beta", "Microsoft Edge Insider Dev", "Microsoft Edge Insider Canary", "Opera", "Opera Beta", "Opera Developer", "Opera GX", "Opera Crypto", "Vivaldi", "Mozilla Firefox" });
-            CBBrowser.Location = new Point(792, 33);
-            CBBrowser.Name = "CBBrowser";
-            CBBrowser.Size = new Size(181, 23);
-            CBBrowser.TabIndex = 11;
-            CBBrowser.SelectedIndexChanged += CBBrowser_SelectedIndexChanged;
-            // 
+            //
+            // BtnCookieLogin
+            //
+            BtnCookieLogin.Location = new Point(792, 8);
+            BtnCookieLogin.Name = "BtnCookieLogin";
+            BtnCookieLogin.Size = new Size(182, 23);
+            BtnCookieLogin.TabIndex = 10;
+            BtnCookieLogin.Text = "登入 YouTube 帳號...";
+            BtnCookieLogin.UseVisualStyleBackColor = true;
+            BtnCookieLogin.Click += BtnCookieLogin_Click;
+            //
+            // LCookieStatus
+            //
+            LCookieStatus.AutoSize = true;
+            LCookieStatus.Location = new Point(792, 34);
+            LCookieStatus.MaximumSize = new Size(182, 0);
+            LCookieStatus.Name = "LCookieStatus";
+            LCookieStatus.Size = new Size(53, 15);
+            LCookieStatus.TabIndex = 11;
+            LCookieStatus.Text = "尚未登入。";
+            //
             // LNotice
             // 
             LNotice.AutoSize = true;
@@ -471,10 +448,8 @@ namespace YTLiveChatCatcher
             Controls.Add(BtnSearchUserAgent);
             Controls.Add(CBEnableDebug);
             Controls.Add(LNotice);
-            Controls.Add(CBBrowser);
-            Controls.Add(TBProfileFolderName);
-            Controls.Add(LProfileFolderName);
-            Controls.Add(CBLoadCookie);
+            Controls.Add(LCookieStatus);
+            Controls.Add(BtnCookieLogin);
             Controls.Add(TBUserAgent);
             Controls.Add(LUserAgent);
             Controls.Add(LTempIncome);
@@ -540,10 +515,8 @@ namespace YTLiveChatCatcher
         private Label LTempIncome;
         private Label LUserAgent;
         private TextBox TBUserAgent;
-        private CheckBox CBLoadCookie;
-        private Label LProfileFolderName;
-        private TextBox TBProfileFolderName;
-        private ComboBox CBBrowser;
+        private Button BtnCookieLogin;
+        private Label LCookieStatus;
         private Label LNotice;
         private CheckBox CBEnableDebug;
         private Button BtnSearchUserAgent;

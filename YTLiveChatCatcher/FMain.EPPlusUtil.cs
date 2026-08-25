@@ -1,6 +1,8 @@
 ﻿using Color = System.Drawing.Color;
+using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using Rubujo.YouTube.Utility;
+using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Sets;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using YTLiveChatCatcher.Extensions;
@@ -188,19 +190,28 @@ public partial class FMain
 
                     LVLiveChatList.InvokeIfRequired(async () =>
                     {
-                        if (LVLiveChatList.SmallImageList != null)
+                        // 這裡是 fire-and-forget 的 async void 委派，
+                        // 一定要在內部自己攔截例外，否則會直接讓整個應用程式當掉。
+                        try
                         {
-                            string errorMessage = await LVLiveChatList.SmallImageList
-                                .Images
-                                .SetAuthorPhoto(
-                                    SharedHttpClient,
-                                    imgKey,
-                                    authorPhotoUrl);
-
-                            if (!string.IsNullOrEmpty(errorMessage))
+                            if (LVLiveChatList.SmallImageList != null)
                             {
-                                WriteLog(errorMessage);
+                                string errorMessage = await LVLiveChatList.SmallImageList
+                                    .Images
+                                    .SetAuthorPhoto(
+                                        SharedHttpClient,
+                                        imgKey,
+                                        authorPhotoUrl);
+
+                                if (!string.IsNullOrEmpty(errorMessage))
+                                {
+                                    WriteLog(errorMessage);
+                                }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
                         }
                     });
 

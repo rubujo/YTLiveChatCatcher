@@ -24,10 +24,41 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
+        // 讓 UI 執行緒（含 async void 事件處理常式、SynchronizationContext.Post 回呼）
+        // 未處理的例外，統一導向 Application.ThreadException，而不是讓整個程序直接終止。
+        Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+        Application.ThreadException += OnThreadException;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+
         UpdateConfig();
         ConfigureServices();
 
         Application.Run((FMain)ServiceProvider?.GetService(typeof(FMain))!);
+    }
+
+    /// <summary>
+    /// 處理 UI 執行緒（含訊息迴圈內的 async void 回呼）未攔截的例外
+    /// </summary>
+    private static void OnThreadException(object sender, ThreadExceptionEventArgs e)
+    {
+        LogManager.GetCurrentClassLogger().Error(e.Exception, "未處理的 UI 執行緒例外。");
+
+        MessageBox.Show(
+            $"發生未預期的錯誤：{e.Exception.Message}",
+            "YTLiveChatCatcher",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Error);
+    }
+
+    /// <summary>
+    /// 處理非 UI 執行緒（例如背景 Task 內未被攔截）的致命例外，至少記錄下來以利事後排查
+    /// </summary>
+    private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+        {
+            LogManager.GetCurrentClassLogger().Fatal(ex, "未處理的非 UI 執行緒例外。");
+        }
     }
 
     /// <summary>

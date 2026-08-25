@@ -50,42 +50,6 @@ namespace YTLiveChatCatcher.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("3")]
-        public int BrowserItemIndex {
-            get {
-                return ((int)(this["BrowserItemIndex"]));
-            }
-            set {
-                this["BrowserItemIndex"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string ProfileFolderName {
-            get {
-                return ((string)(this["ProfileFolderName"]));
-            }
-            set {
-                this["ProfileFolderName"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool LoadCookie {
-            get {
-                return ((bool)(this["LoadCookie"]));
-            }
-            set {
-                this["LoadCookie"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool EnableDebug {
             get {

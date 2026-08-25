@@ -1073,24 +1073,6 @@ public partial class FMain
             CBEnableTTS.Checked = Properties.Settings.Default.EnableTTS;
         });
 
-        CBLoadCookie.InvokeIfRequired(() =>
-        {
-            // 載入載入 Cookies 設定值。
-            CBLoadCookie.Checked = Properties.Settings.Default.LoadCookie;
-        });
-
-        CBBrowser.InvokeIfRequired(() =>
-        {
-            // 載入網頁瀏覽器選項的索引值。
-            CBBrowser.SelectedIndex = Properties.Settings.Default.BrowserItemIndex;
-        });
-
-        TBProfileFolderName.InvokeIfRequired(() =>
-        {
-            // 載入設定檔資料夾名稱的設定值。
-            TBProfileFolderName.Text = Properties.Settings.Default.ProfileFolderName;
-        });
-
         TBUserAgent.InvokeIfRequired(() =>
         {
             // 載入使用者代理字串。
@@ -1362,19 +1344,28 @@ public partial class FMain
 
                     LVLiveChatList.InvokeIfRequired(async () =>
                     {
-                        if (LVLiveChatList.SmallImageList != null)
+                        // 這裡是 fire-and-forget 的 async void 委派，
+                        // 一定要在內部自己攔截例外，否則會直接讓整個應用程式當掉。
+                        try
                         {
-                            string errorMessage = await LVLiveChatList.SmallImageList
-                                .Images
-                                .SetAuthorPhoto(
-                                    SharedHttpClient,
-                                    imgKey,
-                                    authorPhotoUrl);
-
-                            if (!string.IsNullOrEmpty(errorMessage))
+                            if (LVLiveChatList.SmallImageList != null)
                             {
-                                WriteLog(errorMessage);
+                                string errorMessage = await LVLiveChatList.SmallImageList
+                                    .Images
+                                    .SetAuthorPhoto(
+                                        SharedHttpClient,
+                                        imgKey,
+                                        authorPhotoUrl);
+
+                                if (!string.IsNullOrEmpty(errorMessage))
+                                {
+                                    WriteLog(errorMessage);
+                                }
                             }
+                        }
+                        catch (Exception ex)
+                        {
+                            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
                         }
                     });
 
@@ -1680,19 +1671,9 @@ public partial class FMain
         });
         */
 
-        CBLoadCookie.InvokeIfRequired(() =>
+        BtnCookieLogin.InvokeIfRequired(() =>
         {
-            CBLoadCookie.Enabled = enable;
-        });
-
-        CBBrowser.InvokeIfRequired(() =>
-        {
-            CBBrowser.Enabled = enable;
-        });
-
-        TBProfileFolderName.InvokeIfRequired(() =>
-        {
-            TBProfileFolderName.Enabled = enable;
+            BtnCookieLogin.Enabled = enable;
         });
 
         TBSecChUa.InvokeIfRequired(() =>
@@ -1704,71 +1685,6 @@ public partial class FMain
         {
             BtnImport.Enabled = enable;
         });
-    }
-
-    /// <summary>
-    /// 設定使用 Cookie
-    /// </summary>
-    private void SetUseCookie()
-    {
-        bool enable = false;
-
-        CBLoadCookie.InvokeIfRequired(() =>
-        {
-            enable = CBLoadCookie.Checked;
-        });
-
-        WebBrowserUtil.BrowserType browserType =
-            WebBrowserUtil.BrowserType.GoogleChrome;
-
-        CBBrowser.InvokeIfRequired(() =>
-        {
-            browserType = CBBrowser.SelectedItem?.ToString() switch
-            {
-                "Brave" => WebBrowserUtil.BrowserType.Brave,
-                "Brave Beta" => WebBrowserUtil.BrowserType.BraveBeta,
-                "Brave Nightly" => WebBrowserUtil.BrowserType.BraveNightly,
-                "Google Chrome" => WebBrowserUtil.BrowserType.GoogleChrome,
-                "Google Chrome Beta" => WebBrowserUtil.BrowserType.GoogleChromeBeta,
-                "Google Chrome Canary" => WebBrowserUtil.BrowserType.GoogleChromeCanary,
-                "Chromium" => WebBrowserUtil.BrowserType.Chromium,
-                "Microsoft Edge" => WebBrowserUtil.BrowserType.MicrosoftEdge,
-                "Microsoft Edge Insider Beta" => WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderBeta,
-                "Microsoft Edge Insider Dev" => WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderDev,
-                "Microsoft Edge Insider Canary" => WebBrowserUtil.BrowserType.MicrosoftEdgeInsiderCanary,
-                "Opera" => WebBrowserUtil.BrowserType.Opera,
-                "Opera Beta" => WebBrowserUtil.BrowserType.OperaBeta,
-                "Opera Developer" => WebBrowserUtil.BrowserType.OperaDeveloper,
-                "Opera GX" => WebBrowserUtil.BrowserType.OperaGX,
-                "Opera Crypto" => WebBrowserUtil.BrowserType.OperaCrypto,
-                "Vivaldi" => WebBrowserUtil.BrowserType.Vivaldi,
-                "Mozilla Firefox" => WebBrowserUtil.BrowserType.MozillaFirefox,
-                _ => WebBrowserUtil.BrowserType.GoogleChrome
-            };
-        });
-
-        string profileFolderName = string.Empty;
-
-        TBProfileFolderName.InvokeIfRequired(() =>
-        {
-            profileFolderName = TBProfileFolderName.Text;
-        });
-
-        // 設定 LiveChatCatcher 是否使用 Cookies。
-        if (enable)
-        {
-            string cookies = YouTubeCookieUtil.GetYouTubeCookie(browserType, profileFolderName);
-
-            SharedYTJsonParser.Cookies = cookies;
-
-            WriteLog(!string.IsNullOrEmpty(cookies) ? "已啟用使用 Cookie。" : "Cookie 取得失敗，已關閉使用 Cookie。");
-        }
-        else
-        {
-            SharedYTJsonParser.Cookies = string.Empty;
-
-            WriteLog("已關閉使用 Cookie。");
-        }
     }
 
     /// <summary>
@@ -1810,13 +1726,29 @@ public partial class FMain
             },
             SharedYTJsonParserLogger);
 
-        CBLoadCookie.InvokeIfRequired(() =>
+        // 若使用者先前在登入視窗勾選「記住我」，載入以 DPAPI 加密儲存的 Cookie。
+        string? rememberedCookies = SecureCookieStore.Load();
+
+        if (!string.IsNullOrEmpty(rememberedCookies))
         {
-            if (CBLoadCookie.Checked)
-            {
-                // 設定使用 Cookie
-                SetUseCookie();
-            }
+            SharedYTJsonParser.Cookies = rememberedCookies;
+        }
+
+        UpdateCookieStatus();
+    }
+
+    /// <summary>
+    /// 更新目前登入用 Cookie 的狀態顯示
+    /// </summary>
+    private void UpdateCookieStatus()
+    {
+        LCookieStatus.InvokeIfRequired(() =>
+        {
+            LCookieStatus.Text = string.IsNullOrEmpty(SharedYTJsonParser.Cookies) ?
+                "尚未登入。" :
+                SecureCookieStore.Exists() ?
+                    "已登入（記住我）。" :
+                    "已登入（本次執行有效）。";
         });
     }
 

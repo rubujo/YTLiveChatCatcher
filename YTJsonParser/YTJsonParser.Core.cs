@@ -153,7 +153,18 @@ public partial class YTJsonParser
                     break;
             }
 
-            JsonElement jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
+            JsonElement jeYtCfg;
+
+            try
+            {
+                jeYtCfg = JsonSerializer.Deserialize<JsonElement>(jsonYtCfg);
+            }
+            catch (JsonException ex)
+            {
+                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytcfg JSON 失敗：{ex.GetExceptionMessage()}");
+
+                return initialData;
+            }
 
             initialData.YTConfigData = ParseYtCfg(jeYtCfg);
 
@@ -184,7 +195,18 @@ public partial class YTJsonParser
                 jsonYtInitialData = jsonYtInitialData[0..^1];
             }
 
-            JsonElement jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
+            JsonElement jeYtInitialData;
+
+            try
+            {
+                jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
+            }
+            catch (JsonException ex)
+            {
+                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytInitialData JSON 失敗：{ex.GetExceptionMessage()}");
+
+                return initialData;
+            }
 
             switch (dataType)
             {
@@ -318,7 +340,16 @@ public partial class YTJsonParser
 
             if (httpResponseMessage?.StatusCode == HttpStatusCode.OK)
             {
-                jsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
+                try
+                {
+                    jsonElement = JsonSerializer.Deserialize<JsonElement>(receivedJsonContent);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetJsonElementAsync), $"解析回應 JSON 失敗：{ex.GetExceptionMessage()}");
+
+                    return jsonElement;
+                }
             }
             else
             {

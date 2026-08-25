@@ -181,7 +181,18 @@ public partial class YTJsonParser
                 return false;
             }
 
-            JsonElement jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+            JsonElement jeRoot;
+
+            try
+            {
+                jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+            }
+            catch (JsonException ex)
+            {
+                LogMessages.Error(_logger, nameof(IsVideoStreamingAsync), $"解析 ytInitialPlayerResponse JSON 失敗：{ex.GetExceptionMessage()}");
+
+                return false;
+            }
 
             JsonElement? isLiveNow = jeRoot
                 .Get("microformat")

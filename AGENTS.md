@@ -37,7 +37,21 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 - **`IAsyncEnumerable<T>` 取代事件**：`StreamLiveChatDataAsync`／`StreamCommunityPostsAsync` 回傳 `IAsyncEnumerable<IReadOnlyList<T>>`（每次列舉＝一次輪詢取得的一批資料，不是逐則訊息——YouTube 本來就是批次回應，逐則 yield 只會讓 WinForms 端被迫逐則 `Invoke`）。取消完全交給呼叫端自己的 `CancellationTokenSource`，函式庫不再保管 `Task`／`CancellationTokenSource`／`Stop()`。`LiveChatStreamOptions`／`CommunityPostStreamOptions` 是每次呼叫的區域參數（`LiveChatType`、`CustomLiveChatType`、`ForceIntervalMs` 等），不是共用可變狀態——這讓同一個 `YTJsonParser` 實例可以同時執行多個獨立的串流，彼此不會互相干擾。
 - **`ILogger` 取代自製 log 事件**：建構子接受 `ILogger<YTJsonParser>`（預設 `NullLogger`）。內部記錄呼叫集中在 `LogMessages.cs`（`[LoggerMessage]` source-generated partial method），大部分呼叫點用通用範本（`LogMessages.Error/Warning/Debug/Trace`），少數語意明確的事件（例如 `YtConfigDataIsNull`、`SubMenuCustomTitle`）有專屬方法。新增記錄呼叫時比照這個分法，不要退回手動組字串的 `_logger.LogXxx($"...")`。
 - **輪詢間隔的回報**：`StreamLiveChatDataAsync` 有一個 `IProgress<int>? intervalProgress` 參數，每次輪詢間隔更新時會呼叫 `.Report(intervalMs)`——這是 WinForms 端用來更新「下次擷取還要等幾秒」文字框的方式，取代了舊版「解析 log 訊息字串抓數字」的做法。
-- **純工具函式已拆出**：`GetYouTubeChannelID`／`GetYouTubeVideoID`／`GetYouTubeChannelUrl`（`Utils/YouTubeUrlUtil.cs`）、`GetYouTubeCookie`（`Utils/YouTubeCookieUtil.cs`）都是不依賴 instance 狀態的 `static` 方法，呼叫時不需要（也不應該透過）`YTJsonParser` 實例。
+- **純工具函式已拆出**：`GetYouTubeChannelID`／`GetYouTubeVideoID`／`GetYouTubeChannelUrl`（`Utils/YouTubeUrlUtil.cs`）都是不依賴 instance 狀態的 `static` 方法，呼叫時不需要（也不應該透過）`YTJsonParser` 實例。
+
+## 取得會員限定內容用的 Cookie（2026/8 重構後）
+
+`YTJsonParser` 本身**不提供**任何讀取或解密瀏覽器（Chrome／Edge／Firefox）Cookie 資料庫的方法——舊版的 `Utils/WebBrowserUtil.cs`／`Utils/YouTubeCookieUtil.cs` 已完全移除。原因：
+
+1. **已經技術上失效**：Chrome 127+（2024/7 起）與新版 Edge 預設啟用 App-Bound Encryption，一般使用者權限的 DPAPI 已解不出正確的金鑰，舊版做法對主流瀏覽器基本上已經拿不到資料。
+2. **與竊資軟體技術特徵重疊**：直接解密另一個應用程式私有儲存的憑證資料庫，即使程式碼本身沒有惡意，仍容易被防毒軟體誤判、被使用者誤解、被上架平台拒絕。
+
+`YTLiveChatCatcher`（WinForms 端）改用官方支援的介面取得 Cookie，兩條路徑互為備援：
+
+- **`FCookieLogin`（主要）**：應用程式專屬的 `Microsoft.Web.WebView2` 登入視窗，使用**自己專屬的 user data folder**（`%LocalAppData%\YTLiveChatCatcher\WebView2Profile`，刻意不指向使用者既有的 Edge／Chrome profile 路徑）。使用者在裡面直接登入 Google／YouTube 帳號後，透過官方 API `CoreWebView2CookieManager.GetCookiesAsync("https://www.youtube.com/")` 取得該 WebView2 profile 的 Cookie——這是瀏覽器自己把資料交給宿主程式，不受 App-Bound Encryption 影響，也不會碰到使用者日常瀏覽器的資料。
+- **手動貼上（備援）**：`FCookieLogin` 也提供一個文字欄位，讓使用者自行貼上從瀏覽器複製的 Cookie 字串，在 WebView2 不可用（例如企業政策擋掉、Runtime 未安裝）時仍有路可走。
+
+儲存：預設 Cookie 只存在記憶體（`SharedYTJsonParser.Cookies`），關閉程式即遺失；使用者可在 `FCookieLogin` 勾選「記住我」，才會透過 `Common/Utils/SecureCookieStore.cs` 以 **DPAPI（`CurrentUser` scope）加密後**寫入本機檔案（`%LocalAppData%\YTLiveChatCatcher\cookie.dat`）——注意這裡的 DPAPI 用途是「加密自己這個程式要存的東西」，跟舊版「解密別的應用程式已加密的資料」方向相反，只有同一台機器、同一個 Windows 使用者才能還原。`FCookieLogin` 的「登出／清除已儲存資料」會同時清掉 WebView2 profile 內的 Cookie 與這個加密檔案。
 
 ## 程式風格
 
