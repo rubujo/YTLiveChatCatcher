@@ -194,7 +194,7 @@ public class EnumSet
         /// <summary>
         /// 馬拉雅拉姆語
         /// </summary>
-        Malayam,
+        Malayalam,
         /// <summary>
         /// 馬拉地語
         /// </summary>

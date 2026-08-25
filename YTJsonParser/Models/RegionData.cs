@@ -38,6 +38,7 @@ public class RegionData
     /// <returns>CultureInfo</returns>
     public CultureInfo GetCultureInfo()
     {
-        return new CultureInfo($"{Hl}{(string.IsNullOrEmpty(this?.Gl) ? string.Empty : $"-{this?.Gl}")}");
+        // Hl 本身已經內含地區碼（例如 "zh-TW"），不需要再手動拼接 Gl。
+        return new CultureInfo(Hl ?? "en");
     }
 }

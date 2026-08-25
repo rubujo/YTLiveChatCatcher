@@ -61,17 +61,17 @@ public static class ModelExtension
                 return;
             }
 
-            attachmentData.PollData?.ChoiceDatas?.ForEach(async (ChoiceData choiceData) =>
+            // List<T>.ForEach 吃的是 Action<T>，若直接塞 async lambda 會變成 fire-and-forget（呼叫端等不到
+            // 圖片真正下載完成，例外也沒人接），改用 Task.WhenAll 讓呼叫端能確實等到全部選項圖片下載完成。
+            await Task.WhenAll(attachmentData.PollData.ChoiceDatas.Select(async choiceData =>
             {
                 byte[]? imageBytes = await ytJsonParser.GetImageBytes(choiceData.ImageUrl);
 
-                if (imageBytes == null)
+                if (imageBytes != null)
                 {
-                    return;
+                    choiceData.ImageDataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(imageBytes)}";
                 }
-
-                choiceData.ImageDataUri = $"data:image/jpeg;base64,{Convert.ToBase64String(imageBytes)}";
-            });
+            }));
         }
         else
         {

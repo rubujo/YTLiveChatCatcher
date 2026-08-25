@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
+using Microsoft.Maui.Graphics;
 using System.Text;
 
 namespace Rubujo.YouTube.Utility.Extensions;
@@ -6,7 +6,7 @@ namespace Rubujo.YouTube.Utility.Extensions;
 /// <summary>
 /// Stream 擴充方法
 /// </summary>
-public static class SteamExtension
+public static class StreamExtension
 {
     /// <summary>
     /// 轉換成 byte[]
@@ -18,12 +18,11 @@ public static class SteamExtension
     {
         using BinaryReader binaryReader = new(stream);
 
-        if (int.TryParse(stream.Length.ToString(), out int streamLength))
-        {
-            return binaryReader.ReadBytes(streamLength);
-        }
+        long remaining = stream.Length - stream.Position;
 
-        return [];
+        return remaining > 0 && remaining <= int.MaxValue ?
+            binaryReader.ReadBytes((int)remaining) :
+            [];
     }
 
     /// <summary>
@@ -43,10 +42,18 @@ public static class SteamExtension
         byte[] bytesTIFF = [73, 73, 42];
         byte[] bytesJPEG = [255, 216, 255, 224];
 
+        byte[] streamBytes = stream.ToByteArray();
+
+        // 來源串流過短（例如空的或失敗的下載）時直接視為無法辨識，避免 Buffer.BlockCopy 拋例外。
+        if (streamBytes.Length < 4)
+        {
+            return null;
+        }
+
         // 複製前 4 個 byte 到 bytesBuffer。
         byte[] bytesBuffer = new byte[4];
 
-        Buffer.BlockCopy(stream.ToByteArray(), 0, bytesBuffer, 0, bytesBuffer.Length);
+        Buffer.BlockCopy(streamBytes, 0, bytesBuffer, 0, bytesBuffer.Length);
 
         // 檢查 bytesBuffer 的 Sequence。
         if (bytesBMP.SequenceEqual(bytesBuffer.Take(bytesBMP.Length)))

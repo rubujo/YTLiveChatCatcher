@@ -58,8 +58,8 @@ public static partial class YouTubeUrlUtil
         string channelID = string.Empty;
 
         IConfiguration configuration = Configuration.Default.WithDefaultLoader();
-        IBrowsingContext browsingContext = BrowsingContext.New(configuration);
-        IDocument document = await browsingContext.OpenAsync(channelUrl);
+        using IBrowsingContext browsingContext = BrowsingContext.New(configuration);
+        using IDocument document = await browsingContext.OpenAsync(channelUrl);
         IElement? element = document?.Head?.Children
             .FirstOrDefault(n => n.LocalName == "meta" &&
                 n.GetAttribute("property") == "og:url");
@@ -92,11 +92,12 @@ public static partial class YouTubeUrlUtil
 
         string videoID = regex.Replace(videoUrl, string.Empty);
 
-        if (videoID.Contains("&list="))
-        {
-            string[] tempArray = videoID.Split("&list=");
+        // 移除任何查詢參數（例如 &list=、&t=、&si= 等分享／追蹤參數），只保留純影片 ID。
+        int queryIndex = videoID.IndexOfAny(['&', '?']);
 
-            videoID = tempArray[0];
+        if (queryIndex >= 0)
+        {
+            videoID = videoID[..queryIndex];
         }
 
         if (string.IsNullOrEmpty(videoID))

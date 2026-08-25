@@ -1,8 +1,6 @@
-﻿using GetCachable;
-using Microsoft.Maui.Graphics;
-using Microsoft.Maui.Graphics.Platform;
-using Microsoft.Maui.Graphics.Skia;
+﻿using Microsoft.Maui.Graphics;
 using Rubujo.YouTube.Utility.Extensions;
+using Rubujo.YouTube.Utility.Utils;
 using System.Text.Json.Serialization;
 
 namespace Rubujo.YouTube.Utility.Models.LiveChat;
@@ -56,62 +54,23 @@ public class StickerData
     /// <returns>Task&lt;string&gt;</returns>
     public async Task<string> SetImage(HttpClient? httpClient, bool isFetchLargePicture)
     {
-        string errorMessage = string.Empty;
-
         if (httpClient == null)
         {
-            errorMessage = "[StickerData.SetImage()] 變數 \"httpClient\" 為 null！";
-
-            return errorMessage;
+            return "[StickerData.SetImage()] 變數 \"httpClient\" 為 null！";
         }
 
         if (string.IsNullOrEmpty(ID) || string.IsNullOrEmpty(Url))
         {
-            errorMessage = "[StickerData.SetImage()] 變數 \"ID\" 或 \"Url\" 為 null 或空白！";
-
-            return errorMessage;
+            return "[StickerData.SetImage()] 變數 \"ID\" 或 \"Url\" 為 null 或空白！";
         }
 
-        // 以 ID 為鍵值，將 IImage 暫存 10 分鐘。
-        IImage image = await BetterCacheManager.GetCachableData(ID, async () =>
-        {
-            try
-            {
-                byte[] bytes = await httpClient.GetByteArrayAsync(Url);
-
-                using MemoryStream memoryStream = new(bytes);
-
-                return PlatformImage.FromStream(memoryStream);
-            }
-            catch (Exception ex)
-            {
-                errorMessage = $"無法下載超級貼圖「{Label}」。{Environment.NewLine}" +
-                    $"超級貼圖的網址：{Url}{Environment.NewLine}" +
-                    $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}";
-
-                // 當 isFetchLargePicture 的值為 true 時，建立一個 48x48 的白色 SkiaBitmapExportContext。
-                SkiaBitmapExportContext skiaBitmapExportContext = isFetchLargePicture ?
-                    new(width: 24, height: 24, displayScale: 1.0f) :
-                    new(width: 48, height: 48, displayScale: 1.0f);
-
-                ICanvas canvas = skiaBitmapExportContext.Canvas;
-
-                Rect rect = new(
-                    x: 0,
-                    y: 0,
-                    width: skiaBitmapExportContext.Width,
-                    height: skiaBitmapExportContext.Height);
-
-                canvas.FillColor = Color.FromArgb(Colors.White.ToHex());
-                canvas.FillRectangle(rect);
-
-                using MemoryStream memoryStream = new();
-
-                skiaBitmapExportContext.WriteToStream(memoryStream);
-
-                return PlatformImage.FromStream(memoryStream);
-            }
-        }, 10);
+        (IImage image, string errorMessage) = await ImageDataUtil.DownloadOrPlaceholderAsync(
+            httpClient: httpClient,
+            cacheKey: ID,
+            displayIdentifier: Label,
+            url: Url,
+            isFetchLargePicture: isFetchLargePicture,
+            entityDisplayName: "超級貼圖");
 
         Image = image;
         Format = image.AsStream().GetImageFormat().ToString();

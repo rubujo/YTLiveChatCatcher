@@ -14,6 +14,6 @@ public static class EnumExtension
     /// <returns>數值</returns>
     public static int ToInt32(this EnumSet.LiveChatType liveChatType)
     {
-        return Convert.ToInt32(liveChatType);
+        return (int)liveChatType;
     }
 }

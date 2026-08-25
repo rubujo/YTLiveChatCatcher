@@ -110,7 +110,7 @@ public class DictionarySet
                 Gl = "AD",
                 Hl = "ca",
                 TimeZone = "Europe/Andorra",
-                AcceptLanguage = "ca=AD,ca;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
+                AcceptLanguage = "ca-AD,ca;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
             }
         },
         {
@@ -384,7 +384,7 @@ public class DictionarySet
             }
         },
         {
-            EnumSet.DisplayLanguage.Malayam,
+            EnumSet.DisplayLanguage.Malayalam,
             new RegionData()
             {
                 Gl = "IN",
@@ -440,7 +440,7 @@ public class DictionarySet
                 Gl = "PL",
                 Hl = "pl",
                 TimeZone = "Europe/Warsaw",
-                AcceptLanguage = "pl-/pl,pl;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
+                AcceptLanguage = "pl-PL,pl;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
             }
         },
         {
@@ -560,7 +560,7 @@ public class DictionarySet
                 Gl = "SE",
                 Hl = "sv",
                 TimeZone = "Europe/Berlin",
-                AcceptLanguage = "sv-SE.sv;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
+                AcceptLanguage = "sv-SE,sv;q=0.9,en-US;q=0.8,en-GB;q=0.7,en;q=0.6"
             }
         },
         {
@@ -801,6 +801,9 @@ public class DictionarySet
 
     /// <summary>
     /// 取得字典：區域
+    /// <para>回傳的是共用靜態字典的直接參照、並非唯讀複本或執行緒安全的集合。
+    /// 若要動態新增／修改內容，請在建立任何 YTJsonParser 執行個體、開始併發串流之前完成，
+    /// 不要在串流進行中動態修改。</para>
     /// </summary>
     /// <returns>Dictionary&lt;EnumSet.DisplayLanguage, RegionData&gt;</returns>
     public static Dictionary<EnumSet.DisplayLanguage, RegionData> GetRegionDictionary()
@@ -810,6 +813,10 @@ public class DictionarySet
 
     /// <summary>
     /// 字典：本地化
+    /// <para>回傳的是共用靜態字典的直接參照。這是刻意設計成可變的公開擴充機制——消費端可以用
+    /// <c>GetLocalizeDictionary().Add(EnumSet.DisplayLanguage.XXX, new Dictionary&lt;string, string&gt;() {...})</c>
+    /// 動態註冊新語言（見 README 範例），但不是執行緒安全的集合，請在建立任何 YTJsonParser 執行個體、
+    /// 開始併發串流之前完成註冊，不要在串流進行中動態修改。</para>
     /// </summary>
     /// <returns>Dictionary&lt;EnumSet.DisplayLanguage, Dictionary&lt;string, string&gt;&gt;</returns>
     public static Dictionary<EnumSet.DisplayLanguage, Dictionary<string, string>> GetLocalizeDictionary()

@@ -17,11 +17,24 @@ public static class JsonElementExtension
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="propertyName">字串，屬性名稱</param>
     /// <returns>JsonElement?</returns>
-    public static JsonElement? Get(this JsonElement jsonElement, string propertyName) =>
-        jsonElement.ValueKind != JsonValueKind.Null &&
-        jsonElement.ValueKind != JsonValueKind.Undefined &&
-        jsonElement.TryGetProperty(propertyName, out JsonElement value)
-            ? value : null;
+    public static JsonElement? Get(this JsonElement jsonElement, string propertyName)
+    {
+        // TryGetProperty 只有在 ValueKind 為 Object 時才合法，其餘型別（String、Array、數值等）呼叫會直接拋例外——
+        // YouTube 偶爾會把某個欄位的型別從物件改成字串／陣列，這裡必須明確擋下，不能只擋 Null／Undefined。
+        if (jsonElement.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        try
+        {
+            return jsonElement.TryGetProperty(propertyName, out JsonElement value) ? value : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     /// <summary>
     /// 取得指定索引值的 JsonElement

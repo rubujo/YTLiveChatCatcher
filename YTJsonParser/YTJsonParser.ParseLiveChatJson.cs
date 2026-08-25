@@ -1301,7 +1301,7 @@ public partial class YTJsonParser
 
                 JsonElement? bold = singleRun.Get("bold");
 
-                if (text.HasValue)
+                if (bold.HasValue)
                 {
                     isBold = bold?.GetBoolean() ?? false;
                 }
@@ -1599,10 +1599,11 @@ public partial class YTJsonParser
 
         JsonElement? timestampUsec = jsonElement?.Get("timestampUsec");
 
-        if (timestampUsec.HasValue)
+        if (timestampUsec.HasValue &&
+            long.TryParse(timestampUsec.Value.GetString(), out long rawTimestamp))
         {
             // 將 Microseconds 轉換成 Miliseconds。
-            long timestamp = Convert.ToInt64(timestampUsec.Value.GetString()) / 1000L;
+            long timestamp = rawTimestamp / 1000L;
 
             // TODO: 2023/12/20 未確認在其它語系時，是否轉換出來的時間值是正確的。
             bool hasRegionData = DictionarySet.GetRegionDictionary()

@@ -16,16 +16,16 @@ public static class ListExtension
     /// </summary>
     /// <param name="list">List&lt;BadgeData&gt;</param>
     /// <returns>字串</returns>
-    public static string GetBadgeName(this List<BadgeData> list)
+    public static string GetBadgeName(this List<BadgeData>? list)
     {
-        string?[] array = list.Select(n => n.Label).ToArray();
-
-        if (array != null && array.Length > 0)
+        if (list == null || list.Count == 0)
         {
-            return string.Join("、", array);
+            return KeySet.NoAuthorBadges;
         }
 
-        return KeySet.NoAuthorBadges;
+        string joined = string.Join("、", list.Select(n => n.Label));
+
+        return string.IsNullOrEmpty(joined) ? KeySet.NoAuthorBadges : joined;
     }
 
     /// <summary>
