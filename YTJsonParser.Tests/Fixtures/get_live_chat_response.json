@@ -1,0 +1,79 @@
+{
+  "continuationContents": {
+    "liveChatContinuation": {
+      "continuations": [
+        {
+          "invalidationContinuationData": {
+            "invalidationId": { "objectSource": 1056, "objectId": "dGVzdA==", "topic": "chat~TEST", "subscribeToGcmTopics": true, "protoCreationTimestampMs": "1700000000000" },
+            "timeoutMs": 10000,
+            "continuation": "TEST_CONTINUATION_TOKEN_2"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "addChatItemAction": {
+            "item": {
+              "liveChatTextMessageRenderer": {
+                "id": "msg-poll-1",
+                "timestampUsec": "1700000001000000",
+                "authorName": { "simpleText": "NormalUser" },
+                "authorPhoto": { "thumbnails": [{ "url": "https://example.com/b32.jpg", "width": 32, "height": 32 }] },
+                "message": { "runs": [{ "text": "一般留言測試" }] },
+                "authorExternalChannelId": "UCnormal"
+              }
+            }
+          }
+        },
+        {
+          "addChatItemAction": {
+            "item": {
+              "liveChatPaidMessageRenderer": {
+                "id": "msg-superchat-1",
+                "timestampUsec": "1700000002000000",
+                "authorName": { "simpleText": "PaidUser" },
+                "authorPhoto": { "thumbnails": [{ "url": "https://example.com/c32.jpg", "width": 32, "height": 32 }] },
+                "message": { "runs": [{ "text": "超級留言測試" }] },
+                "purchaseAmountText": { "simpleText": "NT$100" },
+                "bodyBackgroundColor": 4278237396,
+                "authorExternalChannelId": "UCpaid"
+              }
+            }
+          }
+        },
+        {
+          "removeChatItemAction": {
+            "targetItemId": "msg-poll-1"
+          }
+        },
+        {
+          "removeChatItemByAuthorAction": {
+            "externalChannelId": "UCbanned"
+          }
+        },
+        {
+          "showLiveChatActionPanelAction": {
+            "panelToShow": {
+              "liveChatActionPanelRenderer": {
+                "contents": {
+                  "pollRenderer": {
+                    "liveChatPollId": "poll-1",
+                    "header": {
+                      "pollHeaderRenderer": {
+                        "pollQuestion": { "runs": [{ "text": "測試投票問題" }] }
+                      }
+                    },
+                    "choices": [
+                      { "text": { "runs": [{ "text": "選項A" }] } },
+                      { "text": { "runs": [{ "text": "選項B" }] } }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
