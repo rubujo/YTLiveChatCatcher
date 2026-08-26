@@ -458,7 +458,7 @@ public partial class FMain : Form
             SharedMemberMilestoneCount = 0;
             SharedMemberGiftCount = 0;
             SharedReceivedMemberGiftCount = 0;
-            SharedTotalIncome = 0.0;
+            SharedIncomeByCurrency.Clear();
             SharedMemberInRoomAuthors.Clear();
             SharedDistinctAuthors.Clear();
 

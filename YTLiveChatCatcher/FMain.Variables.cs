@@ -115,8 +115,13 @@ public partial class FMain
     /// <summary>累加：接收會員贈送人數</summary>
     private int SharedReceivedMemberGiftCount = 0;
 
-    /// <summary>累加：新臺幣總收益（超級留言／貼圖，$ 開頭的金額）</summary>
-    private double SharedTotalIncome = 0.0;
+    /// <summary>
+    /// 累加：依貨幣符號分類的超級留言／貼圖原始金額加總（key 為貨幣符號，例如 "NT$"、"US$"）。
+    /// <para>刻意不做匯率換算、也不合併成單一數字——不同貨幣直接相加沒有意義，
+    /// 且沒有不會過期的匯率來源可用，見 <see cref="RegisterNewListViewItemStats"/> 內的
+    /// <see cref="TryParsePurchaseAmount"/>。</para>
+    /// </summary>
+    private readonly Dictionary<string, double> SharedIncomeByCurrency = new(StringComparer.Ordinal);
 
     /// <summary>
     /// 目前聊天室內、具有會員徽章且訊息類型不是加入／升級／里程碑事件本身的不重複作者名稱集合

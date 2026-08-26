@@ -9,6 +9,7 @@ using Rubujo.YouTube.Utility.Utils;
 using Size = System.Drawing.Size;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
@@ -387,11 +388,25 @@ public partial class FMain
 
                 summaryIdx++;
 
+                // 「留言數量」刻意用排除法（跟 RegisterNewListViewItemStats 的 SharedChatCount 邏輯一致），
+                // 不是列舉「一般留言／超級留言／超級貼圖」這種包含法——包含法只要之後又新增一種聊天類訊息
+                // （例如捐款、版主訊息、投票建立），沒有同步更新這裡就會被漏算，這是這次修正前的實際狀況：
+                // 舊版公式只認得上述三種類型，ChatPoll／ChatGift／ChatDonation／ChatModeration 這些同樣算
+                // 「留言」的類型會被排除法算進 SharedChatCount（畫面上的即時數字)，卻不會被這個公式算進去，
+                // 造成匯出的 Excel 跟畫面上的數字對不起來。改成排除法後，任何未來新增的訊息類型只要不在
+                // 下面的排除清單裡，就會自動被算成「留言」，不需要記得同步更新這裡。
                 List<string> arrayFormula =
                 [
-                    $"SUM(COUNTIF(G:G,{{\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatGeneral)}\", " +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}\"}}))&\" 個\"",
+                    $"(COUNTA(G2:G1048576)-SUM(COUNTIF(G2:G1048576,{{" +
+                    $"\"{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect)}\"," +
+                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned)}\"" +
+                    $"}})))&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}\")&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}\")&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}\")&\" 個\"",
@@ -1643,11 +1658,16 @@ public partial class FMain
             SharedSuperStickerCount++;
         }
 
-        if ((isSuperChat || isSuperSticker) && purchaseAmountText.StartsWith('$'))
+        if (isSuperChat || isSuperSticker)
         {
-            string amountText = purchaseAmountText.Replace("$", string.Empty);
-
-            SharedTotalIncome += double.TryParse(amountText, out double amount) ? amount : 0;
+            if (TryParsePurchaseAmount(purchaseAmountText, out string currencySymbol, out double amount))
+            {
+                SharedIncomeByCurrency[currencySymbol] = SharedIncomeByCurrency.GetValueOrDefault(currencySymbol) + amount;
+            }
+            else
+            {
+                WriteLog($"無法辨識的金額格式，未計入收益統計：「{purchaseAmountText}」。");
+            }
         }
 
         if (isJoinMember)
@@ -1698,6 +1718,37 @@ public partial class FMain
             SharedDistinctAuthors.Add(authorName);
         }
     }
+
+    /// <summary>
+    /// 嘗試解析超級留言／貼圖的金額文字（例如 "NT$100"、"$10.00"、"¥1,000"）為貨幣符號與數字金額。
+    /// <para>YouTube 依付款方實際使用的貨幣格式化這段文字，不受 <see cref="EnumSet.DisplayLanguage"/> 影響，
+    /// 可能出現任何貨幣符號（NT$、US$、HK$、¥ 等），不能假設一律是新臺幣或美金，也不能只認裸 "$" 開頭
+    /// ——這是舊版 <c>purchaseAmountText.StartsWith('$')</c> 的錯誤假設，會讓 "NT$100" 這種帶國別字首的
+    /// 金額完全被忽略，不同貨幣也不能直接相加當同一個數字看待。</para>
+    /// </summary>
+    /// <param name="purchaseAmountText">字串，購買金額文字</param>
+    /// <param name="currencySymbol">out 字串，貨幣符號（例如 "NT$"）</param>
+    /// <param name="amount">out double，數字金額</param>
+    /// <returns>布林值，是否成功解析出金額</returns>
+    private static bool TryParsePurchaseAmount(string purchaseAmountText, out string currencySymbol, out double amount)
+    {
+        Match match = PurchaseAmountRegex().Match(purchaseAmountText);
+
+        if (!match.Success)
+        {
+            currencySymbol = string.Empty;
+            amount = 0;
+
+            return false;
+        }
+
+        currencySymbol = match.Groups["symbol"].Value.Trim();
+
+        return double.TryParse(match.Groups["amount"].Value, out amount);
+    }
+
+    [GeneratedRegex(@"^(?<symbol>[^\d]*)(?<amount>[\d,]+(?:\.\d+)?)")]
+    private static partial Regex PurchaseAmountRegex();
 
     /// <summary>
     /// 套用「留言已被刪除」事件：透過 <see cref="SharedItemsByMessageID"/> 找到對應訊息 ID 的既有列並標記，
@@ -1900,19 +1951,26 @@ public partial class FMain
     {
         TBLog.InvokeIfRequired(() =>
         {
-            // YouTube 會抽取 30% 收益。
-            double actualIncome = Math.Round(SharedTotalIncome * 0.70, 0, MidpointRounding.AwayFromZero);
+            // 依貨幣符號分別加總、分別顯示，不做匯率換算——不同貨幣的原始金額不能直接相加或比較。
+            // YouTube 會從每筆金額抽取 30% 收益，因此「實收」是逐幣別各自乘 0.70 後的清單，不是單一數字。
+            string rawBreakdown = SharedIncomeByCurrency.Count > 0 ?
+                string.Join("、", SharedIncomeByCurrency.Select(n => $"{n.Key}{n.Value}")) :
+                "0";
+
+            string actualBreakdown = SharedIncomeByCurrency.Count > 0 ?
+                string.Join("、", SharedIncomeByCurrency.Select(n =>
+                    $"{n.Key}{Math.Round(n.Value * 0.70, 0, MidpointRounding.AwayFromZero)}")) :
+                "0";
 
             LTempIncome.InvokeIfRequired(() =>
             {
-                LTempIncome.Text = $"預計收益：共 {actualIncome} 元整";
+                LTempIncome.Text = $"預計收益：{actualBreakdown}";
 
-                SharedTooltip.SetToolTip(LTempIncome, $"累積收益：共 {SharedTotalIncome} 元整");
+                SharedTooltip.SetToolTip(LTempIncome, $"累積收益：{rawBreakdown}");
             });
 
-            string message = $"目前累積收益：共 {SharedTotalIncome} 元整" +
-                $"（實收：{actualIncome} 元整）{Environment.NewLine}" +
-                "※僅計算超級留言／貼圖的新臺幣收益，其它幣種一律不納入計算。";
+            string message = $"目前累積收益：{rawBreakdown}（實收：{actualBreakdown}）{Environment.NewLine}" +
+                "※依貨幣符號分別加總，不做匯率換算，不同幣別的金額不能直接相加比較。";
 
             WriteLog(message);
         });
