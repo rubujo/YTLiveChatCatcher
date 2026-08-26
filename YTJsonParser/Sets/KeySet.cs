@@ -92,6 +92,11 @@ public class KeySet
     /// </summary>
     public const string ChatReplyCountUpdate = "ChatReplyCountUpdate";
 
+    /// <summary>
+    /// 投票結果更新（創作者投票的即時得票率變動事件，非投票本身）
+    /// </summary>
+    public const string ChatPollUpdate = "ChatPollUpdate";
+
     #endregion
 
     #region 訊息內關鍵字

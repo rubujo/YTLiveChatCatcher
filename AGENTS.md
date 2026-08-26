@@ -67,13 +67,21 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 
 **如果聊天室擷取功能又不動了**：先用 `.claude/skills/yt-fetch-diagnose/SKILL.md` 描述的步驟，直接對 YouTube 發請求比對目前的 JSON 結構跟程式碼裡假設的路徑是否還吻合，而不是憑空猜測或改用其他假設。
 
+**`GetYTConfigDataAsync`（`YTJsonParser.Core.cs`）擷取 ytcfg 的方式（2026/8 修正）**：LiveChat 情境已改用 `ExtractBalancedJsonObject`（括號配對，跟 `IsVideoStreamingAsync`／`GetVideoTitleAsync` 解析 `ytInitialPlayerResponse` 用的是同一個方法）取出 `ytcfg.set({...})` 的完整物件，取代舊版 `Replace("ytcfg.set(", "")` + `LastIndexOf("});")` 的字串裁切——舊版只要 ytcfg 內任何欄位值剛好含有字面上的 `"});"` 就會截斷錯誤，是同一類「巢狀大型字串打斷天真字串裁切」的問題。已對真實直播（東森新聞）與真實頻道（冬蜜 DonBee 社群貼文）驗證修正後兩條路徑皆正常運作。Community 情境的正則表達式擷取（`RegexYtCfgCommunity`）未受影響，維持原樣。
+
 ## 參考第三方專案的原則（Clean Room）
 
 理解 InnerTube 協議格式時，可以參考 chat-downloader、yt-dlp、其他語言的類似專案的公開文件／原始碼**去理解資料格式與端點行為**，但實作本身一律依據自己實際發送請求觀察到的 JSON 結果重新撰寫，不得複製其他專案的程式碼進來。既有程式碼中的 XML 註解會標註「參考：」某網址，代表該處的解析邏輯或欄位命名是依循該資料格式撰寫的說明，不代表程式碼是複製的。
 
 ## 已確認支援的 LiveChat 元素種類（2026/8 實測）
 
-`YTJsonParser.ParseLiveChatJson.cs` 目前會解析：一般留言、超級留言、超級貼圖、加入／升級／里程碑會員、贈送會員（`liveChatSponsorshipsGiftPurchaseAnnouncementRenderer`）、接收會員贈送、新版個別小禮物（`giftMessageViewModel`，ViewModel 結構）、置頂／導向橫幅（`addBannerToLiveChatCommand` -> `bannerRenderer`，2026/8 已對真實直播驗證）、跑馬燈（ticker，會取出內嵌的完整原始 Renderer）、捐款／購買／版主／自動版主訊息、創作者投票（`showLiveChatActionPanelAction` -> `pollRenderer`）、留言刪除（`removeChatItemAction`）、使用者被封鎖（`removeChatItemByAuthorAction`）、留言被取代／修改（`replaceChatItemAction`，例如超級留言淡出後改為較小樣式）、超級留言／貼圖的排行榜徽章（`leaderboardBadge`，2026/8 新發現，掛在訊息上而非獨立 action，解析出的名次文字對應 `RendererData.LeaderboardRank`）、超級留言的回覆討論串人數更新（見下方「回覆數更新機制」）。已於多支真實直播（VTuber、遊戲台、新聞台、Hololive-EN、歐美遊戲／新聞頻道）上實測驗證。**注意**：判斷「是否已結束」請一律用 `IsVideoStreamingAsync` 或直接查 `liveBroadcastDetails.isLiveNow`，不要只憑「有 Top chat／Live chat 篩選選單」判斷（長時間常態直播與已結束重播都可能同時有這個選單）。「重播」情境目前驗證覆蓋範圍見下方「已知技術債」。
+`YTJsonParser.ParseLiveChatJson.cs` 目前會解析：一般留言、超級留言、超級貼圖、加入／升級／里程碑會員、贈送會員（`liveChatSponsorshipsGiftPurchaseAnnouncementRenderer`）、接收會員贈送、新版個別小禮物（`giftMessageViewModel`，ViewModel 結構）、置頂／導向橫幅（`addBannerToLiveChatCommand` -> `bannerRenderer`，2026/8 已對真實直播驗證）、跑馬燈（ticker，會取出內嵌的完整原始 Renderer）、捐款／購買／版主／自動版主訊息、創作者投票（`showLiveChatActionPanelAction` -> `pollRenderer`）與投票的即時得票率更新（`updateLiveChatPollAction`，見下方說明）、留言刪除（`removeChatItemAction`）、使用者被封鎖（`removeChatItemByAuthorAction`）、留言被取代／修改（`replaceChatItemAction`，例如超級留言淡出後改為較小樣式）、超級留言／貼圖的排行榜徽章（`leaderboardBadge`，2026/8 新發現，掛在訊息上而非獨立 action，解析出的名次文字對應 `RendererData.LeaderboardRank`）、超級留言的回覆討論串人數更新（見下方「回覆數更新機制」）。已於多支真實直播（VTuber、遊戲台、新聞台、Hololive-EN、歐美遊戲／新聞頻道）上實測驗證。**注意**：判斷「是否已結束」請一律用 `IsVideoStreamingAsync` 或直接查 `liveBroadcastDetails.isLiveNow`，不要只憑「有 Top chat／Live chat 篩選選單」判斷（長時間常態直播與已結束重播都可能同時有這個選單）。「重播」情境目前驗證覆蓋範圍見下方「已知技術債」。
+
+`updateLiveChatPollAction`（2026/8 新增）：投票建立時（`ParsePollRenderer`）只有問題與選項文字，沒有任何票數；YouTube 是透過這個獨立的 action（注意**不是**上面「回覆數更新」用的 `frameworkUpdates` 通用實體更新機制）即時推送 `voteRatio`／`votePercentage.simpleText`，`liveChatPollId` 與建立時相同可用來對照。已對一場真實直播（美國兒童內容頻道，928→959 票、YES 91%／NO 9%）連續輪詢驗證過端到端正確。
+
+**action／附件層級目前沒有「未知類型」的診斷記錄，這是本次發現的一個架構性問題（2026/8 已補上）**：`ParseRenderer`（訊息內容層級）本來就有 `else` 分支記錄「尚未支援的內容」，但 action 層級（`ParseNonMessageAction`）與社群貼文附件層級（`GetBackstageAttachment`）過去完全沒有這層防護——遇到不認識的 action 或附件類型會**靜默丟棄、不留任何記錄**，代表過去所有測試「沒有發現新的未支援類型」這個結論，其實只涵蓋 `ParseRenderer` 這一層。已補上對應的 Trace 記錄（`"ParseNonMessageAction -> 尚未支援的 action 類型"`／`"GetBackstageAttachment -> 尚未支援的附件類型"`），純粹是診斷用途、不影響既有解析行為。實際測試中已用這個新記錄機制抓到一個真實但尚未確認結構的新 action：`updateOrAddInteractivityWidgetAction`（真實直播中只出現過 1 次，重新嘗試擷取完整樣本未再次命中，結構未知，之後若要支援請先用新的診斷記錄收集到真實樣本再實作）。
+
+**使用者被封鎖（暫時 timeout vs 永久封鎖）的區分能力**：`removeChatItemByAuthorAction` 目前只讀取 `externalChannelId`，程式碼裡沒有解析任何「封鎖類型」或「持續時間」欄位。查證官方 YouTube Data API v3 文件，`banType`（`PERMANENT`／`TEMPORARY`）只存在於需要 OAuth 授權的 `liveChatBans`／`liveChatMessages.snippet.userBannedDetails` 這組**官方**端點，跟本函式庫使用的 InnerTube 非官方端點是完全不同的資料來源；交叉參考 chat-downloader 專案對同一批 action 類型（`removeChatItemAction`／`removeChatItemByAuthorAction`／`markChatItemsByAuthorAsDeletedAction`／`markChatItemAsDeletedAction`）的獨立分析，也確認其實作**沒有**解析任何 banType／duration 欄位。本次會話累計在 9 個真實直播（涵蓋新聞台、政論節目、新人 VTuber 首播、大型內容頻道等多種觀眾與版主行為模式）上連續輪詢共約 45 分鐘（含一次對已知有活躍板主刪言的東森新聞頻道特別延長到 8 分鐘的觀察），只捕捉到訊息刪除（`removeChatItemAction`）與跨頻道導流橫幅（`addBannerToLiveChatCommand` -> `liveChatBannerRedirectRenderer`，`bannerType: "LIVE_CHAT_BANNER_TYPE_CROSS_CHANNEL_REDIRECT"`，已確認是既有 `ChatRedirect` 類型會正確處理的情境），**完全沒有捕捉到任何一次 `removeChatItemByAuthorAction`（使用者封鎖）事件**，因此依然**未能親自取得真實的封鎖 action 原始 JSON 做最終確認**。這個結果本身有其意義：封鎖事件在真實直播裡的發生頻率遠低於單純刪言，用隨機時間點連續輪詢的方式很難統計上巧遇；依據前述官方 API／chat-downloader 交叉證據，暫時／永久封鎖的區分很可能在 InnerTube 這一層本來就不存在，不是本函式庫遺漏解析，但這個結論目前仍建立在間接證據上。另外，`markChatItemsByAuthorAsDeletedAction`／`markChatItemAsDeletedAction` 這兩個 chat-downloader 有處理、但本函式庫完全沒有實作的舊版 action 名稱，這次也沒有觀察到——若之後真的出現，會被上面新增的診斷記錄捕捉到。**若之後要繼續追查，比起隨機輪詢，更有效的做法是找一個自己能控制、可以主動觸發封鎖／timeout 動作的測試直播（例如自己開一場測試直播、用另一個帳號發言後自行封鎖），直接觀察 action 的完整原始 JSON，而不是被動等待真實直播剛好發生。**
 
 尚未實作的項目：
 
@@ -91,7 +99,14 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 
 ## 社群貼文分頁尋找機制（`GetCommunityTab`，2026/8 修正）
 
-實測發現 YouTube 對 `/channel/{id}/community` 的回應，現在只會在 `tabs` 陣列內回傳**單一、已經選取**的分頁，不再像過去一樣把所有分頁都塞進同一份回應，也不再穩定提供可比對 `"/community"` 的 `tabRenderer.endpoint.commandMetadata.webCommandMetadata.url`（該欄位常常整個不存在）。舊版靠網址比對的 `GetCommunityTab` 因此完全失效——對任何 2026 年的頻道都會回傳 `null`，導致社群貼文擷取從頭到尾拿不到任何資料。已修正為優先找 `tabRenderer.selected == true` 的分頁，找不到才退回舊版網址比對，最後才退回「若整份回應只有一個分頁就直接視為社群分頁」。已用 10 個真實頻道驗證修正後可正常運作（image／video／poll 三種附件皆有實測樣本，皆已支援）。
+實測發現 YouTube 對社群分頁的回應，現在只會在 `tabs` 陣列內回傳**單一、已經選取**的分頁，不再像過去一樣把所有分頁都塞進同一份回應，也不再穩定提供可比對舊網址格式的 `tabRenderer.endpoint.commandMetadata.webCommandMetadata.url`（該欄位常常整個不存在）。舊版靠網址比對的 `GetCommunityTab` 因此完全失效——對任何 2026 年的頻道都會回傳 `null`，導致社群貼文擷取從頭到尾拿不到任何資料。已修正為優先找 `tabRenderer.selected == true` 的分頁，找不到才退回舊版網址比對，最後才退回「若整份回應只有一個分頁就直接視為社群分頁」。已用 10 個真實頻道驗證修正後可正常運作（image／video／poll 三種附件皆有實測樣本，皆已支援）。
+
+**請求網址：`/community` → `/posts`（2026/8 修正，重要）**：`GetYTConfigDataAsync`（`YTJsonParser.Core.cs`）原本用 `/channel/{id}/community` 抓社群分頁。實測對 5 個頻道抽測比較 `/community` 與 `/posts` 兩種網址，發現**其中 2 個頻道（Kurzgesagt、米妃Tobi）直接請求 `/community` 會回傳「沒有貼文」的空狀態訊息（`contents.messageRenderer`），即使該頻道其實有大量貼文**（改用 `/posts` 各自正常抓到 174／10+ 篇）；另外 3 個頻道兩種網址皆可正常運作（`/community` 甚至會回傳稍多一點的初始項目，但差異僅止於分頁大小，不影響完整擷取的正確性）。已全面改用 `/posts`，這是 YouTube 官方文件也已採用的新網址（`/community` 是舊名稱）。**這是一個先前完全沒被注意到的靜默失敗**：受影響的頻道用舊版程式碼會直接回傳 0 篇貼文、沒有任何錯誤訊息，容易被誤判為「這個頻道沒有社群貼文」。
+
+## 社群貼文類型（2026/8 新增支援）
+
+- **測驗貼文（`quizRenderer`）**：YouTube 於 2025 年起逐步開放的社群貼文測驗功能，`backstageAttachment.quizRenderer` 底下的 `choices[]` 每個選項多了 `isCorrect`（布林值），且沒有 `numVotes`／`votePercentage`（實測確認：測驗選項在作答前不會透露即時票數分布）；問題文字本身沿用貼文既有的 `contentText`（跟一般文字貼文同一個欄位），不在 `quizRenderer` 內。解析結果沿用既有的 `PollData`／`ChoiceData` 模型（新增 `ChoiceData.IsCorrect`、`AttachmentData.IsQuiz`），因為兩者資料形狀相同，沒有另外建立 QuizData 模型的必要。已對 3 個真實頻道（Trivia Quiz Channel、Veritasium、Buzzfeed Quiz）驗證存在，並對 Trivia Quiz Channel 完整驗證解析正確（2 篇真實測驗貼文，選項與正確答案皆吻合原始 JSON）。
+- **轉發貼文（`sharedPostRenderer`）**：YouTube 的「在 YouTube 上轉發」（Repost on YouTube）功能。**注意**：這不是 `backstageAttachment` 底下的附件類型，而是 `backstagePostThreadRenderer.post` 底下**取代** `backstagePostRenderer` 的另一種可能值（兩者互斥，只會有一個）。結構：`post.sharedPostRenderer` 本身帶有 `displayName`（轉發者）、`content`（轉發時附加的文字，可為空）、`publishedTimeText`（轉發時間）、自己的 `postId`，並巢狀包一份完整的 `originalPost.backstagePostRenderer`（被轉發的原始貼文，結構與一般貼文完全相同，可直接沿用既有的作者／內容／附件解析函式）。`GetBackstagePostRenderer` 已修正為在 `post.backstagePostRenderer`不存在時，退回 `post.sharedPostRenderer.originalPost.backstagePostRenderer`，讓 `PostData` 的 `AuthorText`／`ContentTexts`／`Attachments` 等欄位語意上永遠代表「貼文本身的內容」；轉發中繼資料另外存在新增的 `PostData.IsRepost`／`RepostedByAuthorText`／`RepostCaptionTexts`。已對真實跨頻道轉發（Kurzgesagt 主頻道轉發子頻道「Nightshift – Kurzgesagt After Dark」的 3 篇貼文）完整驗證：`RepostedByAuthorText`（轉發者）與 `AuthorText`（原始作者）正確地是兩個不同的頻道名稱，`RepostCaptionTexts`（轉發附加文字）與 `ContentTexts`（原始內容）也正確地是兩段不同文字，附件（圖片）也正確從原始貼文解析出來——這組真實樣本剛好是跨頻道轉發而非自我轉發，完整驗證了轉發者／原始作者的欄位對應關係沒有猜錯。
 
 ## 直播／重播狀態判斷（`IsVideoStreamingAsync`）
 
@@ -106,6 +121,11 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 `ytInitialPlayerResponse` 內可能含有巢狀大型字串（例如 SVG 圖示），單純裁切最後一個 `;` 並不可靠；
 `IsVideoStreamingAsync` 因此改用 `ExtractBalancedJsonObject`（括號配對）取出完整 JSON 物件。若之後要在
 其他地方解析 `ytInitialPlayerResponse`，建議沿用這個做法而非字串裁切。
+
+`GetVideoTitleAsync`（2026/8 修正）：舊版直接讀取 `/watch` 頁面 HTML 的 `<title>` 標籤（`Element.InnerHtml`），
+有兩個問題：(1) `<title>` 內容固定帶有「 - YouTube」字尾；(2) `Element.InnerHtml` 回傳的是重新序列化過的
+HTML markup，字面上的 `&`／`<`／`>` 等字元會維持 HTML 實體逸出（例如 `&amp;`），不是解碼後的原始文字——已用
+throwaway 測試（AngleSharp `HtmlParser` 解析含 `&amp;`／`&lt;`／`&gt;` 的 `<title>`，`InnerHtml` 回傳的仍是逸出後的字串，`TextContent` 才是解碼後的正確文字）證實這是真實問題，只要標題含有這類符號就會回傳錯誤字串。已改為比照 `IsVideoStreamingAsync` 解析同一頁面的 `ytInitialPlayerResponse.videoDetails.title`（JSON 字串值本來就是解碼後的文字，也沒有「 - YouTube」字尾問題）。
 
 ## 輪詢頻率安全下限
 

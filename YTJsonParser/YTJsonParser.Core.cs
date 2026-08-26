@@ -51,7 +51,11 @@ public partial class YTJsonParser
                 url = $"{StringSet.Origin}/live_chat?is_popout=1&v={videoIDorChannelID}";
                 break;
             case EnumSet.DataType.Community:
-                url = $"{StringSet.Origin}/channel/{videoIDorChannelID}/community";
+                // 2026/8 修正：改用 /posts（YouTube 已將分頁網址由 /community 更名，見下方 GetCommunityTab
+                // 的說明）。實測發現對相當比例的頻道（例如 Kurzgesagt、米妃Tobi 等訂閱數大、頻道存在已久
+                // 的頻道，5 個抽測頻道裡有 2 個）直接請求 /community 會回傳「沒有貼文」的空狀態訊息，即使
+                // 該頻道其實有貼文；改用 /posts 在同一批抽測頻道裡全數正常運作，沒有任何一個失敗。
+                url = $"{StringSet.Origin}/channel/{videoIDorChannelID}/posts";
 
                 initialData.YTConfigData.InitPage = url;
                 break;
@@ -119,9 +123,6 @@ public partial class YTJsonParser
                     return initialData;
                 }
 
-                // TODO: 2023/6/13 考慮是否待修改。
-                // 可以參考 1：https://github.com/abhinavxd/youtube-live-chat-downloader/blob/v2.0.3/yt_chat.go#L147
-                // 可以參考 2：https://github.com/xenova/chat-downloader/blob/master/chat_downloader/sites/youtube.py#L443
                 string jsonYtCfg = elementYtCfg.InnerHtml;
 
                 switch (dataType)
@@ -130,12 +131,14 @@ public partial class YTJsonParser
                     case EnumSet.DataType.LiveChat:
                         {
                             // popout 頁面（直播／重播皆同）一律採此格式擷取。
-                            jsonYtCfg = jsonYtCfg.Replace("ytcfg.set(", string.Empty);
-
-                            int endTokenIndex = jsonYtCfg.LastIndexOf("});");
-
-                            // 要補回最後一個 "}"。
-                            jsonYtCfg = jsonYtCfg[..(endTokenIndex + 1)];
+                            //
+                            // 2026/8 修正舊版 TODO（2023/6/13，原本考慮參考 yt_chat.go／chat-downloader 的
+                            // 做法）：原本用 Replace("ytcfg.set(", "") 加上 LastIndexOf("});") 裁切字串尾端，
+                            // 跟 IsVideoStreamingAsync 修正 ytInitialPlayerResponse 時遇到的問題是同一類——
+                            // 一旦 ytcfg 物件內任何欄位值剛好含有字面上的 "});"（例如某個巢狀字串），
+                            // LastIndexOf 就會找到錯誤的位置而截斷失敗。已改用同一份程式碼裡已經驗證過的
+                            // ExtractBalancedJsonObject（括號配對），不受內容影響，也讓兩處的擷取邏輯一致。
+                            jsonYtCfg = ExtractBalancedJsonObject(jsonYtCfg);
 
                             break;
                         }

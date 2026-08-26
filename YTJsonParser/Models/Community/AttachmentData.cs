@@ -39,7 +39,16 @@ public class AttachmentData
 
     /// <summary>
     /// 投票資料
+    /// <para>當 <see cref="IsQuiz"/> 為 true 時，這裡放的是測驗貼文的選項與作答人數
+    /// （<see cref="ChoiceData.IsCorrect"/> 會標示正確答案），沿用同一個欄位是因為兩者資料形狀相同，
+    /// 沒有另外新增 QuizData 模型的必要。</para>
     /// </summary>
     [JsonPropertyName("pollData")]
     public PollData? PollData { get; set; }
+
+    /// <summary>
+    /// 是否為測驗貼文（2026/8 新增，YouTube 社群貼文的測驗功能，choices 內會標示正確答案）
+    /// </summary>
+    [JsonPropertyName("isQuiz")]
+    public bool IsQuiz { get; set; } = false;
 }

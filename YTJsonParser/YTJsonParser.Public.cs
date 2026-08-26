@@ -94,6 +94,12 @@ public partial class YTJsonParser
 
     /// <summary>
     /// 透過 YouTube 影片的 ID 值取得該影片的標題
+    /// <para>2026/8 更新：改為解析 /watch 頁面內 ytInitialPlayerResponse 的 videoDetails.title
+    /// （與 <see cref="IsVideoStreamingAsync"/> 相同的 JSON 來源），不再直接讀取 HTML 的
+    /// &lt;title&gt; 標籤——舊版做法有兩個問題：(1) &lt;title&gt; 標籤內容固定帶有「 - YouTube」字尾；
+    /// (2) 透過 <c>Element.InnerHtml</c> 取得的是重新序列化過的 HTML markup，字面上的
+    /// <c>&amp;</c>／<c>&lt;</c>／<c>&gt;</c> 等字元會維持 HTML 實體逸出（例如 <c>&amp;amp;</c>），
+    /// 不是解碼後的原始文字，只要標題含有這類符號就會回傳錯誤的字串。JSON 字串值沒有這個問題。</para>
     /// </summary>
     /// <param name="videoID">字串，影片 ID 值</param>
     /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
@@ -135,9 +141,40 @@ public partial class YTJsonParser
             {
                 HtmlParser htmlParser = new();
                 IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
-                IElement titleElement = htmlDocument.QuerySelector("title")!;
+                IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+                IElement? targetScriptElement = scriptElements
+                    .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialPlayerResponse = "));
 
-                videoTitle = titleElement.InnerHtml;
+                if (targetScriptElement == null)
+                {
+                    LogMessages.Error(_logger, nameof(GetVideoTitleAsync), "找不到 \"ytInitialPlayerResponse\"！");
+
+                    return videoTitle;
+                }
+
+                string scriptContent = ExtractBalancedJsonObject(targetScriptElement.InnerHtml);
+
+                if (string.IsNullOrEmpty(scriptContent))
+                {
+                    LogMessages.Error(_logger, nameof(GetVideoTitleAsync), "無法從 \"ytInitialPlayerResponse\" 取出完整的 JSON 物件！");
+
+                    return videoTitle;
+                }
+
+                JsonElement jeRoot;
+
+                try
+                {
+                    jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetVideoTitleAsync), $"解析 ytInitialPlayerResponse JSON 失敗：{ex.GetExceptionMessage()}");
+
+                    return videoTitle;
+                }
+
+                videoTitle = jeRoot.Get("videoDetails")?.Get("title")?.GetString() ?? string.Empty;
             }
             else
             {

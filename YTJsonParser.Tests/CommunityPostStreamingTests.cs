@@ -12,13 +12,15 @@ public class CommunityPostStreamingTests
     [Fact]
     public async Task StreamCommunityPostsAsync_2026新版單一分頁結構_能正確找到社群分頁並解析貼文與附件()
     {
-        // 對應這次工作階段實測發現的問題：YouTube 現在對 /community 請求只回傳單一、已選取的分頁，
-        // 不再穩定提供可比對 "/community" 的 tabRenderer.endpoint.commandMetadata.webCommandMetadata.url，
+        // 對應這次工作階段實測發現的問題：YouTube 現在對社群分頁只回傳單一、已選取的分頁，
+        // 不再穩定提供可比對舊網址格式的 tabRenderer.endpoint.commandMetadata.webCommandMetadata.url，
         // 舊版 GetCommunityTab（僅靠網址比對）會找不到分頁，導致完全抓不到任何貼文。
+        // 另外，2026/8 也修正了實際請求的網址：YouTube 已將分頁網址由 /community 更名為 /posts，
+        // 部分頻道（尤其訂閱數大、頻道存在已久的頻道）直接請求 /community 會回傳空狀態，改用 /posts 才正常。
         string html = ReadFixture("community_page.html");
 
         FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
-            .When(HttpMethod.Get, "/community", html);
+            .When(HttpMethod.Get, "/posts", html);
 
         using HttpClient httpClient = new(handler);
         using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
@@ -33,7 +35,7 @@ public class CommunityPostStreamingTests
             allPosts.AddRange(batch);
         }
 
-        Assert.Equal(2, allPosts.Count);
+        Assert.Equal(4, allPosts.Count);
 
         PostData postWithImage = Assert.Single(allPosts, p => p.PostID == "post-1");
 
@@ -45,5 +47,32 @@ public class CommunityPostStreamingTests
         PostData textOnlyPost = Assert.Single(allPosts, p => p.PostID == "post-2");
 
         Assert.True(textOnlyPost.Attachments == null || textOnlyPost.Attachments.Count == 0);
+
+        // quizRenderer（2026/8 新增，YouTube 社群貼文的測驗功能）：問題文字沿用一般貼文的 ContentTexts，
+        // 附件本身只有選項與正確答案／總作答人數。
+        PostData quizPost = Assert.Single(allPosts, p => p.PostID == "post-3");
+
+        Assert.NotNull(quizPost.Attachments);
+        AttachmentData quizAttachment = Assert.Single(quizPost.Attachments!);
+        Assert.True(quizAttachment.IsQuiz);
+        Assert.NotNull(quizAttachment.PollData);
+        Assert.Equal("999 人已回答", quizAttachment.PollData!.TotalVotes);
+        Assert.Equal(2, quizAttachment.PollData.ChoiceDatas?.Count);
+        Assert.Contains(quizAttachment.PollData.ChoiceDatas!, c => c.Text == "選項A" && c.IsCorrect == false);
+        Assert.Contains(quizAttachment.PollData.ChoiceDatas!, c => c.Text == "選項B" && c.IsCorrect == true);
+
+        // sharedPostRenderer（2026/8 新增，YouTube 社群貼文的「在 YouTube 上轉發」功能）：post 底下是
+        // sharedPostRenderer 而非 backstagePostRenderer，實際內容（作者／文字／附件）取自巢狀的
+        // originalPost.backstagePostRenderer，轉發本身的中繼資料（轉發者、附加文字）另外解析。
+        PostData repostPost = Assert.Single(allPosts, p => p.PostID == "post-4");
+
+        Assert.True(repostPost.IsRepost);
+        Assert.Equal("轉發的頻道", repostPost.RepostedByAuthorText);
+        Assert.Contains(repostPost.RepostCaptionTexts ?? [], t => t.Text == "轉發時附加的說明文字");
+        Assert.Equal("原始作者頻道", repostPost.AuthorText);
+        Assert.Contains(repostPost.ContentTexts ?? [], t => t.Text != null && t.Text.Contains("被轉發的原始貼文內容"));
+        Assert.NotNull(repostPost.Attachments);
+        Assert.Single(repostPost.Attachments!);
+        Assert.Equal("https://example.com/post4.jpg", repostPost.Attachments![0].Url);
     }
 }

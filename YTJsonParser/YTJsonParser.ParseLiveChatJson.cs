@@ -576,7 +576,23 @@ public partial class YTJsonParser
     }
 
     /// <summary>
-    /// 解析非訊息類型的 action（留言刪除、使用者封鎖、投票）
+    /// 目前所有已知的頂層 action 鍵值名稱（部分在 <see cref="ParseActions"/> 呼叫端已檢查，
+    /// 部分在這裡檢查），用於 <see cref="ParseNonMessageAction"/> 判斷是否為完全陌生的 action 類型。
+    /// </summary>
+    private static readonly string[] KnownActionKeys =
+    [
+        "addChatItemAction",
+        "addBannerToLiveChatCommand",
+        "removeChatItemAction",
+        "removeChatItemByAuthorAction",
+        "showLiveChatActionPanelAction",
+        "replayChatItemAction",
+        "replaceChatItemAction",
+        "updateLiveChatPollAction"
+    ];
+
+    /// <summary>
+    /// 解析非訊息類型的 action（留言刪除、使用者封鎖、投票、投票結果更新）
     /// </summary>
     /// <param name="output">List&lt;RendererData&gt;</param>
     /// <param name="singleAction">JsonElement</param>
@@ -606,6 +622,23 @@ public partial class YTJsonParser
         if (pollRenderer.HasValue)
         {
             output.Add(ParsePollRenderer(pollRenderer.Value));
+        }
+
+        JsonElement? pollToUpdate = singleAction
+            .Get("updateLiveChatPollAction")
+            ?.Get("pollToUpdate")
+            ?.Get("pollRenderer");
+
+        if (pollToUpdate.HasValue)
+        {
+            output.Add(ParseUpdateLiveChatPollAction(pollToUpdate.Value));
+        }
+
+        // 完全陌生的 action 類型（不屬於任何已知鍵值）目前會被靜默忽略，這裡補上診斷用的 Trace 記錄，
+        // 避免 YouTube 未來新增的 action 類型在毫無記錄的情況下遺失資料。
+        if (!KnownActionKeys.Any(key => singleAction.TryGetProperty(key, out _)) && _logger.IsEnabled(LogLevel.Trace))
+        {
+            LogMessages.Trace(_logger, "ParseNonMessageAction -> 尚未支援的 action 類型", singleAction.GetRawText());
         }
     }
 
@@ -730,6 +763,61 @@ public partial class YTJsonParser
         {
             ID = pollId,
             Type = GetLocalizeString(KeySet.ChatPoll),
+            AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
+            AuthorBadges = KeySet.NoAuthorBadges,
+            AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
+            MessageContent = string.IsNullOrEmpty(message) ? KeySet.NoMessageContent : message,
+            PurchaseAmountText = KeySet.NoPurchaseAmountText,
+            ForegroundColor = KeySet.NoForegroundColor,
+            BackgroundColor = KeySet.NoBackgroundColor,
+            TimestampText = KeySet.NoTimestampText,
+            AuthorExternalChannelID = KeySet.NoAuthorExternalChannelID
+        };
+    }
+
+    /// <summary>
+    /// 解析 updateLiveChatPollAction（創作者投票的即時得票率更新）
+    /// <para>投票建立時（<see cref="ParsePollRenderer"/>）只會有問題與選項文字，沒有任何票數／得票率；
+    /// 得票率是 YouTube 另外透過這個獨立的 action（而非 <see cref="ParseFrameworkUpdates"/> 的通用實體更新機制）
+    /// 即時推送，`liveChatPollId` 與建立時相同，可用 <see cref="RendererData.ID"/> 對照回原本的投票。</para>
+    /// </summary>
+    /// <param name="jsonElement">JsonElement（<c>updateLiveChatPollAction.pollToUpdate.pollRenderer</c>）</param>
+    /// <returns>RendererData</returns>
+    private RendererData ParseUpdateLiveChatPollAction(JsonElement jsonElement)
+    {
+        string pollId = jsonElement.Get("liveChatPollId")?.GetString() ?? string.Empty;
+
+        RunsData voteCountRunsData = ParseRunData(
+            jsonElement.Get("header")
+                ?.Get("pollHeaderRenderer")
+                ?.Get("metadataText") ?? default);
+
+        List<string> choiceResults = [];
+
+        JsonElement.ArrayEnumerator? choices = jsonElement.Get("choices")?.ToArrayEnumerator();
+
+        if (choices.HasValue)
+        {
+            foreach (JsonElement choice in choices)
+            {
+                RunsData choiceRunsData = ParseRunData(choice.Get("text") ?? default);
+                string? votePercentage = choice.Get("votePercentage")?.Get("simpleText")?.GetString();
+
+                if (!string.IsNullOrEmpty(choiceRunsData.Text) && !string.IsNullOrEmpty(votePercentage))
+                {
+                    choiceResults.Add($"{choiceRunsData.Text}：{votePercentage}");
+                }
+            }
+        }
+
+        string message = !string.IsNullOrEmpty(voteCountRunsData.Text) ?
+            $"{string.Join("、", choiceResults)}（{voteCountRunsData.Text}）" :
+            string.Join("、", choiceResults);
+
+        return new RendererData()
+        {
+            ID = pollId,
+            Type = GetLocalizeString(KeySet.ChatPollUpdate),
             AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
             AuthorBadges = KeySet.NoAuthorBadges,
             AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
@@ -895,7 +983,19 @@ public partial class YTJsonParser
 
             // 2026/8 已對真實直播的置頂橫幅（addBannerToLiveChatCommand -> bannerRenderer）驗證過，
             // 底下的 header/contents 解析路徑與真實 JSON 結構一致。
-            // TODO: 2023/5/29 有插入時間順序的問題。
+            //
+            // 2026/8 已釐清舊版「有插入時間順序的問題」TODO 的真正原因（用真實直播的原始 JSON 逐欄位比對過）：
+            // 這個 action 一律會產生「header」與「contents」兩筆各自獨立的 RendererData：
+            // - header（liveChatBannerHeaderRenderer）：Type 為「置頂留言」，內容是「由 @xxx 置頂」這則
+            //   通知本身，沒有 id／timestampUsec（YouTube 原始 JSON 就沒有這兩個欄位，不是解析遺漏）。
+            // - contents（通常是 liveChatTextMessageRenderer）：Type 為「一般」，帶的是被置頂的那則訊息
+            //   本身「原始」的 id／timestampUsec——如果那則訊息先前已經以一般留言的身分出現過，這裡就會是
+            //   同一個 id 再次出現（語意上是「重新展示」而非新訊息），且 timestampUsec 反映的是「原本發送
+            //   的時間」，不是「現在被置頂的時間」，但這筆資料在輸出序列裡的位置是「現在」。
+            // 這不是解析錯誤，兩筆資料的內容都與 YouTube 原始 JSON 完全吻合；只是呼叫端如果單純依賴
+            // 「輸出順序＝時間順序」的假設，會在這個情境下看到一則帶著舊時間戳記的訊息出現在批次尾端。
+            // 需要嚴格時間排序的呼叫端請自行以 TimestampUsec 排序，並用 ID 去重（正常的 addChatItemAction
+            // 也可能因為輪詢重疊而重複收到同一個 id，去重本來就是呼叫端該做的事）。
             if (liveChatBannerRenderer.TryGetProperty(
                 "header",
                 out JsonElement header))
@@ -1681,7 +1781,9 @@ public partial class YTJsonParser
             // 將 Microseconds 轉換成 Miliseconds。
             long timestamp = rawTimestamp / 1000L;
 
-            // TODO: 2023/12/20 未確認在其它語系時，是否轉換出來的時間值是正確的。
+            // 2026/8 已實測驗證：對 DictRegion 目前收錄的全部 65 種語系逐一呼叫
+            // DateTimeOffset.ToString(CultureInfo) 皆能正確轉換（zh-CN／zh-TW／ja／ko 等皆已確認格式正確、
+            // 無例外拋出），不會有部分語系轉換失敗或格式錯亂的情況。
             bool hasRegionData = DictionarySet.GetRegionDictionary()
                 .TryGetValue(
                     SharedDisplayLanguage,

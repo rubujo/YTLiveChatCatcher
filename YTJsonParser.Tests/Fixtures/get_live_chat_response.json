@@ -78,6 +78,29 @@
               }
             }
           }
+        },
+        {
+          "updateLiveChatPollAction": {
+            "pollToUpdate": {
+              "pollRenderer": {
+                "liveChatPollId": "poll-1",
+                "header": {
+                  "pollHeaderRenderer": {
+                    "metadataText": { "runs": [{ "text": "100 votes" }] }
+                  }
+                },
+                "choices": [
+                  { "text": { "runs": [{ "text": "選項A" }] }, "votePercentage": { "simpleText": "70%" } },
+                  { "text": { "runs": [{ "text": "選項B" }] }, "votePercentage": { "simpleText": "30%" } }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "someBrandNewUnknownAction": {
+            "foo": "bar"
+          }
         }
       ]
     }

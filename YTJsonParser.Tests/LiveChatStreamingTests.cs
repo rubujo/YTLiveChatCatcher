@@ -69,6 +69,10 @@ public class LiveChatStreamingTests
 
         // 同一個實體更新機制底下的其它酬載類型（例如愛心按鈕狀態）應被忽略，不應該產生任何資料。
         Assert.DoesNotContain(allMessages, m => m.ID == "unrelated-entity-key");
+
+        // updateLiveChatPollAction：投票的即時得票率更新，ID 沿用建立時的 liveChatPollId 以便對照。
+        Assert.Contains(allMessages, m => m.Type == "投票結果更新" && m.ID == "poll-1" && m.MessageContent != null &&
+            m.MessageContent.Contains("選項A：70%") && m.MessageContent.Contains("選項B：30%") && m.MessageContent.Contains("100 votes"));
     }
 
     [Fact]

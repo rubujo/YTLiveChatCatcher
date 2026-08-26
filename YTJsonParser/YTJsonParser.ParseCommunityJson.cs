@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Models;
 using Rubujo.YouTube.Utility.Models.Community;
@@ -18,7 +19,7 @@ public partial class YTJsonParser
     /// <param name="jsonElement">JsonElement</param>
     /// <param name="ytConfigData">YTConfigData</param>
     /// <returns>List&lt;PostData&gt;</returns>
-    private static List<PostData> GetInitialPosts(
+    private List<PostData> GetInitialPosts(
         JsonElement? jsonElement,
         YTConfigData? ytConfigData)
     {
@@ -74,6 +75,7 @@ public partial class YTJsonParser
                 }
 
                 string postId = GetPostID(jsonElement: backstagePostRenderer);
+                JsonElement? sharedPostRenderer = GetSharedPostRenderer(jsonElement: backstagePostThreadRenderer);
 
                 postDatas.Add(new PostData()
                 {
@@ -86,6 +88,9 @@ public partial class YTJsonParser
                     VoteCount = GetVoteCount(jsonElement: backstagePostRenderer, simpleText: false),
                     Attachments = GetBackstageAttachment(jsonElement: backstagePostRenderer),
                     IsSponsorsOnly = IsSponsorsOnly(jsonElement: backstagePostRenderer),
+                    IsRepost = sharedPostRenderer.HasValue,
+                    RepostedByAuthorText = GetSharedPostRepostedByAuthorText(jsonElement: sharedPostRenderer),
+                    RepostCaptionTexts = GetSharedPostCaptionTexts(jsonElement: sharedPostRenderer),
                 });
             }
         }
@@ -157,6 +162,7 @@ public partial class YTJsonParser
                 }
 
                 string postId = GetPostID(jsonElement: backstagePostRenderer);
+                JsonElement? sharedPostRenderer = GetSharedPostRenderer(jsonElement: backstagePostThreadRenderer);
 
                 postDatas.Add(new PostData()
                 {
@@ -168,7 +174,10 @@ public partial class YTJsonParser
                     PublishedTimeText = GetPublishedTimeText(jsonElement: backstagePostRenderer),
                     VoteCount = GetVoteCount(jsonElement: backstagePostRenderer, simpleText: false),
                     Attachments = GetBackstageAttachment(jsonElement: backstagePostRenderer),
-                    IsSponsorsOnly = IsSponsorsOnly(jsonElement: backstagePostRenderer)
+                    IsSponsorsOnly = IsSponsorsOnly(jsonElement: backstagePostRenderer),
+                    IsRepost = sharedPostRenderer.HasValue,
+                    RepostedByAuthorText = GetSharedPostRepostedByAuthorText(jsonElement: sharedPostRenderer),
+                    RepostCaptionTexts = GetSharedPostCaptionTexts(jsonElement: sharedPostRenderer)
                 });
             }
         }
@@ -316,9 +325,34 @@ public partial class YTJsonParser
     /// <returns>JsonElement</returns>
     private static JsonElement? GetBackstagePostRenderer(JsonElement? jsonElement)
     {
+        JsonElement? post = jsonElement?.Get("backstagePostThreadRenderer")?.Get("post");
+
+        JsonElement? backstagePostRenderer = post?.Get("backstagePostRenderer");
+
+        if (backstagePostRenderer.HasValue)
+        {
+            return backstagePostRenderer;
+        }
+
+        // 轉發貼文（2026/8 新增）：post 底下是 sharedPostRenderer 而非 backstagePostRenderer，
+        // 實際內容（作者／文字／附件）在 sharedPostRenderer.originalPost.backstagePostRenderer 裡面，
+        // 跟一般貼文是同一份 Renderer 結構，因此可以沿用同一套解析邏輯。轉發本身的中繼資料
+        // （轉發者、轉發時附加的文字）由 GetSharedPostRenderer 另外取得。
+        return post?.Get("sharedPostRenderer")
+            ?.Get("originalPost")
+            ?.Get("backstagePostRenderer");
+    }
+
+    /// <summary>
+    /// 取得 sharedPostRenderer（轉發貼文本身的中繼資料，不是被轉發的原始貼文內容）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>JsonElement，若不是轉發貼文則為 null</returns>
+    private static JsonElement? GetSharedPostRenderer(JsonElement? jsonElement)
+    {
         return jsonElement?.Get("backstagePostThreadRenderer")
             ?.Get("post")
-            ?.Get("backstagePostRenderer");
+            ?.Get("sharedPostRenderer");
     }
 
     /// <summary>
@@ -427,6 +461,50 @@ public partial class YTJsonParser
     }
 
     /// <summary>
+    /// 取得 sharedPostRenderer 轉發時附加的文字（<c>content</c> 欄位，跟 <see cref="GetContentText"/>
+    /// 解析的 <c>contentText</c> 是不同欄位名稱但同樣的 runs 結構）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement（sharedPostRenderer）</param>
+    /// <returns>List&lt;RunsData&gt;，沒有附加文字時為 null</returns>
+    private static List<RunsData>? GetSharedPostCaptionTexts(JsonElement? jsonElement)
+    {
+        List<RunsData> runsDatas = [];
+
+        JsonElement.ArrayEnumerator? runs = jsonElement?.Get("content")
+            ?.Get("runs")
+            ?.ToArrayEnumerator();
+
+        if (runs != null)
+        {
+            foreach (JsonElement run in runs)
+            {
+                RunsData? runsData = GetRuns(jsonElement: run);
+
+                if (runsData != null)
+                {
+                    runsDatas.Add(runsData);
+                }
+            }
+        }
+
+        return runsDatas.Count > 0 ? runsDatas : null;
+    }
+
+    /// <summary>
+    /// 取得 sharedPostRenderer 內執行轉發者的名稱（<c>displayName</c> 欄位）
+    /// </summary>
+    /// <param name="jsonElement">JsonElement（sharedPostRenderer）</param>
+    /// <returns>字串</returns>
+    private static string? GetSharedPostRepostedByAuthorText(JsonElement? jsonElement)
+    {
+        JsonElement.ArrayEnumerator? runs = jsonElement?.Get("displayName")
+            ?.Get("runs")
+            ?.ToArrayEnumerator();
+
+        return runs?.FirstOrDefault().Get("text")?.GetString();
+    }
+
+    /// <summary>
     /// 取得 backstagePostRenderer 的 publishedTimeText 的字串
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
@@ -476,7 +554,7 @@ public partial class YTJsonParser
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>List&lt;Attachment&gt;</returns>
-    private static List<AttachmentData> GetBackstageAttachment(JsonElement? jsonElement)
+    private List<AttachmentData> GetBackstageAttachment(JsonElement? jsonElement)
     {
         List<AttachmentData> attachmentDatas = [];
 
@@ -485,6 +563,7 @@ public partial class YTJsonParser
         JsonElement? backstageImageRenderer = backstageAttachment?.Get("backstageImageRenderer");
         JsonElement? videoRenderer = backstageAttachment?.Get("videoRenderer");
         JsonElement? pollRenderer = backstageAttachment?.Get("pollRenderer");
+        JsonElement? quizRenderer = backstageAttachment?.Get("quizRenderer");
 
         // 有多張圖片附件。
         if (postMultiImageRenderer != null)
@@ -552,6 +631,34 @@ public partial class YTJsonParser
                     PollData = pollData
                 });
             }
+        }
+
+        // 有測驗附件（2026/8 新增，YouTube 社群貼文的測驗功能）。
+        if (quizRenderer != null)
+        {
+            PollData? quizData = GetQuizData(jsonElement: quizRenderer);
+
+            if (quizData != null)
+            {
+                attachmentDatas.Add(new AttachmentData()
+                {
+                    IsQuiz = true,
+                    PollData = quizData
+                });
+            }
+        }
+
+        // 完全陌生的附件類型（例如轉發貼文）目前會被靜默忽略，這裡補上診斷用的 Trace 記錄，
+        // 避免 YouTube 未來新增的附件類型在毫無記錄的情況下遺失資料。
+        if (backstageAttachment.HasValue &&
+            postMultiImageRenderer == null &&
+            backstageImageRenderer == null &&
+            videoRenderer == null &&
+            pollRenderer == null &&
+            quizRenderer == null &&
+            _logger.IsEnabled(LogLevel.Trace))
+        {
+            LogMessages.Trace(_logger, "GetBackstageAttachment -> 尚未支援的附件類型", backstageAttachment.Value.GetRawText());
         }
 
         return attachmentDatas;
@@ -764,6 +871,58 @@ public partial class YTJsonParser
             ChoiceDatas = GetPollRendererChoices(jsonElement: jsonElement),
             TotalVotes = GetPollRendererTotalVotes(jsonElement: jsonElement)
         };
+    }
+
+    /// <summary>
+    /// 取得 quizRenderer 的資料（2026/8 新增，YouTube 社群貼文的測驗功能）
+    /// <para>問題文字沿用貼文本身既有的 <see cref="GetContentText"/>（跟一般文字貼文同一個欄位，
+    /// quizRenderer 本身不含問題文字），這裡只處理選項與正確答案。跟 <see cref="GetPollData"/>
+    /// 共用 <see cref="PollData"/> 模型，是因為兩者資料形狀相同（選項文字＋總作答人數），
+    /// 差別只在於 quiz 的選項多了 <see cref="ChoiceData.IsCorrect"/>、少了 numVotes／votePercentage
+    /// （2026/8 實測真實貼文樣本確認：quiz 選項在作答前不會透露各選項的即時票數分布）。</para>
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>PollData</returns>
+    private static PollData? GetQuizData(JsonElement? jsonElement)
+    {
+        return new PollData()
+        {
+            ChoiceDatas = GetQuizRendererChoices(jsonElement: jsonElement),
+            TotalVotes = GetPollRendererTotalVotes(jsonElement: jsonElement)
+        };
+    }
+
+    /// <summary>
+    /// 取得 quizRenderer 的 choices
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>List&lt;ChoiceData&gt;</returns>
+    private static List<ChoiceData>? GetQuizRendererChoices(JsonElement? jsonElement)
+    {
+        List<ChoiceData> choiceDatas = [];
+
+        JsonElement.ArrayEnumerator? choices = jsonElement?.Get("choices")?.ToArrayEnumerator();
+
+        if (choices != null)
+        {
+            foreach (JsonElement choice in choices)
+            {
+                string? text = GetChoicesText(jsonElement: choice);
+
+                if (string.IsNullOrEmpty(text))
+                {
+                    continue;
+                }
+
+                choiceDatas.Add(new ChoiceData()
+                {
+                    Text = text,
+                    IsCorrect = choice.Get("isCorrect")?.GetBoolean()
+                });
+            }
+        }
+
+        return choiceDatas.Count > 0 ? choiceDatas : null;
     }
 
     /// <summary>
