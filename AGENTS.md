@@ -124,9 +124,13 @@ dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 
 `IntervalMs` 屬性（`YTJsonParser.PublicStatic.cs`）在未設定 `ForceIntervalMs` 時，取「YouTube 回應解析出的間隔值」與 `MinimumIntervalMs`（1000 毫秒）兩者中較大的值，避免因回應內容解析失敗等異常狀況導致間隔值意外停留在 0，對 YouTube 形成近乎無間隔的高頻輪詢。這個下限不套用在已明確設定的 `ForceIntervalMs` 上（視為刻意的選擇）。修改輪詢相關邏輯時，維持「正常情況下遵循 YouTube 建議間隔、異常情況下也不緊迫輪詢」這個原則。
 
+## 輪詢的重試機制（`GetJsonElementAsync`，`YTJsonParser.Core.cs`）
+
+HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性質例外，例如 Wi-Fi 瞬斷、DNS 短暫失敗）共用同一組固定的嘗試次數預算（`maxAttempts`），在同一個 `for` 迴圈內處理，因為每次迭代本來就會重新建構一個新的 `HttpRequestMessage`（`HttpRequestMessage` 送出後不能重複使用，這是兩者能共用同一個迴圈的前提）。429 依伺服器回應的 `Retry-After` 等待，網路例外用遞增間隔（`5 * attempt` 秒，上限 20 秒）。重試次數用盡才放棄這次輪詢、記錄錯誤，讓串流照原本邏輯自然結束，刻意不做無限重試／指數退避，也不做跨輪詢週期的斷點續傳。測試見 `YTJsonParser.Tests/NetworkRetryTests.cs`（用 `FakeHttpMessageHandler.WhenSequence` 模擬「先失敗、重試後成功」）。
+
 ## 已知的行為變化
 
-`YTJsonParser` 的內部記錄只會寫進標準 `ILogger`（實際落地在 NLog 的 `Logs/log.txt` 檔案與主控台輸出），**不會**自動出現在應用程式的記錄文字框裡。如果要在 UI 文字框也看到，需要另外接一個自訂 NLog target 把 `YTJsonParser` 這個 logger 分類的訊息轉發過去，目前刻意沒有做這件事（「查看記錄檔」是預期的除錯方式）。
+`YTJsonParser` 的內部記錄只會寫進標準 `ILogger`（實際落地在 NLog 的 `Logs/log.txt` 檔案與主控台輸出），**不會**自動出現在應用程式的記錄文字框裡，**唯一例外是** `LogMessages.UnsupportedContentEncountered`（EventId 15：解析時遇到尚未支援的內容/類型）——`YTLiveChatCatcher` 的 `InitLiveChatCather` 把這個特定事件透過 `DiagnosticForwardingLogger`（`Common/Utils/DiagnosticForwardingLogger.cs`，依 EventId 攔截，不是比對訊息字串）轉送到 `WriteLog`，讓正在盯著畫面的使用者能即時知道「這批資料可能沒有被完整解析」，而不是事後才想到要去查記錄檔。**這個事件刻意用 `LogLevel.Debug`，不是 `LogLevel.Trace`**——`YTLiveChatCatcher` 的 NLog 規則最低層級是 Debug，Trace 會被直接濾掉、連寫進 `Logs/log.txt` 都不會，這正是這次發現的問題：新增診斷用的 Trace 記錄，若消費端的最低記錄層級高於 Trace，等於完全沒有作用。新增其他值得結構化、需要被特別攔截的事件時，比照這個做法用專屬的 `[LoggerMessage]` 方法（固定 EventId），不要用訊息字串比對去猜測記錄內容。除此之外的其他內部記錄，維持只寫進記錄檔，不轉送到 UI（避免洗版）。
 
 ## WinForms 端消費 RendererData 的正確方式（`FMain.Methods.cs`）
 

@@ -40,4 +40,15 @@ internal static partial class LogMessages
     [LoggerMessage(EventId = 14, Level = LogLevel.Error,
         Message = "[{Context}] 連線發生錯誤，錯誤碼：{StatusCode}\n接收到的內容：\n{Content}")]
     public static partial void HttpError(ILogger logger, string context, string? statusCode, string content);
+
+    /// <summary>
+    /// 遇到目前解析邏輯不認得的內容/類型（YouTube 可能新增了本函式庫尚未支援的元素）。
+    /// <para>刻意用 <see cref="LogLevel.Debug"/>（不是 <see cref="LogLevel.Trace"/>）——
+    /// 消費端常見的記錄設定（例如 YTLiveChatCatcher 的 NLog 規則）最低層級是 Debug，
+    /// 用 Trace 會被直接濾掉、永遠不會寫進任何檔案或主控台，等於形同虛設。
+    /// EventId 保持固定（15），供需要特別關注這個事件的消費端（例如轉送到 UI）依 EventId 篩選，
+    /// 不需要用容易失準的訊息字串比對。</para>
+    /// </summary>
+    [LoggerMessage(EventId = 15, Level = LogLevel.Debug, Message = "[{Context}] {Content}")]
+    public static partial void UnsupportedContentEncountered(ILogger logger, string context, string content);
 }

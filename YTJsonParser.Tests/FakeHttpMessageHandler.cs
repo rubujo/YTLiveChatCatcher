@@ -10,6 +10,7 @@ namespace Rubujo.YouTube.Utility.Tests;
 public sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly List<(Func<HttpRequestMessage, bool> Match, Func<HttpRequestMessage, string> ContentFactory)> _routes = [];
+    private readonly Dictionary<string, Queue<Func<HttpResponseMessage>>> _sequencedResponsesByUrlContains = [];
 
     /// <summary>
     /// 記錄所有實際發出的請求，供測試斷言使用。
@@ -34,9 +35,31 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
         return this;
     }
 
+    /// <summary>
+    /// 針對 URL 符合 urlContains 的請求，依序套用這些回應工廠（用完後才會退回一般的 When 路由比對）。
+    /// 用於模擬「前幾次失敗（例如拋出網路例外、回傳 429）、之後才成功」的重試情境；
+    /// 工廠可以直接 <c>throw</c> 來模擬 SendAsync 本身失敗（例如 <see cref="HttpRequestException"/>）。
+    /// </summary>
+    public FakeHttpMessageHandler WhenSequence(string urlContains, params Func<HttpResponseMessage>[] responseFactories)
+    {
+        _sequencedResponsesByUrlContains[urlContains] = new Queue<Func<HttpResponseMessage>>(responseFactories);
+
+        return this;
+    }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
+
+        string url = request.RequestUri?.ToString() ?? string.Empty;
+
+        foreach (KeyValuePair<string, Queue<Func<HttpResponseMessage>>> entry in _sequencedResponsesByUrlContains)
+        {
+            if (url.Contains(entry.Key) && entry.Value.Count > 0)
+            {
+                return Task.FromResult(entry.Value.Dequeue()());
+            }
+        }
 
         (Func<HttpRequestMessage, bool> Match, Func<HttpRequestMessage, string> ContentFactory) route = _routes
             .FirstOrDefault(r => r.Match(request));

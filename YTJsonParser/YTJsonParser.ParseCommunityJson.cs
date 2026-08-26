@@ -658,7 +658,7 @@ public partial class YTJsonParser
             quizRenderer == null &&
             _logger.IsEnabled(LogLevel.Trace))
         {
-            LogMessages.Trace(_logger, "GetBackstageAttachment -> 尚未支援的附件類型", backstageAttachment.Value.GetRawText());
+            LogMessages.UnsupportedContentEncountered(_logger, "GetBackstageAttachment -> 尚未支援的附件類型", backstageAttachment.Value.GetRawText());
         }
 
         return attachmentDatas;

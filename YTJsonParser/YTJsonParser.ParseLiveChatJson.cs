@@ -196,7 +196,7 @@ public partial class YTJsonParser
 
                         #endregion
 
-                        LogMessages.Trace(_logger, "ParseStreamingContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
+                        LogMessages.UnsupportedContentEncountered(_logger, "ParseStreamingContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
                     }
                 }
             }
@@ -392,7 +392,7 @@ public partial class YTJsonParser
                     #endregion
 
                     // 尚未支援的內容。
-                    LogMessages.Trace(_logger, "ParseContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
+                    LogMessages.UnsupportedContentEncountered(_logger, "ParseContinuation -> 尚未支援的內容", singleContinuation.GetRawText());
                 }
             }
         }
@@ -638,7 +638,7 @@ public partial class YTJsonParser
         // 避免 YouTube 未來新增的 action 類型在毫無記錄的情況下遺失資料。
         if (!KnownActionKeys.Any(key => singleAction.TryGetProperty(key, out _)) && _logger.IsEnabled(LogLevel.Trace))
         {
-            LogMessages.Trace(_logger, "ParseNonMessageAction -> 尚未支援的 action 類型", singleAction.GetRawText());
+            LogMessages.UnsupportedContentEncountered(_logger, "ParseNonMessageAction -> 尚未支援的 action 類型", singleAction.GetRawText());
         }
     }
 
@@ -1118,7 +1118,7 @@ public partial class YTJsonParser
         }
         else
         {
-            LogMessages.Trace(_logger, "ParseRenderer -> 尚未支援的內容", jsonElement.GetRawText());
+            LogMessages.UnsupportedContentEncountered(_logger, "ParseRenderer -> 尚未支援的內容", jsonElement.GetRawText());
         }
 
         return output;

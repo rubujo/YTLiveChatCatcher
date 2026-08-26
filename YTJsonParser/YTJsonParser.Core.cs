@@ -340,9 +340,12 @@ public partial class YTJsonParser
                 LogMessages.Trace(_logger, nameof(GetJsonElementAsync), RedactJsonProperty(jsonContent, "visitorData"));
             }
 
-            // 對 HTTP 429（限速）最多做一次禮貌重試，遵循伺服器回應的 Retry-After（沒有就用保守預設值）；
-            // 重試後仍失敗才照原本邏輯記錄並回傳預設值，讓串流自然結束，不做無限重試／指數退避。
-            const int maxAttempts = 2;
+            // 對 HTTP 429（限速）與暫時性網路例外（例如 Wi-Fi 瞬斷、DNS 短暫解析失敗）都做有限次數的重試，
+            // 共用同一組嘗試次數預算：429 遵循伺服器回應的 Retry-After（沒有就用保守預設值），網路例外用
+            // 遞增間隔。這是為了避免短暫的網路不穩直接讓長達數小時的擷取整場中止——重試前這裡完全沒有這層
+            // 保護，任何非 429 的網路例外都會讓這次輪詢直接放棄，串流因此自然結束。重試次數用盡後才照原本
+            // 邏輯記錄並回傳預設值，不做無限重試／指數退避。
+            const int maxAttempts = 4;
 
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
@@ -372,9 +375,29 @@ public partial class YTJsonParser
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
-                    LogMessages.Error(_logger, nameof(GetJsonElementAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
+                    if (attempt >= maxAttempts)
+                    {
+                        LogMessages.Error(
+                            _logger,
+                            nameof(GetJsonElementAsync),
+                            $"發送請求失敗，已重試 {maxAttempts - 1} 次仍失敗，放棄這次輪詢：{ex.GetExceptionMessage()}");
 
-                    return jsonElement;
+                        return jsonElement;
+                    }
+
+                    TimeSpan networkRetryDelay = TimeSpan.FromSeconds(Math.Min(5 * attempt, 20));
+
+                    LogMessages.Warning(
+                        _logger,
+                        nameof(GetJsonElementAsync),
+                        $"發送請求失敗，將於 {networkRetryDelay.TotalSeconds:0} 秒後重試（第 {attempt}/{maxAttempts - 1} 次）：{ex.GetExceptionMessage()}");
+
+                    if (!await DelayOrBreakAsync((int)networkRetryDelay.TotalMilliseconds, cancellationToken).ConfigureAwait(false))
+                    {
+                        return jsonElement;
+                    }
+
+                    continue;
                 }
 
                 using (httpResponseMessage)

@@ -2071,7 +2071,9 @@ public partial class FMain
                 FetchLargePicture = true,
                 DisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional,
             },
-            SharedYTJsonParserLogger);
+            new DiagnosticForwardingLogger(
+                SharedYTJsonParserLogger,
+                message => WriteLog($"⚠ 偵測到 YouTube 回應內含目前尚未支援的內容，這批資料可能沒有被完整解析（詳見 Logs/log.txt）：{message}")));
 
         // 若使用者先前在登入視窗勾選「記住我」，載入以 DPAPI 加密儲存的 Cookie。
         string? rememberedCookies = SecureCookieStore.Load();
