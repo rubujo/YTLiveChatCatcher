@@ -61,10 +61,10 @@ public partial class YTJsonParser
             // 導致網路短暫斷線恢復後還要等快取過期才會重新嘗試下載。
             byte[] imageBytes = await BetterCacheManager.GetCachableData(url, async () =>
             {
-                using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url, cancellationToken);
+                using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
 
-                return await httpResponseMessage.Content.ReadAsByteArrayAsync(cancellationToken);
-            }, 10);
+                return await httpResponseMessage.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            }, 10).ConfigureAwait(false);
 
             return imageBytes.Length == 0 ? null : imageBytes;
         }

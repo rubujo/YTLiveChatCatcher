@@ -26,7 +26,7 @@ public partial class FMain
     /// <returns>Task</returns>
     public Task LoadXLSX(string filePath)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             ExcelPackage.License.SetNonCommercialOrganization(StringSet.NonCommercialOrganization);
 
@@ -38,7 +38,7 @@ public partial class FMain
             {
                 if (Uri.IsWellFormedUriString(subject, UriKind.Absolute))
                 {
-                    TBVideoID.InvokeIfRequired(() =>
+                    await TBVideoID.InvokeAsyncIfRequired(() =>
                     {
                         TBVideoID.Text = subject;
                     });
@@ -276,7 +276,7 @@ public partial class FMain
                 rowIdx1++;
             }
 
-            LVLiveChatList.InvokeIfRequired(() =>
+            await LVLiveChatList.InvokeAsyncIfRequired(() =>
             {
                 LVLiveChatList.BeginUpdate();
                 LVLiveChatList.Items.AddRange([.. listTempItem]);

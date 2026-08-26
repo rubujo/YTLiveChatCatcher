@@ -33,7 +33,7 @@ public partial class YTJsonParser
 
         try
         {
-            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -44,7 +44,7 @@ public partial class YTJsonParser
 
         using (httpResponseMessage)
         {
-            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(htmlContent))
             {
@@ -117,7 +117,7 @@ public partial class YTJsonParser
 
         try
         {
-            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -128,7 +128,7 @@ public partial class YTJsonParser
 
         using (httpResponseMessage)
         {
-            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(htmlContent))
             {
@@ -216,7 +216,7 @@ public partial class YTJsonParser
 
         try
         {
-            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -227,7 +227,7 @@ public partial class YTJsonParser
 
         using (httpResponseMessage)
         {
-            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(htmlContent))
             {

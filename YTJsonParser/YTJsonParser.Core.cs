@@ -86,7 +86,7 @@ public partial class YTJsonParser
 
         try
         {
-            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -99,7 +99,7 @@ public partial class YTJsonParser
         {
             LogMessages.Debug(_logger, nameof(GetYTConfigDataAsync), httpResponseMessage.ToString());
 
-            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
             if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
             {
@@ -368,7 +368,7 @@ public partial class YTJsonParser
 
                 try
                 {
-                    httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken);
+                    httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -401,7 +401,7 @@ public partial class YTJsonParser
                             nameof(GetJsonElementAsync),
                             $"收到 HTTP 429（Too Many Requests），將於 {retryAfter.TotalSeconds:0} 秒後重試一次。");
 
-                        if (!await DelayOrBreakAsync((int)retryAfter.TotalMilliseconds, cancellationToken))
+                        if (!await DelayOrBreakAsync((int)retryAfter.TotalMilliseconds, cancellationToken).ConfigureAwait(false))
                         {
                             return jsonElement;
                         }
@@ -409,7 +409,7 @@ public partial class YTJsonParser
                         continue;
                     }
 
-                    string? receivedJsonContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken);
+                    string? receivedJsonContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
                     if (string.IsNullOrEmpty(receivedJsonContent))
                     {

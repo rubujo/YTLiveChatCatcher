@@ -66,6 +66,7 @@ async Task Main()
 
 	// 建立 YTJsonParser 實例。
 	// ※不指定 HttpClient 時，會自動建立一個並由本實例負責釋放（Dispose 時一併釋放）。
+	// ※不指定 DisplayLanguage 時，會依 CultureInfo.CurrentUICulture 自動判斷顯示語言。
 	// ※若要帶入 Cookie（例如會員限定內容），請透過官方支援的介面（例如專屬登入視窗＋
 	//   CoreWebView2CookieManager，或使用者手動貼上）取得 Cookie 字串後再指派給 Cookies。
 	using YTJsonParser ytJsonParser = new(

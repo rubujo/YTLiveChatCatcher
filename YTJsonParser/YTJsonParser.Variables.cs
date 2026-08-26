@@ -36,9 +36,10 @@ public partial class YTJsonParser
 
     /// <summary>
     /// 本實例的顯示語言
-    /// <para>預設值為 EnumSet.DisplayLanguage.Chinese_Traditional</para>
+    /// <para>此處的初始值只是欄位宣告時的暫定值，實際值一律由建構函式依
+    /// YTJsonParserOptions.DisplayLanguage（未指定時依 CultureInfo.CurrentUICulture 自動判斷）覆寫。</para>
     /// </summary>
-    private EnumSet.DisplayLanguage SharedDisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional;
+    private EnumSet.DisplayLanguage SharedDisplayLanguage = EnumSet.DisplayLanguage.English;
 
     /// <summary>
     /// 正規表示式（取得 YouTube 影片的 ID）

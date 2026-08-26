@@ -240,7 +240,7 @@ public partial class FMain
         SaveFileDialog saveFileDialog,
         string videoID)
     {
-        return Task.Run(() =>
+        return Task.Run(async () =>
         {
             using Stream stream = saveFileDialog.OpenFile();
 
@@ -504,7 +504,7 @@ public partial class FMain
 
             if (sourceList.Count > 0)
             {
-                bool isStreaming = SharedYTJsonParser.IsVideoStreamingAsync(videoID).GetAwaiter().GetResult();
+                bool isStreaming = await SharedYTJsonParser.IsVideoStreamingAsync(videoID);
 
                 string sheetName = isStreaming ?
                     StringSet.SheetName2 :
@@ -1031,16 +1031,17 @@ public partial class FMain
 
     /// <summary>
     /// 寫紀錄
+    /// <para>2026/8 修正：原本是 async void 搭配 Task.Run + InvokeIfRequired，從 UI 執行緒呼叫時
+    /// 會多繞一趟執行緒集區再繞回來，且 async void 本身若拋出例外無法被呼叫端 catch 到。
+    /// InvokeIfRequired 本身就已經處理好「目前是否在 UI 執行緒上」的判斷（是的話直接執行，
+    /// 不是的話才呼叫 Control.Invoke 切換），不需要外面再包一層 Task.Run。</para>
     /// </summary>
     /// <param name="message">字串，訊息內容</param>
-    public async void WriteLog(string message)
+    public void WriteLog(string message)
     {
-        await Task.Run(() =>
+        TBLog.InvokeIfRequired(() =>
         {
-            TBLog.InvokeIfRequired(() =>
-            {
-                TBLog.AppendText($"[{DateTime.Now}]：{message}{Environment.NewLine}");
-            });
+            TBLog.AppendText($"[{DateTime.Now}]：{message}{Environment.NewLine}");
         });
     }
 
@@ -1532,9 +1533,9 @@ public partial class FMain
                 listTempItem.Add(lvItem);
             }
 
-            Task.Run(() =>
+            Task.Run(async () =>
             {
-                LVLiveChatList.InvokeIfRequired(() =>
+                await LVLiveChatList.InvokeAsyncIfRequired(() =>
                 {
                     LVLiveChatList.BeginUpdate();
                     LVLiveChatList.Items.AddRange([.. listTempItem]);

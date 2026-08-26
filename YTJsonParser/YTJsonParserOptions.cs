@@ -15,8 +15,10 @@ public sealed record YTJsonParserOptions
 
     /// <summary>
     /// 顯示語言
+    /// <para>不指定時，會依 System.Globalization.CultureInfo.CurrentUICulture 自動判斷；
+    /// 找不到對應語言時退回英文。</para>
     /// </summary>
-    public EnumSet.DisplayLanguage DisplayLanguage { get; init; } = EnumSet.DisplayLanguage.Chinese_Traditional;
+    public EnumSet.DisplayLanguage? DisplayLanguage { get; init; }
 
     /// <summary>
     /// 是否獲取大張圖片

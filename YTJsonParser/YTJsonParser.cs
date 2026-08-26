@@ -35,7 +35,7 @@ public partial class YTJsonParser : IDisposable
 
         SharedCookies = options.Cookies ?? string.Empty;
         SharedIsFetchLargePicture = options.FetchLargePicture;
-        SharedDisplayLanguage = options.DisplayLanguage;
+        SharedDisplayLanguage = options.DisplayLanguage ?? LangUtil.GetDisplayLanguageFromCulture();
 
         // 當未指定 HttpClient 時，自動建立並記錄該 HttpClient 為本實例所擁有。
         OwnsHttpClient = options.HttpClient == null;
@@ -83,7 +83,7 @@ public partial class YTJsonParser : IDisposable
 
         string videoID = YouTubeUrlUtil.GetYouTubeVideoID(videoUrlOrID);
 
-        InitialData initialData = await GetYTConfigDataAsync(videoID, EnumSet.DataType.LiveChat, options, cancellationToken);
+        InitialData initialData = await GetYTConfigDataAsync(videoID, EnumSet.DataType.LiveChat, options, cancellationToken).ConfigureAwait(false);
 
         YTConfigData? ytConfigData = initialData.YTConfigData;
 
@@ -105,7 +105,7 @@ public partial class YTJsonParser : IDisposable
         // 持續取得即時聊天資料。
         while (!cancellationToken.IsCancellationRequested)
         {
-            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat, cancellationToken);
+            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat, cancellationToken).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(jsonElement.ToString()))
             {
@@ -130,7 +130,7 @@ public partial class YTJsonParser : IDisposable
                 yield return messages;
             }
 
-            if (!await DelayOrBreakAsync(intervalMs, cancellationToken))
+            if (!await DelayOrBreakAsync(intervalMs, cancellationToken).ConfigureAwait(false))
             {
                 break;
             }
@@ -151,12 +151,12 @@ public partial class YTJsonParser : IDisposable
     {
         options ??= new CommunityPostStreamOptions();
 
-        string channelID = await YouTubeUrlUtil.GetYouTubeChannelID(channelUrlOrID, cancellationToken);
+        string channelID = await YouTubeUrlUtil.GetYouTubeChannelID(channelUrlOrID, cancellationToken).ConfigureAwait(false);
 
         InitialData initialData = await GetYTConfigDataAsync(
             channelID,
             EnumSet.DataType.Community,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (initialData.Posts == null || initialData.Posts.Count == 0)
         {
@@ -186,14 +186,14 @@ public partial class YTJsonParser : IDisposable
         while (!cancellationToken.IsCancellationRequested &&
             !string.IsNullOrEmpty(ytConfigData.Continuation))
         {
-            List<PostData> posts = await GetEarlierPostsAsync(ytConfigData, cancellationToken);
+            List<PostData> posts = await GetEarlierPostsAsync(ytConfigData, cancellationToken).ConfigureAwait(false);
 
             if (posts.Count > 0)
             {
                 yield return posts;
             }
 
-            if (!await DelayOrBreakAsync(GetEffectiveIntervalMs(0, options.ForceIntervalMs), cancellationToken))
+            if (!await DelayOrBreakAsync(GetEffectiveIntervalMs(0, options.ForceIntervalMs), cancellationToken).ConfigureAwait(false))
             {
                 break;
             }
@@ -219,7 +219,7 @@ public partial class YTJsonParser : IDisposable
     {
         try
         {
-            await Task.Delay(delayMs, cancellationToken);
+            await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
 
             return true;
         }

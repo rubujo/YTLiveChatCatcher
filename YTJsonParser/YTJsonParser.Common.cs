@@ -15,7 +15,14 @@ public partial class YTJsonParser
     /// <returns>HttpClient</returns>
     private static HttpClient CreateHttpClient()
     {
-        HttpClient httpClient = new();
+        // 沒有外部注入 HttpClient 時的備援：套用 PooledConnectionLifetime，
+        // 避免長時間存活的單一 HttpClient 因底層連線一直重複使用而遇到 DNS 更新不到的問題。
+        SocketsHttpHandler socketsHttpHandler = new()
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15)
+        };
+
+        HttpClient httpClient = new(socketsHttpHandler);
 
         string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36";
 

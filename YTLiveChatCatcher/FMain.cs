@@ -278,7 +278,7 @@ public partial class FMain : Form
                     intervalProgress: intervalProgress,
                     cancellationToken: cancellationToken))
                 {
-                    TBUserAgent.InvokeIfRequired(() => DoProcessMessages(batch));
+                    await TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -289,11 +289,14 @@ public partial class FMain : Form
             {
                 SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
-                TBUserAgent.InvokeIfRequired(() => WriteLog(ex.GetExceptionMessage()));
+                // 這裡刻意不帶入 cancellationToken——不論是使用者主動停止還是發生例外，
+                // 這則記錄都應該要能寫入，而不是被已取消的 token 連帶擋下來。
+                await TBUserAgent.InvokeAsyncIfRequired(() => WriteLog(ex.GetExceptionMessage()));
             }
             finally
             {
-                TBUserAgent.InvokeIfRequired(() => BtnStop_Click(this, new EventArgs()));
+                // 同上，清理／還原 UI 狀態這件事，不應該因為 cancellationToken 已取消而被跳過。
+                await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(this, new EventArgs()));
 
                 fetchCancellationTokenSource.Dispose();
             }

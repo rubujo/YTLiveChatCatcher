@@ -112,7 +112,7 @@ public partial class YTJsonParser
         JsonElement jsonElement = await GetJsonElementAsync(
             ytConfigData: ytConfigData,
             EnumSet.DataType.Community,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
 
         JsonElement.ArrayEnumerator? onResponseReceivedEndpointsArray =
             GetOnResponseReceivedEndpointsArray(jsonElement: jsonElement);
