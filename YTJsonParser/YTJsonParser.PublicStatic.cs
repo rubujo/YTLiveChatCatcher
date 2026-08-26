@@ -1,4 +1,4 @@
-using GetCachable;
+﻿using GetCachable;
 using Rubujo.YouTube.Utility.Extensions;
 using Rubujo.YouTube.Utility.Sets;
 using Rubujo.YouTube.Utility.Utils;

@@ -1,4 +1,4 @@
-using Rubujo.YouTube.Utility;
+﻿using Rubujo.YouTube.Utility;
 using Xunit;
 
 namespace Rubujo.YouTube.Utility.Tests;

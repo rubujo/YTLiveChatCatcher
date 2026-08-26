@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace Rubujo.YouTube.Utility;
 
@@ -27,7 +27,8 @@ internal static partial class LogMessages
     [LoggerMessage(EventId = 10, Level = LogLevel.Error, Message = "[{MethodName}] 變數 \"ytConfigData\" 是 null！")]
     public static partial void YtConfigDataIsNull(ILogger logger, string methodName);
 
-    [LoggerMessage(EventId = 11, Level = LogLevel.Warning, Message = "未抓取到任何初始貼文，請檢查 Parse 邏輯。")]
+    [LoggerMessage(EventId = 11, Level = LogLevel.Information,
+        Message = "未抓取到任何初始貼文（頻道本身沒有社群貼文屬於正常情況；若確定該頻道有貼文卻持續出現本訊息，才需要檢查 Parse 邏輯）。")]
     public static partial void NoInitialPosts(ILogger logger);
 
     [LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "[ParseSubMenuItemsContinuation] CustomLiveChatType：{CustomTitle}")]

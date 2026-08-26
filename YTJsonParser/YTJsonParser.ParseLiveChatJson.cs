@@ -521,6 +521,55 @@ public partial class YTJsonParser
                     }
                 }
             }
+
+            output.AddRange(ParseFrameworkUpdates(jsonElement.Value));
+        }
+
+        return output;
+    }
+
+    /// <summary>
+    /// 解析 <c>frameworkUpdates.entityBatchUpdate.mutations</c>（YouTube 的通用「實體」即時更新機制）
+    /// <para>目前只處理 <c>replyCountEntity</c>（付費類訊息的回覆討論串人數，見 <see cref="GetReplyCountEntityKey"/>）
+    /// ——這是目前唯一觀察到、承載了實際可用資料的實體種類。同一個機制底下還有 <c>engagementToolbarStateEntityPayload</c>
+    /// （超級留言的愛心按鈕狀態）與 <c>emojiFountainDataEntity</c>（直播間的表情雨特效），
+    /// 前者實測過真實資料後只有一個不透明的 key、沒有任何可判讀的狀態欄位，後者是整場直播共用、
+    /// 不屬於任何一則訊息的環境特效資料，兩者皆刻意不處理。</para>
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>List&lt;RendererData&gt;</returns>
+    private List<RendererData> ParseFrameworkUpdates(JsonElement jsonElement)
+    {
+        List<RendererData> output = [];
+
+        JsonElement.ArrayEnumerator? mutations = jsonElement.Get("frameworkUpdates")
+            ?.Get("entityBatchUpdate")
+            ?.Get("mutations")
+            ?.ToArrayEnumerator();
+
+        if (!mutations.HasValue)
+        {
+            return output;
+        }
+
+        foreach (JsonElement mutation in mutations)
+        {
+            JsonElement? replyCountEntity = mutation.Get("payload")?.Get("replyCountEntity");
+
+            if (!replyCountEntity.HasValue)
+            {
+                continue;
+            }
+
+            string entityKey = mutation.Get("entityKey")?.GetString() ?? string.Empty;
+            string? replyCountNumber = replyCountEntity.Value.Get("replyCountNumber")?.GetString();
+
+            output.Add(new RendererData()
+            {
+                ID = entityKey,
+                Type = GetLocalizeString(KeySet.ChatReplyCountUpdate),
+                ReplyCount = replyCountNumber
+            });
         }
 
         return output;
@@ -1445,6 +1494,7 @@ public partial class YTJsonParser
 
         string? headerBackgroundColor = GetHeaderBackgroundColor(jsonElement);
         string? leaderboardRank = GetLeaderboardRank(jsonElement);
+        string? replyCountEntityKey = GetReplyCountEntityKey(jsonElement);
 
         #region 處理特例
 
@@ -1512,6 +1562,7 @@ public partial class YTJsonParser
             BackgroundColor = backgroundColor,
             HeaderBackgroundColor = headerBackgroundColor,
             LeaderboardRank = leaderboardRank,
+            ReplyCountEntityKey = replyCountEntityKey,
             TimestampText = timestampText,
             AuthorExternalChannelID = authorExternalChannelID,
             Stickers = messageData?.Stickers,
@@ -1757,6 +1808,23 @@ public partial class YTJsonParser
             ?.Get("title");
 
         return title?.GetString();
+    }
+
+    /// <summary>
+    /// 取得回覆數更新事件的關聯鍵值（僅付費類 Renderer，例如超級留言／超級貼圖才會有回覆按鈕）
+    /// <para>YouTube 把回覆數當成獨立的「實體」（entity），不會直接內嵌在訊息 JSON 裡，
+    /// 而是透過這個 key 對照到後續某一批回應內 <c>frameworkUpdates.entityBatchUpdate.mutations</c>
+    /// 裡面同一個 key 的 <c>replyCountEntity</c>（見 <see cref="ParseFrameworkUpdates"/>）。</para>
+    /// </summary>
+    /// <param name="jsonElement">JsonElement</param>
+    /// <returns>字串，找不到時為 null（代表此訊息類型不適用，非資料缺漏）</returns>
+    private static string? GetReplyCountEntityKey(JsonElement? jsonElement)
+    {
+        JsonElement? replyCountEntityKey = jsonElement?.Get("replyButton")
+            ?.Get("pdgReplyButtonViewModel")
+            ?.Get("replyCountEntityKey");
+
+        return replyCountEntityKey?.GetString();
     }
 
     /// <summary>

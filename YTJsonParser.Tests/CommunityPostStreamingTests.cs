@@ -1,4 +1,4 @@
-using Rubujo.YouTube.Utility;
+﻿using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Models.Community;
 using Xunit;
 

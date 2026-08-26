@@ -1,0 +1,18 @@
+root = true
+
+# 專案在 Windows／Visual Studio 環境下開發，既有程式碼一律是 UTF-8（含 BOM）＋ CRLF，
+# 這裡明確記錄下來，避免非 Visual Studio 的編輯器／工具（含 AI 代理）寫入檔案時漏掉 BOM
+# 或用 LF，造成同一個 repo 內換行字元／編碼不一致。
+[*]
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,sln}]
+indent_style = space
+indent_size = 4
+
+[*.{json,md,yml,yaml}]
+indent_style = space
+indent_size = 2

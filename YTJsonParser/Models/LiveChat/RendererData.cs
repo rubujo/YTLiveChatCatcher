@@ -82,6 +82,24 @@ public class RendererData
     public string? LeaderboardRank { get; set; }
 
     /// <summary>
+    /// 回覆數更新事件的關聯鍵值
+    /// <para>僅付費類訊息（例如超級留言／超級貼圖）才會有；一般訊息為 null，代表不適用而非資料缺漏。
+    /// 訊息剛送出時尚無回覆，之後若有人回覆，會在後續某一批資料中收到一筆
+    /// <see cref="Type"/> 為「回覆數更新」的 <see cref="RendererData"/>，其 <see cref="ID"/>
+    /// 會等於這裡的值——呼叫端需自行保留這個對照關係，才能把新的 <see cref="ReplyCount"/> 更新回原始訊息上。</para>
+    /// </summary>
+    [JsonPropertyName("replyCountEntityKey")]
+    public string? ReplyCountEntityKey { get; set; }
+
+    /// <summary>
+    /// 回覆數
+    /// <para>一般訊息、以及尚未有任何回覆的付費類訊息皆為 null（並非資料缺漏）。
+    /// 只有在收到「回覆數更新」事件（<see cref="ReplyCountEntityKey"/> 對照關係）時才會有值。</para>
+    /// </summary>
+    [JsonPropertyName("replyCount")]
+    public string? ReplyCount { get; set; }
+
+    /// <summary>
     /// 時間標記（文字格式）
     /// </summary>
     [JsonPropertyName("timestampText")]

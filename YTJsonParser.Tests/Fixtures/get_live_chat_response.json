@@ -36,7 +36,13 @@
                 "message": { "runs": [{ "text": "超級留言測試" }] },
                 "purchaseAmountText": { "simpleText": "NT$100" },
                 "bodyBackgroundColor": 4278237396,
-                "authorExternalChannelId": "UCpaid"
+                "authorExternalChannelId": "UCpaid",
+                "replyButton": {
+                  "pdgReplyButtonViewModel": {
+                    "replyCountEntityKey": "reply-entity-key-1",
+                    "replyCountPlaceholder": { "content": "Reply" }
+                  }
+                }
               }
             }
           }
@@ -70,6 +76,33 @@
                   }
                 }
               }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "frameworkUpdates": {
+    "entityBatchUpdate": {
+      "mutations": [
+        {
+          "entityKey": "reply-entity-key-1",
+          "type": "ENTITY_MUTATION_TYPE_REPLACE",
+          "payload": {
+            "replyCountEntity": {
+              "key": "reply-entity-key-1",
+              "replyCount": { "content": "3" },
+              "replyCountNumber": "3",
+              "replyButtonAccessibilityText": "Reply to this Super Chat (3 replies)"
+            }
+          }
+        },
+        {
+          "entityKey": "unrelated-entity-key",
+          "type": "ENTITY_MUTATION_TYPE_REPLACE",
+          "payload": {
+            "engagementToolbarStateEntityPayload": {
+              "key": "unrelated-entity-key"
             }
           }
         }

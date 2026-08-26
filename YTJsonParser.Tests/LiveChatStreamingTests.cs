@@ -1,4 +1,4 @@
-using Rubujo.YouTube.Utility;
+﻿using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using Rubujo.YouTube.Utility.Sets;
 using Xunit;
@@ -57,6 +57,18 @@ public class LiveChatStreamingTests
         // showLiveChatActionPanelAction -> pollRenderer：投票應被解析並包含問題與選項文字。
         Assert.Contains(allMessages, m => m.Type == "投票" && m.MessageContent != null &&
             m.MessageContent.Contains("測試投票問題") && m.MessageContent.Contains("選項A") && m.MessageContent.Contains("選項B"));
+
+        // 超級留言應帶有回覆數更新事件的關聯鍵值。
+        RendererData superChat = Assert.Single(allMessages, m => m.ID == "msg-superchat-1");
+        Assert.Equal("reply-entity-key-1", superChat.ReplyCountEntityKey);
+
+        // frameworkUpdates.entityBatchUpdate 內的 replyCountEntity 突變應被解析成一筆獨立的「回覆數更新」資料，
+        // 其 ID 借用來存放 entityKey，讓呼叫端可以對照回上面的 ReplyCountEntityKey。
+        Assert.Contains(allMessages, m =>
+            m.Type == "回覆數更新" && m.ID == "reply-entity-key-1" && m.ReplyCount == "3");
+
+        // 同一個實體更新機制底下的其它酬載類型（例如愛心按鈕狀態）應被忽略，不應該產生任何資料。
+        Assert.DoesNotContain(allMessages, m => m.ID == "unrelated-entity-key");
     }
 
     [Fact]

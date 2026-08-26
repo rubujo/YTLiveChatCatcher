@@ -1,4 +1,4 @@
-using Microsoft.Web.WebView2.WinForms;
+﻿using Microsoft.Web.WebView2.WinForms;
 
 namespace YTLiveChatCatcher
 {

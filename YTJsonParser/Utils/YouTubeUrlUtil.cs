@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using AngleSharp;
 using AngleSharp.Dom;
 using Rubujo.YouTube.Utility.Sets;

@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Web.WebView2.Core;
 using Rubujo.YouTube.Utility.Extensions;
 using YTLiveChatCatcher.Common.Utils;

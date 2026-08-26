@@ -1,4 +1,4 @@
-using Rubujo.YouTube.Utility.Sets;
+﻿using Rubujo.YouTube.Utility.Sets;
 
 namespace Rubujo.YouTube.Utility;
 

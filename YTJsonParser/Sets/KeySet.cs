@@ -87,6 +87,11 @@ public class KeySet
     /// </summary>
     public const string ChatModeration = "ChatModeration";
 
+    /// <summary>
+    /// 回覆數更新（付費類訊息的回覆討論串人數變動事件，非訊息本身）
+    /// </summary>
+    public const string ChatReplyCountUpdate = "ChatReplyCountUpdate";
+
     #endregion
 
     #region 訊息內關鍵字

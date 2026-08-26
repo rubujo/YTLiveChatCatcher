@@ -692,6 +692,7 @@ public class DictionarySet
                 { KeySet.ChatGift, "Gift" },
                 { KeySet.ChatDonation, "Donation" },
                 { KeySet.ChatModeration, "Moderation" },
+                { KeySet.ChatReplyCountUpdate, "Reply Count Update" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "Upgraded membership to" },
                 { KeySet.MemberMilestone, "Member for" }
@@ -717,6 +718,7 @@ public class DictionarySet
                 { KeySet.ChatGift, "禮物" },
                 { KeySet.ChatDonation, "捐款／購買" },
                 { KeySet.ChatModeration, "版主訊息" },
+                { KeySet.ChatReplyCountUpdate, "回覆數更新" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "頻道會員等級已升級至" },
                 { KeySet.MemberMilestone, "已加入會員" }
@@ -742,6 +744,7 @@ public class DictionarySet
                 { KeySet.ChatGift, "礼物" },
                 { KeySet.ChatDonation, "捐款／购买" },
                 { KeySet.ChatModeration, "版主消息" },
+                { KeySet.ChatReplyCountUpdate, "回复数更新" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "会员级别已升至" },
                 { KeySet.MemberMilestone, "会龄" }
@@ -767,6 +770,7 @@ public class DictionarySet
                 { KeySet.ChatGift, "ギフト" },
                 { KeySet.ChatDonation, "寄付／購入" },
                 { KeySet.ChatModeration, "モデレーション" },
+                { KeySet.ChatReplyCountUpdate, "返信数の更新" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "にアップグレードされました" },
                 { KeySet.MemberMilestone, "メンバー歴" }
@@ -792,6 +796,7 @@ public class DictionarySet
                 { KeySet.ChatGift, "선물" },
                 { KeySet.ChatDonation, "후원／구매" },
                 { KeySet.ChatModeration, "운영자 메시지" },
+                { KeySet.ChatReplyCountUpdate, "답글 수 업데이트" },
                 // 使用 Contains() 判斷關鍵字詞。
                 { KeySet.MemberUpgrade, "멤버십을" },
                 { KeySet.MemberMilestone, "회원 가입 기간" }

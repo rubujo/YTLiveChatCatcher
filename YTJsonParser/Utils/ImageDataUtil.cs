@@ -1,4 +1,4 @@
-using GetCachable;
+﻿using GetCachable;
 using Microsoft.Maui.Graphics;
 using Microsoft.Maui.Graphics.Platform;
 using Microsoft.Maui.Graphics.Skia;
