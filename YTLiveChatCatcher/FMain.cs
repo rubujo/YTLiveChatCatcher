@@ -51,6 +51,7 @@ public partial class FMain : Form
 
             InitListView(LVLiveChatList);
             InitLiveChatCather(SharedHttpClient);
+            CheckCaptureRecovery();
 
             CheckAppVersion(SharedHttpClient);
         }
@@ -278,6 +279,10 @@ public partial class FMain : Form
                     intervalProgress: intervalProgress,
                     cancellationToken: cancellationToken))
                 {
+                    // 先寫進當機復原記錄再處理成 ListView 項目：即使 DoProcessMessages 或後續流程
+                    // 出了問題，這批已經收到的原始資料也已經安全落地在本機檔案裡。
+                    CaptureRecoveryStore.AppendBatch(batch);
+
                     await TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), cancellationToken);
                 }
             }
@@ -461,6 +466,9 @@ public partial class FMain : Form
             SharedIncomeByCurrency.Clear();
             SharedMemberInRoomAuthors.Clear();
             SharedDistinctAuthors.Clear();
+
+            // 使用者主動清空聊天室，代表明確不需要保留這批資料，一併清除當機復原記錄。
+            CaptureRecoveryStore.Clear();
 
             UpdateSummaryInfo();
 

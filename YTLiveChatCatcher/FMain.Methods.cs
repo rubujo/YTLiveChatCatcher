@@ -956,6 +956,13 @@ public partial class FMain
             workbook.Properties.Author = $"{StringSet.AppName} {version}";
 
             package.SaveAs(stream);
+
+            // 只有完整匯出 LVLiveChatList（不是篩選後的搜尋結果子集）才代表這場擷取的原始資料已經
+            // 安全落地，可以清除當機復原記錄；篩選子集匯出不代表使用者已經拿到完整資料的備份。
+            if (listView.Name == LVLiveChatList.Name)
+            {
+                CaptureRecoveryStore.Clear();
+            }
         });
     }
 
@@ -2084,6 +2091,43 @@ public partial class FMain
         }
 
         UpdateCookieStatus();
+    }
+
+    /// <summary>
+    /// 檢查是否有上次未正常結束的擷取記錄（<see cref="CaptureRecoveryStore"/>），有的話詢問使用者是否要載入。
+    /// <para>「未正常結束」代表應用程式在擷取過程中當機、被強制關閉，或使用者忘記匯出就直接關閉視窗——
+    /// 這幾種情況下，畫面上累積的資料原本會直接消失，因為它們只存在記憶體裡。</para>
+    /// </summary>
+    private void CheckCaptureRecovery()
+    {
+        if (!CaptureRecoveryStore.Exists())
+        {
+            return;
+        }
+
+        DialogResult result = MessageBox.Show(
+            "偵測到上次擷取記錄尚未正常結束（可能是應用程式當機、被強制關閉，或忘記匯出就關閉），是否要載入這些資料？",
+            Text,
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question);
+
+        if (result != DialogResult.Yes)
+        {
+            CaptureRecoveryStore.Clear();
+
+            return;
+        }
+
+        List<List<RendererData>> recoveredBatches = CaptureRecoveryStore.LoadBatches();
+
+        foreach (List<RendererData> batch in recoveredBatches)
+        {
+            DoProcessMessages(batch);
+        }
+
+        // 刻意不在載入後清除記錄檔——這樣即使載入回來後還沒來得及匯出就又當機一次，
+        // 這批資料依然留在復原記錄裡，下次啟動還是問得到。記錄檔只在成功匯出或手動清空聊天室時才清除。
+        WriteLog($"已從當機復原記錄載入 {recoveredBatches.Sum(n => n.Count)} 筆資料（共 {recoveredBatches.Count} 個批次）。");
     }
 
     /// <summary>

@@ -155,6 +155,14 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 新增會影響「這則訊息算不算留言」這個分類的邏輯時，改 `ChatStatsCalculator.Classify` 跟 `ChatMessageExclusionKeys`，不要繞回 `FMain.Methods.cs` 裡另外寫一份判斷。
 
+## 當機復原（`CaptureRecoveryStore`）
+
+擷取聊天室是一個可能持續數小時的過程，畫面上的資料只存在記憶體裡，完全依賴使用者自己記得手動匯出。`CaptureRecoveryStore`（`Common/Utils/CaptureRecoveryStore.cs`）在每次 `StartFetchLiveChatData` 收到新批次時，就先把原始資料附加寫進 `%LocalAppData%\YTLiveChatCatcher\recovery.jsonl`（JSON Lines，一行一批次，附加寫入成本不隨累積資料量變貴），再交給 `DoProcessMessages` 處理成 `ListView` 項目——即使處理過程本身出問題，這批已收到的原始資料也已經安全落地。
+
+- `FMain_Load` 呼叫 `CheckCaptureRecovery`：偵測到非空的復原記錄時詢問使用者是否載入；選是就把每個批次重新餵給 `DoProcessMessages`（跟即時擷取走同一條處理路徑，包含 ID 關聯／去重／統計邏輯），選否則清除記錄檔。
+- 記錄檔**只在**成功完整匯出 `LVLiveChatList`（不是搜尋結果的篩選子集）或使用者主動按「清空聊天室」時才清除——單純按「停止擷取」不會清除，因為停止不代表使用者已經拿到資料的安全備份，「忘記匯出就關掉程式」正是這個機制要保護的情境之一。
+- `SerializeBatchLine`／`ParseBatchLines` 是抽出來的純邏輯（不碰真實檔案系統），供 `YTLiveChatCatcher.Tests` 覆蓋；`AppendBatch`／`LoadBatches`／`Clear`／`Exists` 這幾個會動到真實檔案的方法刻意沒有測試覆蓋，因為它們固定寫死存取使用者實際執行這個應用程式時真正會用到的同一個檔案路徑，測試直接操作有覆寫掉使用者真實復原記錄的風險。
+
 ## 已知技術債
 
 `EPPlus` 使用 Polyform Noncommercial 授權（`ExcelPackage.License.SetNonCommercialOrganization(...)`，`FMain.EPPlusUtil.cs`／`FMain.Methods.cs` 各呼叫一次，分別對應匯入／匯出兩個獨立進入點，非重複程式碼）。本專案為免費、非商業性質，符合此授權條款；商業用途需另外購買授權，更新版本前留意授權條款是否變動。
