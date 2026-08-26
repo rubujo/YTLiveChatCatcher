@@ -9,7 +9,6 @@ using Rubujo.YouTube.Utility.Utils;
 using Size = System.Drawing.Size;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using System.Runtime.Versioning;
-using System.Text.RegularExpressions;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
@@ -388,25 +387,21 @@ public partial class FMain
 
                 summaryIdx++;
 
-                // 「留言數量」刻意用排除法（跟 RegisterNewListViewItemStats 的 SharedChatCount 邏輯一致），
-                // 不是列舉「一般留言／超級留言／超級貼圖」這種包含法——包含法只要之後又新增一種聊天類訊息
-                // （例如捐款、版主訊息、投票建立），沒有同步更新這裡就會被漏算，這是這次修正前的實際狀況：
-                // 舊版公式只認得上述三種類型，ChatPoll／ChatGift／ChatDonation／ChatModeration 這些同樣算
-                // 「留言」的類型會被排除法算進 SharedChatCount（畫面上的即時數字)，卻不會被這個公式算進去，
-                // 造成匯出的 Excel 跟畫面上的數字對不起來。改成排除法後，任何未來新增的訊息類型只要不在
-                // 下面的排除清單裡，就會自動被算成「留言」，不需要記得同步更新這裡。
+                // 「留言數量」刻意用排除法（跟 ChatStatsCalculator.Classify 的 CountsAsChatMessage 邏輯一致，
+                // 且直接共用同一份 ChatMessageExclusionKeys 清單，不是各自維護一份），不是列舉「一般留言／
+                // 超級留言／超級貼圖」這種包含法——包含法只要之後又新增一種聊天類訊息（例如捐款、版主訊息、
+                // 投票建立），忘記同步更新這裡就會被漏算，這是這次修正前的實際狀況：舊版公式只認得上述三種
+                // 類型，ChatPoll／ChatGift／ChatDonation／ChatModeration 這些同樣算「留言」的類型會被排除法
+                // 算進 SharedChatCount（畫面上的即時數字），卻不會被這個公式算進去，造成匯出的 Excel 跟畫面上
+                // 的數字對不起來。改成跟 ChatStatsCalculator 共用同一份排除清單後，兩邊不可能再各自漂移。
+                string chatCountExclusionList = string.Join(",",
+                    new[] { Rubujo.YouTube.Utility.Sets.StringSet.YouTube }
+                        .Concat(ChatStatsCalculator.ChatMessageExclusionKeys.Select(SharedYTJsonParser.GetLocalizeString))
+                        .Select(n => $"\"{n}\""));
+
                 List<string> arrayFormula =
                 [
-                    $"(COUNTA(G2:G1048576)-SUM(COUNTIF(G2:G1048576,{{" +
-                    $"\"{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect)}\"," +
-                    $"\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned)}\"" +
-                    $"}})))&\" 個\"",
+                    $"(COUNTA(G2:G1048576)-SUM(COUNTIF(G2:G1048576,{{{chatCountExclusionList}}})))&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}\")&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}\")&\" 個\"",
                     $"COUNTIF(G:G,\"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}\")&\" 個\"",
@@ -1621,11 +1616,12 @@ public partial class FMain
     }
 
     /// <summary>
-    /// 累加式更新統計計數器（2026/8 新增，取代 UpdateSummaryInfo 內原本每批次都要重新掃描整個 ListView
-    /// 的做法——長時間直播累積上千則訊息後，每批次都重新掃描一次全部歷史資料是 O(n²)）。
+    /// 累加式更新統計計數器，取代 UpdateSummaryInfo 內原本每批次都要重新掃描整個 ListView 的做法
+    /// ——長時間直播累積上千則訊息後，每批次都重新掃描一次全部歷史資料是 O(n²)。
     /// <para>只應該在真正新增一列時呼叫一次（<see cref="DoProcessMessages"/>／<see cref="LoadXLSX"/> 各呼叫一處），
     /// 就地更新既有列（<see cref="ApplyExistingListViewItemUpdate"/>、刪除／封鎖標記）不會、也不應該呼叫這個方法，
-    /// 否則會讓同一則訊息被重複計算。條件務必跟 <see cref="UpdateSummaryInfo"/> 過去的篩選邏輯保持一致。</para>
+    /// 否則會讓同一則訊息被重複計算。實際的分類判斷邏輯在 <see cref="ChatStatsCalculator.Classify"/>
+    /// （跟 WinForms 脫鉤、有單元測試覆蓋，見 YTLiveChatCatcher.Tests），這裡只負責依分類結果套用狀態變更。</para>
     /// </summary>
     /// <param name="type">字串，訊息類型（已在地化）</param>
     /// <param name="authorBages">字串，作者徽章文字</param>
@@ -1637,30 +1633,21 @@ public partial class FMain
         string authorName,
         string purchaseAmountText)
     {
-        bool isJoinMember = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember);
-        bool isMemberUpgrade = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade);
-        bool isMemberMilestone = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone);
-        bool isMemberGift = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift);
-        bool isReceivedMemberGift = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift);
-        bool isRedirect = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect);
-        bool isPinned = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned);
-        bool isSuperChat = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat);
-        bool isSuperSticker = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker);
-        bool isYouTubeSystem = type == Rubujo.YouTube.Utility.Sets.StringSet.YouTube;
+        MessageStatsClassification classification = ChatStatsCalculator.Classify(SharedYTJsonParser, type, authorBages);
 
-        if (isSuperChat)
+        if (classification.IsSuperChat)
         {
             SharedSuperChatCount++;
         }
 
-        if (isSuperSticker)
+        if (classification.IsSuperSticker)
         {
             SharedSuperStickerCount++;
         }
 
-        if (isSuperChat || isSuperSticker)
+        if (classification.IsSuperChat || classification.IsSuperSticker)
         {
-            if (TryParsePurchaseAmount(purchaseAmountText, out string currencySymbol, out double amount))
+            if (ChatStatsCalculator.TryParsePurchaseAmount(purchaseAmountText, out string currencySymbol, out double amount))
             {
                 SharedIncomeByCurrency[currencySymbol] = SharedIncomeByCurrency.GetValueOrDefault(currencySymbol) + amount;
             }
@@ -1670,85 +1657,46 @@ public partial class FMain
             }
         }
 
-        if (isJoinMember)
+        if (classification.IsJoinMember)
         {
             SharedMemberJoinCount++;
         }
 
-        if (isMemberUpgrade)
+        if (classification.IsMemberUpgrade)
         {
             SharedMemberUpgradeCount++;
         }
 
-        if (isMemberMilestone)
+        if (classification.IsMemberMilestone)
         {
             SharedMemberMilestoneCount++;
         }
 
-        if (isMemberGift)
+        if (classification.IsMemberGift)
         {
             SharedMemberGiftCount++;
         }
 
-        if (isReceivedMemberGift)
+        if (classification.IsReceivedMemberGift)
         {
             SharedReceivedMemberGiftCount++;
         }
 
-        // 對應舊版 LChatCount 的排除條件（系統訊息／五種會員事件／導向／置頂）。
-        if (!isYouTubeSystem &&
-            !isJoinMember && !isMemberUpgrade && !isMemberMilestone &&
-            !isMemberGift && !isReceivedMemberGift &&
-            !isRedirect && !isPinned)
+        if (classification.CountsAsChatMessage)
         {
             SharedChatCount++;
         }
 
-        // 對應舊版 LMemberInRoomCount 的排除條件（加入／升級／里程碑事件本身不算「在場會員」，
-        // 但這幾種事件之外、帶有會員徽章的一般留言／超級留言／貼圖才算）。
-        if (!isJoinMember && !isMemberUpgrade && !isMemberMilestone &&
-            authorBages.Contains(StringSet.Member))
+        if (classification.CountsAsMemberInRoom)
         {
             SharedMemberInRoomAuthors.Add(authorName);
         }
 
-        // 對應舊版 LAuthorCount 的排除條件（系統訊息、以及類型文字含有「會員」關鍵字的五種會員事件）。
-        if (!isYouTubeSystem && !type.Contains(StringSet.Member))
+        if (classification.CountsAsDistinctAuthor)
         {
             SharedDistinctAuthors.Add(authorName);
         }
     }
-
-    /// <summary>
-    /// 嘗試解析超級留言／貼圖的金額文字（例如 "NT$100"、"$10.00"、"¥1,000"）為貨幣符號與數字金額。
-    /// <para>YouTube 依付款方實際使用的貨幣格式化這段文字，不受 <see cref="EnumSet.DisplayLanguage"/> 影響，
-    /// 可能出現任何貨幣符號（NT$、US$、HK$、¥ 等），不能假設一律是新臺幣或美金，也不能只認裸 "$" 開頭
-    /// ——這是舊版 <c>purchaseAmountText.StartsWith('$')</c> 的錯誤假設，會讓 "NT$100" 這種帶國別字首的
-    /// 金額完全被忽略，不同貨幣也不能直接相加當同一個數字看待。</para>
-    /// </summary>
-    /// <param name="purchaseAmountText">字串，購買金額文字</param>
-    /// <param name="currencySymbol">out 字串，貨幣符號（例如 "NT$"）</param>
-    /// <param name="amount">out double，數字金額</param>
-    /// <returns>布林值，是否成功解析出金額</returns>
-    private static bool TryParsePurchaseAmount(string purchaseAmountText, out string currencySymbol, out double amount)
-    {
-        Match match = PurchaseAmountRegex().Match(purchaseAmountText);
-
-        if (!match.Success)
-        {
-            currencySymbol = string.Empty;
-            amount = 0;
-
-            return false;
-        }
-
-        currencySymbol = match.Groups["symbol"].Value.Trim();
-
-        return double.TryParse(match.Groups["amount"].Value, out amount);
-    }
-
-    [GeneratedRegex(@"^(?<symbol>[^\d]*)(?<amount>[\d,]+(?:\.\d+)?)")]
-    private static partial Regex PurchaseAmountRegex();
 
     /// <summary>
     /// 套用「留言已被刪除」事件：透過 <see cref="SharedItemsByMessageID"/> 找到對應訊息 ID 的既有列並標記，

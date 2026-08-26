@@ -13,6 +13,7 @@
 - `YTJsonParser/`：核心函式庫。負責向 YouTube 發送請求、解析回傳的 JSON（ytcfg、ytInitialData、innertube API 回應），對外提供強型別的 `RendererData`／`PostData`／`YTConfigData` 等模型，以及 `StreamLiveChatDataAsync`／`StreamCommunityPostsAsync` 兩個 `IAsyncEnumerable` 拉取式串流方法。不依賴任何 UI 框架、不依賴 DI 容器，理論上可被任何 .NET 應用程式引用。
 - `YTLiveChatCatcher/`：WinForms 桌面應用程式，使用 `YTJsonParser` 的單一實例（`FMain.Variables.cs` 內的 `SharedYTJsonParser`，於 `InitLiveChatCather` 建立）驅動 UI，透過 `Task.Run` + `await foreach` 消費串流。
 - `YTJsonParser.Tests/`：xUnit v3（`xunit.v3` 套件，非舊版 `xunit`）測試專案，用 `FakeHttpMessageHandler` 依 URL 比對回傳 `Fixtures/` 內的真實 JSON 樣本，完全不連線即可驗證解析邏輯。
+- `YTLiveChatCatcher.Tests/`：同樣 xUnit v3，測試 `YTLiveChatCatcher/Common/Utils/ChatStatsCalculator.cs`——WinForms 端跟 `Control`／`Form` 完全脫鉤的純計算邏輯（金額解析、訊息類型分類），見下方「WinForms 端的純計算邏輯」。
 
 ## 建置、執行與測試
 
@@ -20,13 +21,14 @@
 dotnet build YTLiveChatCatcher.slnx
 dotnet run --project YTLiveChatCatcher
 dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
+dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 ```
 
-`dotnet test` 需要 repo 根目錄的 `global.json`（`{"test":{"runner":"Microsoft.Testing.Platform"}}`）才能在 .NET 10 SDK 下運作——xunit.v3 是 Microsoft.Testing.Platform 原生專案，.NET 10 的 `dotnet test` 預設仍嘗試走舊版 VSTest 橋接、會直接失敗，不要移除這個 `global.json`。也可以直接 `dotnet run --project YTJsonParser.Tests` 以主控台方式執行（xunit.v3 內建的 in-process runner）。
+`dotnet test` 需要 repo 根目錄的 `global.json`（`{"test":{"runner":"Microsoft.Testing.Platform"}}`）才能在 .NET 10 SDK 下運作——xunit.v3 是 Microsoft.Testing.Platform 原生專案，.NET 10 的 `dotnet test` 預設仍嘗試走舊版 VSTest 橋接、會直接失敗，不要移除這個 `global.json`。也可以直接 `dotnet run --project YTJsonParser.Tests`（或 `YTLiveChatCatcher.Tests`）以主控台方式執行（xunit.v3 內建的 in-process runner）。
 
 新增測試時：`YTJsonParser` 的解析方法幾乎都是 `private`，測試一律透過**公開 API**（`StreamLiveChatDataAsync`／`StreamCommunityPostsAsync`／`IsVideoStreamingAsync`）搭配 `FakeHttpMessageHandler` 進行，不要為了測試把方法改成 `internal` + `InternalsVisibleTo`——這樣測試才能在內部實作重構後仍然有效，同時也順便驗證了 URL 組成與 continuation 交換邏輯（這是最容易被 YouTube 改版打壞的部分）。新增 fixture 時，**用程式（例如 Python 的 `json.dumps`）產生保證合法的 JSON 字串再嵌入 HTML**，不要手動在一行內編織巢狀大括號／中括號，容易漏算括號讓 fixture 壞掉。
 
-`YTLiveChatCatcher` 沒有自動化測試（`ListView`／`FMain` 高度耦合、需要 STA 訊息迴圈）。改動它之後至少要建置＋啟動應用程式確認無啟動期例外；牽涉即時串流／匯入匯出的改動，理想上要接真實直播手動操作驗證，做不到時要在回報裡明講「沒做到這一步」，不要含糊帶過。
+`YTLiveChatCatcher` 本身（`ListView`／`FMain`）沒有自動化測試——高度耦合、需要 STA 訊息迴圈，這部分改動後至少要建置＋啟動應用程式確認無啟動期例外；牽涉即時串流／匯入匯出的改動，理想上要接真實直播手動操作驗證，做不到時要在回報裡明講「沒做到這一步」，不要含糊帶過。但**其中不依賴 `Control`／`Form` 的純計算邏輯要抽到獨立類別、由 `YTLiveChatCatcher.Tests` 覆蓋**，不要因為「反正 WinForms 沒辦法測」就連可以測的部分也一起放棄——`ChatStatsCalculator` 就是這樣抽出來的，且抽出來的過程直接消滅了一個真實 bug 的重演可能（見下方）。
 
 ## 目標框架與語言版本
 
@@ -134,8 +136,20 @@ dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 - `留言已被刪除`／`使用者已被封鎖`：找到對應列後，在訊息內容前面加上文字標記（例如「〔已刪除〕」）並套用刪除線字型＋灰色，**保留原始列**（工具用途包含記錄／收益分析，刪除的留言本身也是有價值的資訊）。標記文字特意寫進訊息內容欄位本身而不是只靠字型樣式，因為 Excel 匯出不會轉存字型的刪除線樣式。
 - `回覆數更新`／`投票結果更新`：找到對應列後就地更新欄位文字，不產生新列。
 - 同一個 `ID` 再次出現（真重複資料，或 `replaceChatItemAction`）：就地更新既有列，不略過（避免 replace 的新內容被靜默丟棄）也不當成新列加入。
-- `UpdateSummaryInfo` 用一組累加式計數器／集合（`FMain.Variables.cs`：`SharedChatCount`／.../`SharedTotalIncome`／`SharedMemberInRoomAuthors`／`SharedDistinctAuthors`）取代每批次對整個 `ListView` 重新掃描，只在 `RegisterNewListViewItemStats`（真正新增一列時呼叫一次；就地更新既有列不會呼叫，避免重複計算）裡更新，`UpdateSummaryInfo` 本身只讀取這些欄位組字串。**若未來新增一種會影響統計的訊息類型，記得同時更新 `RegisterNewListViewItemStats`**，否則新類型不會反映在統計數字裡——這是這個設計相對於「每次重新掃描」的取捨，正確性依賴人工同步維護兩處邏輯。
+- `UpdateSummaryInfo` 用一組累加式計數器／集合（`FMain.Variables.cs`：`SharedChatCount`／.../`SharedIncomeByCurrency`／`SharedMemberInRoomAuthors`／`SharedDistinctAuthors`）取代每批次對整個 `ListView` 重新掃描，只在 `RegisterNewListViewItemStats`（真正新增一列時呼叫一次；就地更新既有列不會呼叫，避免重複計算）裡更新，`UpdateSummaryInfo` 本身只讀取這些欄位組字串。**若未來新增一種全新的計數器類型（例如「XX 事件人數」），記得同時更新 `RegisterNewListViewItemStats`**——但「這則訊息算不算聊天留言」這個分類本身已經抽到 `ChatStatsCalculator.Classify`，不受這條限制，見下一段。
 - `FMain.EPPlusUtil.cs` 的 `LoadXLSX`（匯入）讀取舊版（沒有新欄位）匯出的 *.xlsx 檔案時會安全地讀到空字串，不會出錯。
+
+## WinForms 端的純計算邏輯（`ChatStatsCalculator`）
+
+`RegisterNewListViewItemStats` 曾經一次犯過兩個真實的統計正確性錯誤：金額加總只認裸 `"$"` 開頭（導致主要受眾使用的 `"NT$100"` 格式被完全忽略）、Excel 匯出的「留言數量」公式用列舉法列出三種類型（導致捐款／版主訊息／投票建立這類同樣算「留言」的類型被漏算，跟畫面即時數字對不起來）。兩次都不是被測試抓到的——因為判斷邏輯整包寫在跟 `Form`／`Control` 綁死的方法裡，沒有測試能碰。
+
+修法：把不依賴 WinForms 的判斷邏輯抽到 `YTLiveChatCatcher/Common/Utils/ChatStatsCalculator.cs`（純 `static` 類別，只依賴 `YTJsonParser`／BCL，沒有任何 `System.Windows.Forms` 參照），由 `YTLiveChatCatcher.Tests` 覆蓋：
+
+- `TryParsePurchaseAmount`：用 `[GeneratedRegex]` 正確拆解貨幣符號與金額（`"NT$100"` → `"NT$"`／`100`），不假設一律是新臺幣或美金。
+- `Classify`：依訊息類型／徽章判斷這則訊息該如何影響各項統計，回傳 `MessageStatsClassification`。`RegisterNewListViewItemStats` 只負責依這個分類結果做欄位遞增／集合新增，不再自己判斷。
+- `ChatMessageExclusionKeys`：「留言數量」統計要排除的訊息類型清單，`ChatStatsCalculator.Classify` 的 `CountsAsChatMessage` 與 `DoExportTask` 組 Excel「留言數量」公式時**共用同一份**（後者用 `.Select(SharedYTJsonParser.GetLocalizeString)` 動態組出排除清單），不是兩處各自維護——這是消滅前述第二個 bug 的根本做法：兩處不可能再各自漂移，而不是靠人工記得同步。
+
+新增會影響「這則訊息算不算留言」這個分類的邏輯時，改 `ChatStatsCalculator.Classify` 跟 `ChatMessageExclusionKeys`，不要繞回 `FMain.Methods.cs` 裡另外寫一份判斷。
 
 ## 已知技術債
 
