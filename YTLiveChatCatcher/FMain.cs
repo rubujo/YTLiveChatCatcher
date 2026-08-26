@@ -413,21 +413,26 @@ public partial class FMain : Form
 
             RunLongTask();
 
-            await DoExportTask(
+            // 原本用 .ContinueWith(...) 收尾：預設的 ContinueWith 不論前面的 Task 是成功或失敗都會執行，
+            // 且回傳的 Task 只反映 ContinueWith 委派本身的結果——這代表 DoExportTask 拋出的例外會被吞掉，
+            // 不會被下面的 catch 攔到，使用者只會看到「作業完成」，看不到真正失敗的原因。改用
+            // try/finally：TerminateLongTask 一樣保證會執行，但例外現在會正確往外傳給下面的 catch。
+            try
+            {
+                await DoExportTask(
                     LVLiveChatList,
                     listAllData,
                     saveFileDialog,
-                    videoID)
-                .ContinueWith(_ =>
-                {
-                    TerminateLongTask(isImport: false);
-                });
+                    videoID);
+            }
+            finally
+            {
+                TerminateLongTask(isImport: false);
+            }
         }
         catch (Exception ex)
         {
             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
-
-            TerminateLongTask(isImport: false);
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
@@ -682,7 +687,7 @@ public partial class FMain : Form
         }
     }
 
-    private void BtnImport_Click(object sender, EventArgs e)
+    private async void BtnImport_Click(object sender, EventArgs e)
     {
         try
         {
@@ -722,18 +727,23 @@ public partial class FMain : Form
 
                 RunLongTask();
 
-                LoadXLSX(filePath: filePath)
-                    .ContinueWith(_ =>
-                    {
-                        TerminateLongTask(isImport: true);
-                    });
+                // 原本是完全沒有 await 的 fire-and-forget：LoadXLSX(...).ContinueWith(...) 沒有被等待，
+                // 代表 LoadXLSX 拋出的例外根本不會被下面的 catch 攔到（也不會讓應用程式崩潰，就只是
+                // 靜默消失），使用者會看到匯入按鈕重新可以按，卻完全不知道匯入其實失敗、原因是什麼。
+                // 改成 await + try/finally 後，例外會正確往外傳給下面的 catch。
+                try
+                {
+                    await LoadXLSX(filePath: filePath);
+                }
+                finally
+                {
+                    TerminateLongTask(isImport: true);
+                }
             }
         }
         catch (Exception ex)
         {
             WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
-
-            TerminateLongTask(isImport: true);
         }
     }
 
@@ -764,7 +774,7 @@ public partial class FMain : Form
         }
     }
 
-    private void LVLiveChatList_DragDrop(object sender, DragEventArgs e)
+    private async void LVLiveChatList_DragDrop(object sender, DragEventArgs e)
     {
         try
         {
@@ -797,15 +807,20 @@ public partial class FMain : Form
                         return;
                     }
 
+                    // 同一個原因（原本是完全沒有 await 的 fire-and-forget，LoadXLSX 拋出的例外會被
+                    // 靜默吞掉，不會被下面的 catch 攔到）改成 await + try/finally，見 BtnImport_Click。
                     foreach (string filePath in fileList)
                     {
                         RunLongTask();
 
-                        LoadXLSX(filePath: filePath)
-                            .ContinueWith(_ =>
-                            {
-                                TerminateLongTask(isImport: true);
-                            });
+                        try
+                        {
+                            await LoadXLSX(filePath: filePath);
+                        }
+                        finally
+                        {
+                            TerminateLongTask(isImport: true);
+                        }
                     }
                 }
             }
@@ -821,8 +836,6 @@ public partial class FMain : Form
                 Text,
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
-
-            TerminateLongTask(isImport: true);
         }
     }
 

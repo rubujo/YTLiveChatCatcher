@@ -71,6 +71,7 @@ dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 - 解析 YouTube 原始 JSON（`*Renderer`／`*ViewModel`）時，**刻意使用 `JsonElement.Get(...)` 防禦式走訪**（見 `Extensions/JsonElementExtension.cs`），不要為這一層改寫成強型別 DTO 直接反序列化——原因見下方「YouTube 端點沒有官方文件」。穩定、簡單的設定資料（例如 ytcfg 的 `INNERTUBE_API_KEY`，見 `Models/YtCfgDto.cs`）可以、也應該用強型別 DTO + `JsonElement.Deserialize<T>()`。對外公開的模型（`RendererData`、`YTConfigData`、`PostData` 等）永遠是強型別、有 `[JsonPropertyName]` 標註的 C# 類別。
 - 解析 `ytcfg.set({...})`／`ytInitialPlayerResponse` 這類內嵌在 HTML `<script>` 裡的 JSON 時，用 `ExtractBalancedJsonObject`（括號配對），不要用字串裁切（`Replace` + `LastIndexOf`／裁切最後一個 `;`）——這類物件常含巢狀大型字串（例如 SVG），字面上剛好出現裁切用的分隔符會直接截斷錯誤。
 - WinForms 端跨執行緒更新 UI：背景執行緒（`Task.Run` 內）且會頻繁或處理較多資料的更新用 `ControlExtension.InvokeAsyncIfRequired`（`Control.InvokeAsync`，非阻塞，`await` 等待完成但不佔用執行緒集區執行緒）；由 UI 執行緒直接呼叫的事件處理常式、或低頻／單一控制項的小更新，維持用 `InvokeIfRequired`（`Control.Invoke`，阻塞版本，程式碼更單純）即可，不必為了一致性把所有呼叫點都改成非同步鏈。清理／還原 UI 狀態這類「不論成功或取消都要執行」的收尾動作，呼叫 `InvokeAsyncIfRequired` 時不要帶入可能已取消的 `CancellationToken`。
+- **不要用 `Task.ContinueWith(...)` 做「不論成功失敗都要收尾」的邏輯**——預設的 `ContinueWith` 不論前面的 `Task` 是成功、失敗還是取消都會執行，且回傳的新 `Task` 只反映 `ContinueWith` 委派本身的結果，不會反映前面 `Task` 的例外；如果外層有 `await`，前面 `Task` 拋出的例外會被整個吞掉，外層的 `catch` 永遠攔不到，畫面上可能還顯示成功訊息。這個 bug 曾經同時出現在 `FMain.cs`（匯出／匯入）跟 `FSearch.cs`（匯出）四個地方，其中兩處匯入流程甚至完全沒有 `await`，是純粹的 fire-and-forget。一律改用 `try { await X(); } finally { 收尾邏輯 }`，讓例外能正確傳到外層的 `catch`。
 
 ## YouTube 端點沒有官方文件，會不定期變動
 

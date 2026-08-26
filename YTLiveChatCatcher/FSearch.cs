@@ -302,69 +302,52 @@ public partial class FSearch : Form
                 PBProgress.Style = ProgressBarStyle.Marquee;
             });
 
-            await _FMain.DoExportTask(
+            // 原本用 .ContinueWith(...) 收尾：預設的 ContinueWith 不論前面的 Task 是成功或失敗都會執行，
+            // 且回傳的 Task 只反映 ContinueWith 委派本身的結果——這代表 DoExportTask 拋出的例外會被吞掉，
+            // 不會被下面的 catch 攔到，使用者只會看到「作業完成」，看不到真正失敗的原因。改用
+            // try/finally：控制項的還原邏輯一樣保證會執行（也不用在 catch 裡再複製一份），
+            // 但例外現在會正確往外傳給下面的 catch，「作業完成」的記錄也只會在真的成功時才寫入。
+            try
+            {
+                await _FMain.DoExportTask(
                     LVFilteredList,
                     listAllData,
                     saveFileDialog,
-                    videoID)
-                .ContinueWith(_ =>
+                    videoID);
+
+                _FMain.WriteLog($"*.xlsx 匯出作業完成。");
+            }
+            finally
+            {
+                BtnExport.InvokeIfRequired(() =>
                 {
-                    BtnExport.InvokeIfRequired(() =>
-                    {
-                        BtnExport.Enabled = true;
-                    });
-
-                    TBKeyword.InvokeIfRequired(() =>
-                    {
-                        TBKeyword.Enabled = true;
-                    });
-
-                    BtnSearch.InvokeIfRequired(() =>
-                    {
-                        BtnSearch.Enabled = true;
-                    });
-
-                    BtnClear.InvokeIfRequired(() =>
-                    {
-                        BtnClear.Enabled = true;
-                    });
-
-                    PBProgress.InvokeIfRequired(() =>
-                    {
-                        PBProgress.Style = ProgressBarStyle.Blocks;
-                    });
-
-                    _FMain.WriteLog($"*.xlsx 匯出作業完成。");
+                    BtnExport.Enabled = true;
                 });
+
+                TBKeyword.InvokeIfRequired(() =>
+                {
+                    TBKeyword.Enabled = true;
+                });
+
+                BtnSearch.InvokeIfRequired(() =>
+                {
+                    BtnSearch.Enabled = true;
+                });
+
+                BtnClear.InvokeIfRequired(() =>
+                {
+                    BtnClear.Enabled = true;
+                });
+
+                PBProgress.InvokeIfRequired(() =>
+                {
+                    PBProgress.Style = ProgressBarStyle.Blocks;
+                });
+            }
         }
         catch (Exception ex)
         {
             _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
-
-            BtnExport.InvokeIfRequired(() =>
-            {
-                BtnExport.Enabled = true;
-            });
-
-            TBKeyword.InvokeIfRequired(() =>
-            {
-                TBKeyword.Enabled = true;
-            });
-
-            BtnSearch.InvokeIfRequired(() =>
-            {
-                BtnSearch.Enabled = true;
-            });
-
-            BtnClear.InvokeIfRequired(() =>
-            {
-                BtnClear.Enabled = true;
-            });
-
-            PBProgress.InvokeIfRequired(() =>
-            {
-                PBProgress.Style = ProgressBarStyle.Blocks;
-            });
 
             MessageBox.Show(
                 $"發生錯誤：{ex.GetExceptionMessage()}",
