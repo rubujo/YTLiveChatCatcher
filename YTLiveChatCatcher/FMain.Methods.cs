@@ -139,6 +139,40 @@ public partial class FMain
                 // 設成 0，預設不直接顯示。
                 Width = 0,
                 DisplayIndex = 11
+            },
+            new()
+            {
+                Name = "LeaderboardRank",
+                Text = "排行榜名次",
+                TextAlign = HorizontalAlignment.Center,
+                Width = 80,
+                DisplayIndex = 12
+            },
+            new()
+            {
+                Name = "ReplyCount",
+                Text = "回覆數",
+                TextAlign = HorizontalAlignment.Center,
+                Width = 60,
+                DisplayIndex = 13
+            },
+            new()
+            {
+                Name = "HeaderBackgroundColor",
+                Text = "標頭背景顏色",
+                TextAlign = HorizontalAlignment.Center,
+                // 設成 0，預設不直接顯示（跟 ForegroundColor／BackgroundColor 一樣，僅供樣式套用與匯出使用）。
+                Width = 0,
+                DisplayIndex = 14
+            },
+            new()
+            {
+                Name = "ReplyCountEntityKey",
+                Text = "回覆數關聯鍵值",
+                TextAlign = HorizontalAlignment.Center,
+                // 設成 0，預設不直接顯示，純粹用於回覆數更新事件的關聯查找。
+                Width = 0,
+                DisplayIndex = 15
             }
         ];
 
@@ -216,7 +250,7 @@ public partial class FMain
 
             using ExcelPackage package = new();
 
-            double[] widthSet = [5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 20.0, 0.0];
+            double[] widthSet = [5.0, 20.0, 24.0, 50.0, 14.0, 27.0, 16.0, 20.0, 20.0, 20.0, 20.0, 20.0, 0.0, 14.0, 10.0, 0.0, 0.0];
 
             ExcelWorkbook workbook = package.Workbook;
             ExcelWorksheet worksheet1 = workbook.Worksheets.Add(StringSet.SheetName1);
@@ -285,9 +319,16 @@ public partial class FMain
 
             int startIdx1 = 2;
 
+            // 2026/8 補上刪除／封鎖／回覆數更新／投票結果更新這四種類型的排除：正常情況下這幾種事件
+            // 現在會在 DoProcessMessages 就地處理掉，不會再變成 ListView 裡的獨立列可以匯出；
+            // 這裡補上排除純粹是防禦性處理，避免舊版（修正前）留下的資料被匯出。
             IEnumerable<ListViewItem> dataSet = listAllData
                 .Where(n => n.SubItems[5].Text != StringSet.AppName &&
-                    n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube);
+                    n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMessageDeleted) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate));
 
             foreach (ListViewItem listViewItem in dataSet)
             {
@@ -447,6 +488,11 @@ public partial class FMain
                     // 以免在時間熱點活頁簿內出現奇怪的時間點。
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) &&
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
+                    // 2026/8 補上刪除／封鎖／回覆數更新／投票結果更新的排除，理由同上方的內容分頁排除。
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMessageDeleted) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate) &&
+                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate) &&
                     !string.IsNullOrEmpty(n.SubItems[8].Text) &&
                     !n.SubItems[8].Text.Contains('-'))
                 .Select(n => n.SubItems[8].Text.Length > 3 ?
@@ -1191,6 +1237,40 @@ public partial class FMain
                 }
 
                 string id = rendererData.ID ?? string.Empty;
+                string type = rendererData.Type ?? string.Empty;
+
+                // 這幾種類型是「以 ID 關聯回既有列」的更新／刪除事件，本身不是新留言，
+                // 找到對應列後就地標記／更新，然後繼續處理下一筆，不要再往下組成新的 ListViewItem。
+                // （2026/8 修正：先前這幾種事件會被誤判成新留言，變成畫面上一列列的原始 ID／頻道 ID 字串垃圾列，
+                // 且會虛灌「留言數量」／「留言人數」統計；Excel 匯出也會原封不動地把這些垃圾列匯出。）
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMessageDeleted))
+                {
+                    ApplyMessageDeletedMarker(id);
+
+                    continue;
+                }
+
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned))
+                {
+                    ApplyUserBannedMarker(rendererData.AuthorExternalChannelID);
+
+                    continue;
+                }
+
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate))
+                {
+                    ApplyReplyCountUpdate(id, rendererData.ReplyCount);
+
+                    continue;
+                }
+
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate))
+                {
+                    ApplyPollResultUpdate(id, rendererData.MessageContent);
+
+                    continue;
+                }
+
                 string authorName = (rendererData.AuthorName != null &&
                     rendererData.AuthorName != KeySet.NoAuthorName) ?
                     rendererData.AuthorName :
@@ -1212,7 +1292,6 @@ public partial class FMain
                     rendererData.PurchaseAmountText :
                     string.Empty;
                 string timestampUsec = rendererData.TimestampUsec ?? string.Empty;
-                string type = rendererData.Type ?? string.Empty;
                 string foregroundColor = (rendererData.ForegroundColor != null &&
                     rendererData.ForegroundColor != KeySet.NoForegroundColor) ?
                     rendererData.ForegroundColor :
@@ -1230,6 +1309,10 @@ public partial class FMain
                     rendererData.AuthorExternalChannelID != KeySet.NoAuthorExternalChannelID) ?
                     rendererData.AuthorExternalChannelID :
                     string.Empty;
+                string leaderboardRank = rendererData.LeaderboardRank ?? string.Empty;
+                string replyCount = rendererData.ReplyCount ?? string.Empty;
+                string headerBackgroundColor = rendererData.HeaderBackgroundColor ?? string.Empty;
+                string replyCountEntityKey = rendererData.ReplyCountEntityKey ?? string.Empty;
 
                 if (string.IsNullOrEmpty(timestampText))
                 {
@@ -1238,6 +1321,37 @@ public partial class FMain
                     {
                         timestampText = dateTime.ToString("HH:mm:ss");
                     }
+                }
+
+                // 優先以訊息 ID 判斷是否已存在（跨批次也能正確判斷），
+                // 只有在沒有 ID 值可用時才退回舊版「作者名稱＋時間戳記」的判斷方式。
+                //
+                // 這個 id 已經存在時，不能直接略過：既有可能是真的重複資料（輪詢間隔重疊造成同一則訊息
+                // 收到兩次），也有可能是 replaceChatItemAction（例如超級留言／貼圖淡出後改為較小樣式，
+                // 內容與顏色都可能改變）——後者若整個略過，新的內容會被靜默丟棄；若當成新列加入，
+                // 又會變成一列看起來重複的資料。兩種情況都應該「更新既有列」才對，因此改用就地更新
+                // （對真正重複的資料而言，用相同的值覆寫一次是無害的）。
+                if (!string.IsNullOrEmpty(id) &&
+                    SharedItemsByMessageID.TryGetValue(id, out ListViewItem? existingItemForId))
+                {
+                    ApplyExistingListViewItemUpdate(
+                        existingItemForId,
+                        authorBages,
+                        messageContent,
+                        purchaseAmountText,
+                        foregroundColor,
+                        backgroundColor,
+                        headerBackgroundColor,
+                        leaderboardRank,
+                        replyCount);
+
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(id) &&
+                    listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec))
+                {
+                    continue;
                 }
 
                 ListViewItem lvItem = new(authorName)
@@ -1279,6 +1393,10 @@ public partial class FMain
                     authorPhotoUrl,
                     authorExternalChannelID,
                     id,
+                    leaderboardRank,
+                    replyCount,
+                    headerBackgroundColor,
+                    replyCountEntityKey,
                 ];
 
                 lvItem.SubItems.AddRange(subItemContents);
@@ -1312,6 +1430,19 @@ public partial class FMain
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
                         item.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(headerBackgroundColor))
+                {
+                    // 只變更「標頭」相關欄位的背景色（作者名稱／徽章／金額／時間），呈現跟真實 YouTube
+                    // 超級留言一樣的雙色設計（標頭一色、內文另一色），訊息本文維持 backgroundColor。
+                    Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
+                    int[] headerSubItemIndexes = [0, 1, 3, 4];
+
+                    foreach (int headerSubItemIndex in headerSubItemIndexes)
+                    {
+                        lvItem.SubItems[headerSubItemIndex].BackColor = headerColor;
                     }
                 }
 
@@ -1372,11 +1503,33 @@ public partial class FMain
                     lvItem.ImageKey = imgKey;
                 }
 
-                // 先過濾以避免加入到重複的資料。
-                if (!listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec))
+                // 登記進關聯用的索引，讓之後同一批次或後續批次的刪除／封鎖／回覆數更新／
+                // 投票結果更新事件能 O(1) 找到這一列（而不是線性掃描整個 ListView）。
+                if (!string.IsNullOrEmpty(id))
                 {
-                    listTempItem.Add(lvItem);
+                    SharedItemsByMessageID[id] = lvItem;
                 }
+
+                if (!string.IsNullOrEmpty(authorExternalChannelID))
+                {
+                    if (!SharedItemsByAuthorChannelID.TryGetValue(authorExternalChannelID, out List<ListViewItem>? authorItems))
+                    {
+                        authorItems = [];
+
+                        SharedItemsByAuthorChannelID[authorExternalChannelID] = authorItems;
+                    }
+
+                    authorItems.Add(lvItem);
+                }
+
+                if (!string.IsNullOrEmpty(replyCountEntityKey))
+                {
+                    SharedItemsByReplyCountEntityKey[replyCountEntityKey] = lvItem;
+                }
+
+                RegisterNewListViewItemStats(type, authorBages, authorName, purchaseAmountText);
+
+                listTempItem.Add(lvItem);
             }
 
             Task.Run(() =>
@@ -1401,6 +1554,241 @@ public partial class FMain
         {
             WriteLog($"發生錯誤：{ex.GetExceptionMessage()}");
         }
+    }
+
+    /// <summary>
+    /// 就地更新一筆已存在的既有列（同一個訊息 ID 再次出現時使用）：可能是輪詢間隔重疊造成的真重複資料
+    /// （用相同的值覆寫一次無害），也可能是 replaceChatItemAction（例如超級留言／貼圖淡出後改為較小樣式）。
+    /// 只更新視覺上可能因此改變的欄位（訊息內容、金額、顏色、排行榜名次、回覆數），
+    /// 不重新套用會員／置頂等以 Type 分類的樣式（一則訊息被 replace 後通常不會變成其它訊息類型）。
+    /// </summary>
+    private static void ApplyExistingListViewItemUpdate(
+        ListViewItem lvItem,
+        string authorBadges,
+        string messageContent,
+        string purchaseAmountText,
+        string foregroundColor,
+        string backgroundColor,
+        string headerBackgroundColor,
+        string leaderboardRank,
+        string replyCount)
+    {
+        lvItem.SubItems[1].Text = authorBadges;
+        lvItem.SubItems[2].Text = messageContent;
+        lvItem.SubItems[3].Text = purchaseAmountText;
+        lvItem.SubItems[12].Text = leaderboardRank;
+        lvItem.SubItems[13].Text = replyCount;
+
+        if (!string.IsNullOrEmpty(foregroundColor))
+        {
+            lvItem.SubItems[2].ForeColor = ColorTranslator.FromHtml(foregroundColor);
+        }
+
+        if (!string.IsNullOrEmpty(backgroundColor))
+        {
+            foreach (ListViewItem.ListViewSubItem subItem in lvItem.SubItems)
+            {
+                subItem.BackColor = ColorTranslator.FromHtml(backgroundColor);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(headerBackgroundColor))
+        {
+            Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
+            int[] headerSubItemIndexes = [0, 1, 3, 4];
+
+            foreach (int headerSubItemIndex in headerSubItemIndexes)
+            {
+                lvItem.SubItems[headerSubItemIndex].BackColor = headerColor;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 累加式更新統計計數器（2026/8 新增，取代 UpdateSummaryInfo 內原本每批次都要重新掃描整個 ListView
+    /// 的做法——長時間直播累積上千則訊息後，每批次都重新掃描一次全部歷史資料是 O(n²)）。
+    /// <para>只應該在真正新增一列時呼叫一次（<see cref="DoProcessMessages"/>／<see cref="LoadXLSX"/> 各呼叫一處），
+    /// 就地更新既有列（<see cref="ApplyExistingListViewItemUpdate"/>、刪除／封鎖標記）不會、也不應該呼叫這個方法，
+    /// 否則會讓同一則訊息被重複計算。條件務必跟 <see cref="UpdateSummaryInfo"/> 過去的篩選邏輯保持一致。</para>
+    /// </summary>
+    /// <param name="type">字串，訊息類型（已在地化）</param>
+    /// <param name="authorBages">字串，作者徽章文字</param>
+    /// <param name="authorName">字串，作者名稱</param>
+    /// <param name="purchaseAmountText">字串，購買金額文字</param>
+    private void RegisterNewListViewItemStats(
+        string type,
+        string authorBages,
+        string authorName,
+        string purchaseAmountText)
+    {
+        bool isJoinMember = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember);
+        bool isMemberUpgrade = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade);
+        bool isMemberMilestone = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone);
+        bool isMemberGift = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift);
+        bool isReceivedMemberGift = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift);
+        bool isRedirect = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect);
+        bool isPinned = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned);
+        bool isSuperChat = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat);
+        bool isSuperSticker = type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker);
+        bool isYouTubeSystem = type == Rubujo.YouTube.Utility.Sets.StringSet.YouTube;
+
+        if (isSuperChat)
+        {
+            SharedSuperChatCount++;
+        }
+
+        if (isSuperSticker)
+        {
+            SharedSuperStickerCount++;
+        }
+
+        if ((isSuperChat || isSuperSticker) && purchaseAmountText.StartsWith('$'))
+        {
+            string amountText = purchaseAmountText.Replace("$", string.Empty);
+
+            SharedTotalIncome += double.TryParse(amountText, out double amount) ? amount : 0;
+        }
+
+        if (isJoinMember)
+        {
+            SharedMemberJoinCount++;
+        }
+
+        if (isMemberUpgrade)
+        {
+            SharedMemberUpgradeCount++;
+        }
+
+        if (isMemberMilestone)
+        {
+            SharedMemberMilestoneCount++;
+        }
+
+        if (isMemberGift)
+        {
+            SharedMemberGiftCount++;
+        }
+
+        if (isReceivedMemberGift)
+        {
+            SharedReceivedMemberGiftCount++;
+        }
+
+        // 對應舊版 LChatCount 的排除條件（系統訊息／五種會員事件／導向／置頂）。
+        if (!isYouTubeSystem &&
+            !isJoinMember && !isMemberUpgrade && !isMemberMilestone &&
+            !isMemberGift && !isReceivedMemberGift &&
+            !isRedirect && !isPinned)
+        {
+            SharedChatCount++;
+        }
+
+        // 對應舊版 LMemberInRoomCount 的排除條件（加入／升級／里程碑事件本身不算「在場會員」，
+        // 但這幾種事件之外、帶有會員徽章的一般留言／超級留言／貼圖才算）。
+        if (!isJoinMember && !isMemberUpgrade && !isMemberMilestone &&
+            authorBages.Contains(StringSet.Member))
+        {
+            SharedMemberInRoomAuthors.Add(authorName);
+        }
+
+        // 對應舊版 LAuthorCount 的排除條件（系統訊息、以及類型文字含有「會員」關鍵字的五種會員事件）。
+        if (!isYouTubeSystem && !type.Contains(StringSet.Member))
+        {
+            SharedDistinctAuthors.Add(authorName);
+        }
+    }
+
+    /// <summary>
+    /// 套用「留言已被刪除」事件：透過 <see cref="SharedItemsByMessageID"/> 找到對應訊息 ID 的既有列並標記，
+    /// 而不是把這個事件本身當成一則新留言加入清單。找不到對應列時（例如該訊息是在這次擷取開始前發送的）
+    /// 靜默略過，不做任何事。
+    /// </summary>
+    /// <param name="targetItemId">字串，被刪除訊息的 ID</param>
+    private void ApplyMessageDeletedMarker(string? targetItemId)
+    {
+        if (string.IsNullOrEmpty(targetItemId) ||
+            !SharedItemsByMessageID.TryGetValue(targetItemId, out ListViewItem? lvItem))
+        {
+            return;
+        }
+
+        MarkListViewItemAsRemoved(lvItem, "〔已刪除〕");
+    }
+
+    /// <summary>
+    /// 套用「使用者已被封鎖」事件：透過 <see cref="SharedItemsByAuthorChannelID"/> 一次找出該使用者
+    /// 目前所有留言的既有列並逐一標記。
+    /// </summary>
+    /// <param name="externalChannelId">字串，被封鎖使用者的外部頻道 ID</param>
+    private void ApplyUserBannedMarker(string? externalChannelId)
+    {
+        if (string.IsNullOrEmpty(externalChannelId) ||
+            !SharedItemsByAuthorChannelID.TryGetValue(externalChannelId, out List<ListViewItem>? lvItems))
+        {
+            return;
+        }
+
+        foreach (ListViewItem lvItem in lvItems)
+        {
+            MarkListViewItemAsRemoved(lvItem, "〔使用者已被封鎖〕");
+        }
+    }
+
+    /// <summary>
+    /// 幫既有列加上「已刪除／已封鎖」的視覺標記，保留原始內容（不移除該列）供封存與匯出使用。
+    /// 標記文字直接寫進訊息內容欄位本身（而不是只靠字型樣式），是因為 Excel 匯出目前只會轉存
+    /// 前景／背景顏色，不會轉存刪除線字型樣式，純靠字型會讓這個資訊在匯出檔案裡遺失。
+    /// </summary>
+    /// <param name="lvItem">ListViewItem</param>
+    /// <param name="marker">字串，標記文字</param>
+    private static void MarkListViewItemAsRemoved(ListViewItem lvItem, string marker)
+    {
+        ListViewItem.ListViewSubItem messageSubItem = lvItem.SubItems[2];
+
+        if (!messageSubItem.Text.StartsWith(marker, StringComparison.Ordinal))
+        {
+            messageSubItem.Text = $"{marker}{messageSubItem.Text}";
+        }
+
+        foreach (ListViewItem.ListViewSubItem subItem in lvItem.SubItems)
+        {
+            subItem.Font = new Font(subItem.Font ?? lvItem.Font, FontStyle.Strikeout);
+            subItem.ForeColor = Color.Gray;
+        }
+    }
+
+    /// <summary>
+    /// 套用「回覆數更新」事件：透過 <see cref="SharedItemsByReplyCountEntityKey"/> 找到對應的既有列
+    /// （通常是超級留言／超級貼圖），更新其回覆數欄位。
+    /// </summary>
+    /// <param name="entityKey">字串，回覆數更新事件的關聯鍵值（對應原始訊息的 ReplyCountEntityKey）</param>
+    /// <param name="replyCount">字串，最新的回覆數</param>
+    private void ApplyReplyCountUpdate(string? entityKey, string? replyCount)
+    {
+        if (string.IsNullOrEmpty(entityKey) ||
+            !SharedItemsByReplyCountEntityKey.TryGetValue(entityKey, out ListViewItem? lvItem))
+        {
+            return;
+        }
+
+        lvItem.SubItems[13].Text = replyCount ?? string.Empty;
+    }
+
+    /// <summary>
+    /// 套用「投票結果更新」事件：透過 <see cref="SharedItemsByMessageID"/> 找到對應投票 ID 的既有列
+    /// （投票建立時的 ID 沿用同一個 liveChatPollId），更新其訊息內容為最新的得票結果文字。
+    /// </summary>
+    /// <param name="pollId">字串，投票 ID</param>
+    /// <param name="messageContent">字串，最新的得票結果文字</param>
+    private void ApplyPollResultUpdate(string? pollId, string? messageContent)
+    {
+        if (string.IsNullOrEmpty(pollId) ||
+            !SharedItemsByMessageID.TryGetValue(pollId, out ListViewItem? lvItem))
+        {
+            return;
+        }
+
+        lvItem.SubItems[2].Text = messageContent ?? string.Empty;
     }
 
     /// <summary>
@@ -1502,40 +1890,26 @@ public partial class FMain
 
     /// <summary>
     /// 更新統計資訊
+    /// <para>2026/8 改為直接讀取 <see cref="RegisterNewListViewItemStats"/> 維護的累加式計數器，
+    /// 不再每次都重新掃描整個 <see cref="LVLiveChatList"/>——長時間直播累積上千則訊息後，
+    /// 舊版每批次都要重新掃描一次全部歷史資料（且同一批次內還要掃好幾次算不同統計項目），
+    /// 是隨訊息數量成長的 O(n²) 效能問題；改成單純讀取欄位後，這個方法本身是 O(1)。</para>
     /// </summary>
     private void UpdateSummaryInfo()
     {
-        IEnumerable<ListViewItem> dataSet = LVLiveChatList.Items.Cast<ListViewItem>();
-
         TBLog.InvokeIfRequired(() =>
         {
-            IEnumerable<ListViewItem> tempDataSet = dataSet.Where(n =>
-                (n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat) ||
-                n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)) &&
-                n.SubItems[3].Text.StartsWith('$'));
-
-            double totalIncome = 0.0;
-
-            foreach (ListViewItem lvItem in tempDataSet)
-            {
-                // 只會取新臺幣的資料。
-                string currentItemIncomeValue = lvItem.SubItems[3].Text.Replace("$", string.Empty);
-
-                totalIncome += double.TryParse(currentItemIncomeValue, out double currentItemIncomeActualValue) ?
-                    currentItemIncomeActualValue : 0;
-            }
-
             // YouTube 會抽取 30% 收益。
-            double actualIncome = Math.Round(totalIncome * 0.70, 0, MidpointRounding.AwayFromZero);
+            double actualIncome = Math.Round(SharedTotalIncome * 0.70, 0, MidpointRounding.AwayFromZero);
 
             LTempIncome.InvokeIfRequired(() =>
             {
                 LTempIncome.Text = $"預計收益：共 {actualIncome} 元整";
 
-                SharedTooltip.SetToolTip(LTempIncome, $"累積收益：共 {totalIncome} 元整");
+                SharedTooltip.SetToolTip(LTempIncome, $"累積收益：共 {SharedTotalIncome} 元整");
             });
 
-            string message = $"目前累積收益：共 {totalIncome} 元整" +
+            string message = $"目前累積收益：共 {SharedTotalIncome} 元整" +
                 $"（實收：{actualIncome} 元整）{Environment.NewLine}" +
                 "※僅計算超級留言／貼圖的新臺幣收益，其它幣種一律不納入計算。";
 
@@ -1544,73 +1918,39 @@ public partial class FMain
 
         LChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatRedirect) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPinned))
-                .Count();
-
-            LChatCount.Text = $"留言數量：{count} 個";
+            LChatCount.Text = $"留言數量：{SharedChatCount} 個";
         });
 
         LSuperChatCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)).Count();
-
-            LSuperChatCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}：{count} 個";
+            LSuperChatCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperChat)}：{SharedSuperChatCount} 個";
         });
 
         LSuperStickerCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)).Count();
-
-            LSuperStickerCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}：{count} 個";
+            LSuperStickerCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatSuperSticker)}：{SharedSuperStickerCount} 個";
         });
 
         LMemberJoinCount.InvokeIfRequired(() =>
         {
-            int joinCount = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)).Count();
-            int upgradeCount = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)).Count();
-            int milestoneCount = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)).Count();
-            int giftCount = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)).Count();
-            int receivedGiftCount = dataSet.Where(n => n.SubItems[5].Text == SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)).Count();
+            LMemberJoinCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}：{SharedMemberJoinCount} 位";
 
-            LMemberJoinCount.Text = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember)}：{joinCount} 位";
-
-            string tooltip = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}：{upgradeCount} 位、" +
-                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}：{milestoneCount} 位、" +
-                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}：{giftCount} 位、" +
-                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}：{receivedGiftCount} 位";
+            string tooltip = $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade)}：{SharedMemberUpgradeCount} 位、" +
+                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone)}：{SharedMemberMilestoneCount} 位、" +
+                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift)}：{SharedMemberGiftCount} 位、" +
+                $"{SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift)}：{SharedReceivedMemberGiftCount} 位";
 
             SharedTooltip.SetToolTip(LMemberJoinCount, tooltip);
         });
 
         LMemberInRoomCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatJoinMember) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberUpgrade) &&
-                n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberMilestone) &&
-                n.SubItems[1].Text.Contains(StringSet.Member))
-                .Select(n => n.SubItems[0].Text)
-                .Distinct()
-                .Count();
-
-            LMemberInRoomCount.Text = $"會員人數：{count} 位";
+            LMemberInRoomCount.Text = $"會員人數：{SharedMemberInRoomAuthors.Count} 位";
         });
 
         LAuthorCount.InvokeIfRequired(() =>
         {
-            int count = dataSet.Where(n => n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                !n.SubItems[5].Text.Contains(StringSet.Member))
-                .Select(n => n.SubItems[0].Text)
-                .Distinct()
-                .Count();
-
-            LAuthorCount.Text = $"留言人數：{count} 位";
+            LAuthorCount.Text = $"留言人數：{SharedDistinctAuthors.Count} 位";
         });
     }
 

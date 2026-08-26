@@ -79,6 +79,11 @@ public partial class FMain
                 string timestampText = sheet1.Cells[rowIdx1, 10].Text;
                 string authorExternalChannelID = sheet1.Cells[rowIdx1, 12].Text;
                 string id = sheet1.Cells[rowIdx1, 13].Text;
+                // 2026/8 新增：舊版匯出的 *.xlsx 檔案不會有這幾欄，讀取到空字串是正常情況。
+                string leaderboardRank = sheet1.Cells[rowIdx1, 14].Text;
+                string replyCount = sheet1.Cells[rowIdx1, 15].Text;
+                string headerBackgroundColor = sheet1.Cells[rowIdx1, 16].Text;
+                string replyCountEntityKey = sheet1.Cells[rowIdx1, 17].Text;
 
                 // 當 "type" 為 null 或空值時，直接進入下一個。
                 if (string.IsNullOrEmpty(type))
@@ -125,6 +130,10 @@ public partial class FMain
                     authorPhotoUrl,
                     authorExternalChannelID,
                     id,
+                    leaderboardRank,
+                    replyCount,
+                    headerBackgroundColor,
+                    replyCountEntityKey,
                 ];
 
                 lvItem.SubItems.AddRange(subItemContents);
@@ -158,6 +167,17 @@ public partial class FMain
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
                         item.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(headerBackgroundColor))
+                {
+                    Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
+                    int[] headerSubItemIndexes = [0, 1, 3, 4];
+
+                    foreach (int headerSubItemIndex in headerSubItemIndexes)
+                    {
+                        lvItem.SubItems[headerSubItemIndex].BackColor = headerColor;
                     }
                 }
 
@@ -218,10 +238,38 @@ public partial class FMain
                     lvItem.ImageKey = imgKey;
                 }
 
-                // 先過濾以避免加入到重複的資料。
-                if (!listTempItem.Any(n => n.Text == authorName &&
-                    n.SubItems[4].Text == timestampUsec))
+                // 先過濾以避免加入到重複的資料：優先以訊息 ID 判斷，沒有 ID 值時才退回舊版判斷方式，
+                // 邏輯與 DoProcessMessages 一致。
+                bool isDuplicate = !string.IsNullOrEmpty(id) ?
+                    SharedItemsByMessageID.ContainsKey(id) :
+                    listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec);
+
+                if (!isDuplicate)
                 {
+                    if (!string.IsNullOrEmpty(id))
+                    {
+                        SharedItemsByMessageID[id] = lvItem;
+                    }
+
+                    if (!string.IsNullOrEmpty(authorExternalChannelID))
+                    {
+                        if (!SharedItemsByAuthorChannelID.TryGetValue(authorExternalChannelID, out List<ListViewItem>? authorItems))
+                        {
+                            authorItems = [];
+
+                            SharedItemsByAuthorChannelID[authorExternalChannelID] = authorItems;
+                        }
+
+                        authorItems.Add(lvItem);
+                    }
+
+                    if (!string.IsNullOrEmpty(replyCountEntityKey))
+                    {
+                        SharedItemsByReplyCountEntityKey[replyCountEntityKey] = lvItem;
+                    }
+
+                    RegisterNewListViewItemStats(type, authorBages, authorName, purchaseAmmount);
+
                     listTempItem.Add(lvItem);
                 }
 

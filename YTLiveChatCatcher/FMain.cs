@@ -438,6 +438,27 @@ public partial class FMain : Form
                 LVLiveChatList.Items.Clear();
             });
 
+            // 清除刪除／封鎖／回覆數更新／投票結果更新事件用的關聯索引，
+            // 避免殘留對已經被清空的 ListViewItem 的參照（記憶體洩漏），
+            // 也避免下一場直播的事件誤關聯到這一場已清空的舊資料。
+            SharedItemsByMessageID.Clear();
+            SharedItemsByReplyCountEntityKey.Clear();
+            SharedItemsByAuthorChannelID.Clear();
+
+            // 重設累加式統計計數器（務必在呼叫 UpdateSummaryInfo() 之前重設，
+            // 否則畫面上的統計文字會先短暫顯示清空前的舊數字）。
+            SharedChatCount = 0;
+            SharedSuperChatCount = 0;
+            SharedSuperStickerCount = 0;
+            SharedMemberJoinCount = 0;
+            SharedMemberUpgradeCount = 0;
+            SharedMemberMilestoneCount = 0;
+            SharedMemberGiftCount = 0;
+            SharedReceivedMemberGiftCount = 0;
+            SharedTotalIncome = 0.0;
+            SharedMemberInRoomAuthors.Clear();
+            SharedDistinctAuthors.Clear();
+
             UpdateSummaryInfo();
 
             TBLog.InvokeIfRequired(TBLog.Clear);

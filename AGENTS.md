@@ -15,7 +15,7 @@
 ## 建置、執行與測試
 
 ```bash
-dotnet build YTLiveChatCatcher.sln
+dotnet build YTLiveChatCatcher.slnx
 dotnet run --project YTLiveChatCatcher
 dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj
 ```
@@ -134,6 +134,32 @@ throwaway 測試（AngleSharp `HtmlParser` 解析含 `&amp;`／`&lt;`／`&gt;` �
 ## 已知的行為變化（2026/8 重構後）
 
 `YTJsonParser` 的內部記錄（原本會透過 `OnLogOutput` 事件轉發到 WinForms 應用程式自己的 `TBLog` 文字框）現在只會寫進標準 `ILogger`（實際落地在 NLog 的 `Logs/log.txt` 檔案與主控台輸出），**不會**再自動出現在應用程式的記錄文字框裡。如果之後想在 UI 文字框也看到，需要另外接一個自訂 NLog target 把 `YTJsonParser` 這個 logger 分類的訊息轉發過去，這次重構刻意沒有做這件事（改用標準記錄架構後，「查看記錄檔」才是預期的除錯方式）。
+
+## WinForms 端消費 RendererData 的正確方式（`FMain.Methods.cs`，2026/8 修正）
+
+`YTJsonParser` 的 `RendererData` 裡有幾種類型本質上是「以 `ID`（或其它欄位）關聯回既有訊息的更新／刪除事件」，不是獨立的新留言：`留言已被刪除`（`ID` = 目標訊息 ID）、`使用者已被封鎖`（`AuthorExternalChannelID` = 被封鎖使用者的頻道 ID）、`回覆數更新`（`ID` = `ReplyCountEntityKey`，需要對照原始付費訊息自己的 `ReplyCountEntityKey` 欄位）、`投票結果更新`（`ID` = 建立投票時的同一個 `liveChatPollId`），以及 `replaceChatItemAction` 產生的「同一個 `ID` 再次出現」情境（例如超級留言／貼圖淡出後改為較小樣式）。
+
+2026/8 之前，`DoProcessMessages` 完全沒有處理這個關聯語意，把上述每一種都當成全新留言加入 `ListView`——實際效果是畫面上會多出顯示原始 ID／頻道 ID 字串或近乎全空白的垃圾列，且會虛灌「留言數量」／「留言人數」統計，Excel 匯出（直接鏡射 `ListView` 內容）也會原封不動地把這些垃圾列匯出。已修正為：
+
+- 新增 `SharedItemsByMessageID`／`SharedItemsByReplyCountEntityKey`／`SharedItemsByAuthorChannelID` 三個字典（`FMain.Variables.cs`），在建立新列時同步登記，讓上述事件能 O(1) 找到對應列（而不是線性掃描整個 `ListView`），`BtnClear_Click` 清空聊天室時務必一併清空這三個字典。
+- `留言已被刪除`／`使用者已被封鎖`：找到對應列後，在訊息內容前面加上文字標記（例如「〔已刪除〕」）並套用刪除線字型＋灰色，**保留原始列**供封存／匯出使用（不是直接移除該列——這個工具的用途包含記錄／收益分析，刪除的留言本身也是有價值的資訊）。標記文字特意寫進訊息內容欄位本身而不是只靠字型樣式，因為 Excel 匯出目前不會轉存字型的刪除線樣式。
+- `回覆數更新`／`投票結果更新`：找到對應列後就地更新回覆數／得票結果欄位文字，不產生新列。
+- 同一個 `ID` 再次出現時（真重複資料，或 `replaceChatItemAction`）：就地更新既有列的訊息內容／金額／顏色等欄位，而不是略過（避免 replace 的新內容被靜默丟棄）或加入看似重複的新列。
+- 新增 `RendererData.LeaderboardRank`／`ReplyCount`／`HeaderBackgroundColor`／`ReplyCountEntityKey` 對應的 `ListView` 欄位（先前這幾個函式庫已經提供的欄位完全沒有接到 UI 上）；`HeaderBackgroundColor` 套用在作者名稱／徽章／金額／時間這幾個「標頭」欄位的背景色，呈現跟真實 YouTube 超級留言一樣的標頭／內文雙色設計。
+- `UpdateSummaryInfo`／Excel 匯出的內容分頁／時間熱點分頁，都補上這四種類型的排除條件（正常情況下這幾種事件現在不會再變成獨立列，這裡的排除純粹是防禦性處理，避免舊版匯出檔案匯入後殘留資料虛灌統計）。
+- `FMain.EPPlusUtil.cs` 的 `LoadXLSX`（匯入）與 Excel 匯出的 `widthSet` 欄寬陣列都同步補上新欄位，`LoadXLSX` 讀取舊版（沒有這幾欄）匯出的 *.xlsx 檔案時會安全地讀到空字串，不會出錯。
+
+這次修正只用建置＋既有的 `YTJsonParser.Tests`（不受影響，仍 8/8 通過）＋啟動應用程式確認無啟動期例外做驗證；`YTLiveChatCatcher` 專案本身沒有自動化測試（`ListView`／`FMain` 高度耦合、需要 STA 訊息迴圈），完整的即時串流＋刪除／封鎖／回覆數／投票更新情境的視覺驗證，需要實際連上真實直播手動操作，這次沒有做到這一步。
+
+### `UpdateSummaryInfo` 效能修正（2026/8，累加式計數器取代每批次重新掃描）
+
+舊版 `UpdateSummaryInfo` 每次收到新批次都會對整個 `LVLiveChatList.Items`（可能累積上千則訊息）用 LINQ `Where(...).Count()` 重新掃描約 10 次（留言數量、超級留言／貼圖數量、五種會員事件數量、會員人數、留言人數、收益加總），長時間直播下來是隨訊息數量成長的 O(n²)。已改為：
+
+- 新增一組累加式計數器／集合（`FMain.Variables.cs`：`SharedChatCount`／`SharedSuperChatCount`／...／`SharedTotalIncome`／`SharedMemberInRoomAuthors`／`SharedDistinctAuthors`），只在 `RegisterNewListViewItemStats`（`FMain.Methods.cs`）裡更新，條件逐一對照舊版 `UpdateSummaryInfo` 的篩選邏輯改寫，確保計算結果一致。
+- `RegisterNewListViewItemStats` 只在真正新增一列時呼叫一次（`DoProcessMessages`／`LoadXLSX` 各一處）；就地更新既有列（刪除／封鎖標記、`ApplyExistingListViewItemUpdate`）不會呼叫，避免同一則訊息被重複計算。
+- `UpdateSummaryInfo` 本身改成純粹讀取這些欄位組字串，不再掃描 `ListView`，方法本身變成 O(1)。
+- `BtnClear_Click` 清空聊天室時，務必在呼叫 `UpdateSummaryInfo()` **之前**把這些計數器／集合歸零／清空，順序寫反的話畫面會先短暫顯示清空前的舊數字。
+- 若未來又要新增一種會影響統計的訊息類型，記得同時更新 `RegisterNewListViewItemStats`，否則新類型不會反映在統計數字裡（這是這個設計相對於「每次重新掃描」的取捨：正確性依賴人工同步維護兩處邏輯，而不是單一事實來源）。
 
 ## 已知技術債（非本次任務範圍，供後續參考）
 

@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/方案項目/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="YTJsonParser.Tests/YTJsonParser.Tests.csproj" />
+  <Project Path="YTJsonParser/YTJsonParser.csproj" />
+  <Project Path="YTLiveChatCatcher/YTLiveChatCatcher.csproj" />
+</Solution>

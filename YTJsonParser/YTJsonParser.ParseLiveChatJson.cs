@@ -441,7 +441,7 @@ public partial class YTJsonParser
                         output.AddRange(ParseRenderer(item.Value));
                     }
 
-                    // TODO: 2023/5/29 未測試，不確定是否有效。
+                    // 2026/8 已對真實直播驗證過，詳見 ParseRenderer 內 liveChatBannerRenderer 分支的說明。
                     JsonElement? singleBannerRenderer = singleAction
                         .Get("addBannerToLiveChatCommand")
                         ?.Get("bannerRenderer");
