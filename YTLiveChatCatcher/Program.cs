@@ -21,6 +21,12 @@ internal static class Program
     internal static void Main()
     {
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
+        // 跟隨 Windows 系統設定自動切換深／淺色模式（.NET 10 起穩定 API，不再是實驗性功能）。
+        // 僅 Windows 11 以上有效，Windows 10 會自動退回淺色；不會在應用程式執行期間跟著系統設定即時切換
+        // （系統設定變更後需要重啟應用程式），也不是所有控制項都會跟著變（例如 MessageBox 固定是淺色）。
+        Application.SetColorMode(SystemColorMode.System);
+
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 

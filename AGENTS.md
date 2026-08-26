@@ -167,3 +167,5 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 ## 已知技術債
 
 `EPPlus` 使用 Polyform Noncommercial 授權（`ExcelPackage.License.SetNonCommercialOrganization(...)`，`FMain.EPPlusUtil.cs`／`FMain.Methods.cs` 各呼叫一次，分別對應匯入／匯出兩個獨立進入點，非重複程式碼）。本專案為免費、非商業性質，符合此授權條款；商業用途需另外購買授權，更新版本前留意授權條款是否變動。
+
+`Application.SetColorMode(SystemColorMode.System)`（`Program.cs`）讓應用程式跟隨 Windows 設定自動切換深／淺色模式，僅 Windows 11 以上有效（Windows 10 自動退回淺色），且不是所有控制項都會跟著變（`MessageBox` 固定淺色，是 WinForms 目前的已知限制，不是這個專案沒做完整）。**`ListView` 無法內嵌顯示自訂表情符號／超級貼圖的圖片**——`YTJsonParser` 把這類內容轉成文字佔位符（例如 `:emoji_label:`）存進訊息內容，圖片只會出現在 Excel 匯出的「自定義表情符號」「超級貼圖」分頁，因為標準 `ListView`（沒有用 OwnerDraw 自繪）一列只能掛一張圖示（這裡拿去顯示作者頭像了），沒辦法在文字欄位裡文字＋圖片混排；要做到需要自繪 ListView、換控制項，或加一個獨立的縮圖預覽面板，目前刻意沒有做。
