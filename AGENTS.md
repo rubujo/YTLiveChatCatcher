@@ -143,6 +143,7 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 - 同一個 `ID` 再次出現（真重複資料，或 `replaceChatItemAction`）：就地更新既有列，不略過（避免 replace 的新內容被靜默丟棄）也不當成新列加入。
 - `UpdateSummaryInfo` 用一組累加式計數器／集合（`FMain.Variables.cs`：`SharedChatCount`／.../`SharedIncomeByCurrency`／`SharedMemberInRoomAuthors`／`SharedDistinctAuthors`）取代每批次對整個 `ListView` 重新掃描，只在 `RegisterNewListViewItemStats`（真正新增一列時呼叫一次；就地更新既有列不會呼叫，避免重複計算）裡更新，`UpdateSummaryInfo` 本身只讀取這些欄位組字串。**若未來新增一種全新的計數器類型（例如「XX 事件人數」），記得同時更新 `RegisterNewListViewItemStats`**——但「這則訊息算不算聊天留言」這個分類本身已經抽到 `ChatStatsCalculator.Classify`，不受這條限制，見下一段。
 - `FMain.EPPlusUtil.cs` 的 `LoadXLSX`（匯入）讀取舊版（沒有新欄位）匯出的 *.xlsx 檔案時會安全地讀到空字串，不會出錯。
+- **`DoProcessMessages` 本身不可以再用 `Task.Run` 把實際插入 `ListView` 的動作丟到背景執行緒。** `DoProcessMessages` 是透過 `TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), cancellationToken)` 呼叫的（`FMain.cs` 的擷取迴圈），呼叫當下就已經在 UI 執行緒上。曾經在方法內部又包一層 `Task.Run(async () => { await LVLiveChatList.InvokeAsyncIfRequired(...); ... })`，導致 `DoProcessMessages` 在那批資料真正插入畫面**之前**就先 return——外層迴圈以為這批已處理完成，繼續去抓下一批，但執行緒集區不保證先排的工作先跑，下一批的 `Task.Run` 可能比這一批先執行完，畫面上（以及匯出檔案裡）的訊息順序因此會跟實際收到的順序不一致。已改成直接同步呼叫（拿掉那層 `Task.Run`），讓外層的 `await` 真正等到這批資料完整插入畫面才算完成。用一支重現同樣結構、跑 200 批次的驗證程式證實過：修正前的寫法真的會亂序（例如第 4 批比第 0 批先出現），修正後不會。
 
 ## WinForms 端的純計算邏輯（`ChatStatsCalculator`）
 

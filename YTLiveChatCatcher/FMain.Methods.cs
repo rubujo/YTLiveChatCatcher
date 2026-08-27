@@ -1550,23 +1550,25 @@ public partial class FMain
                 listTempItem.Add(lvItem);
             }
 
-            Task.Run(async () =>
+            // 這裡刻意不再用 Task.Run 把實際插入 ListView 的動作丟到背景執行緒：DoProcessMessages
+            // 本身就是透過 TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), ...) 呼叫的
+            // （見 FMain.cs 的擷取迴圈），呼叫當下就已經在 UI 執行緒上，不需要再轉一手。
+            // 更重要的是正確性：舊版用 Task.Run 讓這個方法在還沒真正把這批資料插入 ListView 之前就先
+            // return，外層迴圈以為這批「已處理完成」就繼續去抓下一批——執行緒集區不保證先排的工作先跑，
+            // 如果下一批的 Task.Run 剛好比這一批先執行，聊天室畫面上（以及匯出檔案裡）的訊息順序就會
+            // 跟實際收到的順序不一致。改成直接呼叫，讓 InvokeAsyncIfRequired 的 await 真正等到這批資料
+            // 完整插入畫面後才算完成，才能保證批次之間嚴格照收到的順序處理。
+            LVLiveChatList.BeginUpdate();
+            LVLiveChatList.Items.AddRange([.. listTempItem]);
+
+            if (LVLiveChatList.Items.Count > 0)
             {
-                await LVLiveChatList.InvokeAsyncIfRequired(() =>
-                {
-                    LVLiveChatList.BeginUpdate();
-                    LVLiveChatList.Items.AddRange([.. listTempItem]);
+                LVLiveChatList.Items[^1].EnsureVisible();
+            }
 
-                    if (LVLiveChatList.Items.Count > 0)
-                    {
-                        LVLiveChatList.Items[^1].EnsureVisible();
-                    }
+            LVLiveChatList.EndUpdate();
 
-                    LVLiveChatList.EndUpdate();
-                });
-
-                UpdateSummaryInfo();
-            });
+            UpdateSummaryInfo();
         }
         catch (Exception ex)
         {
