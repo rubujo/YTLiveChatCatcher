@@ -137,6 +137,15 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 `YTJsonParser` 的內部記錄只會寫進標準 `ILogger`（實際落地在 NLog 的 `Logs/log.txt` 檔案與主控台輸出），**不會**自動出現在應用程式的記錄文字框裡，**唯一例外是** `LogMessages.UnsupportedContentEncountered`（EventId 15：解析時遇到尚未支援的內容/類型）——`YTLiveChatCatcher` 的 `InitLiveChatCather` 把這個特定事件透過 `DiagnosticForwardingLogger`（`Common/Utils/DiagnosticForwardingLogger.cs`，依 EventId 攔截，不是比對訊息字串）轉送到 `WriteLog`，讓正在盯著畫面的使用者能即時知道「這批資料可能沒有被完整解析」，而不是事後才想到要去查記錄檔。**這個事件刻意用 `LogLevel.Debug`，不是 `LogLevel.Trace`**——`YTLiveChatCatcher` 的 NLog 規則最低層級是 Debug，Trace 會被直接濾掉、連寫進 `Logs/log.txt` 都不會，這正是這次發現的問題：新增診斷用的 Trace 記錄，若消費端的最低記錄層級高於 Trace，等於完全沒有作用。新增其他值得結構化、需要被特別攔截的事件時，比照這個做法用專屬的 `[LoggerMessage]` 方法（固定 EventId），不要用訊息字串比對去猜測記錄內容。除此之外的其他內部記錄，維持只寫進記錄檔，不轉送到 UI（避免洗版）。
 
+## 擷取工作的 Start／Stop 生命週期（`FMain.cs`）
+
+`SharedFetchCancellationTokenSource`（`FMain.Variables.cs`）在三個地方會被 `?.Cancel()`：`BtnStop_Click`、`StartFetchLiveChatData` 開頭（防禦性地取消「萬一還有上一場擷取殘留」）、`FMain_FormClosing`。`StartFetchLiveChatData` 建立新的 `CancellationTokenSource` 時，會**局部保留**這次專屬的參照（`fetchCancellationTokenSource`），背景 `Task.Run` 的 `finally` 只 `Dispose` 自己這一份，不會誤 `Dispose` 掉之後某次重新開始擷取所建立的新實例——但這個 `finally` 曾經沒有把已經 `Dispose` 掉的實例從 `SharedFetchCancellationTokenSource` 清掉，導致：
+
+1. 使用者按「開始」→「停止」→「開始」（第二次按「開始」發生在背景 `finally` 已經跑完 `Dispose` 之後）。
+2. 第二次 `StartFetchLiveChatData` 開頭的 `SharedFetchCancellationTokenSource?.Cancel()` 作用在這個已經 `Dispose` 過、但欄位仍非 `null` 的殘留參照上，直接丟出 `ObjectDisposedException`（"The CancellationTokenSource has been disposed."），使用者會在按下「開始」時看到錯誤訊息框，整個擷取無法重新開始。
+
+修法：`finally` 在 `Dispose` 之前，先用 `ReferenceEquals(SharedFetchCancellationTokenSource, fetchCancellationTokenSource)` 確認 `SharedFetchCancellationTokenSource` 仍然是「這一份」才把它清成 `null`（同時也用這個判斷式決定要不要呼叫 `BtnStop_Click` 還原 UI 狀態）——如果使用者已經又按過一次「開始」，`SharedFetchCancellationTokenSource` 這時已經指向新一輪的新實例，不該被這個舊的背景工作清掉／誤還原成「已停止」的 UI 狀態。這類「背景清理工作用局部參照 `Dispose` 自己，但共用欄位忘記同步清空」的模式，之後新增類似的背景工作生命週期管理時要特別小心。
+
 ## WinForms 端消費 RendererData 的正確方式（`FMain.Methods.cs`）
 
 `RendererData` 裡有幾種類型本質上是「以 `ID`（或其他欄位）關聯回既有訊息的更新／刪除事件」，不是獨立的新留言：`留言已被刪除`（`ID` = 目標訊息 ID）、`使用者已被封鎖`（`AuthorExternalChannelID` = 被封鎖使用者的頻道 ID）、`回覆數更新`（`ID` = `ReplyCountEntityKey`）、`投票結果更新`（`ID` = 建立投票時的 `liveChatPollId`），以及 `replaceChatItemAction` 產生的「同一個 `ID` 再次出現」情境。把這些當成全新留言加入 `ListView` 會在畫面上多出垃圾列、虛灌統計數字，Excel 匯出也會原封不動地把垃圾列匯出。

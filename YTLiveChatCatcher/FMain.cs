@@ -300,8 +300,24 @@ public partial class FMain : Form
             }
             finally
             {
-                // 同上，清理／還原 UI 狀態這件事，不應該因為 cancellationToken 已取消而被跳過。
-                await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(this, new EventArgs()));
+                // 只有在 SharedFetchCancellationTokenSource 仍然是「這一份」時才還原 UI／清空共用欄位：
+                // 如果使用者在這個背景工作跑到這裡之前，已經按過一次「停止」再按「開始」，
+                // SharedFetchCancellationTokenSource 這時已經指向新一輪擷取的新實例，
+                // 這裡不該把新那一輪的 UI 狀態當成「已停止」還原掉。
+                if (ReferenceEquals(SharedFetchCancellationTokenSource, fetchCancellationTokenSource))
+                {
+                    // 同上，清理／還原 UI 狀態這件事，不應該因為 cancellationToken 已取消而被跳過。
+                    await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(this, new EventArgs()));
+
+                    // 2026/8 修正：這裡以前沒有把 SharedFetchCancellationTokenSource 清為 null，
+                    // 讓它繼續指向即將在下一行被 Dispose 的這個實例。使用者實測「開始 -> 停止 -> 開始」
+                    // 會在第二次按「開始」時看到「The CancellationTokenSource has been disposed.」——
+                    // StartFetchLiveChatData 開頭防禦性的 `SharedFetchCancellationTokenSource?.Cancel()`
+                    // 作用在這個已經被 Dispose 過、但欄位仍非 null 的殘留參照上，直接丟出
+                    // ObjectDisposedException。清成 null 後，下一次呼叫該行時 `?.` 會直接短路，不會
+                    // 呼叫到已經 Dispose 的執行個體。
+                    SharedFetchCancellationTokenSource = null;
+                }
 
                 fetchCancellationTokenSource.Dispose();
             }
