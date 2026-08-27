@@ -1840,6 +1840,11 @@ public partial class FMain
             BtnImport.Enabled = false;
         });
 
+        BtnExportCommunityPosts.InvokeIfRequired(() =>
+        {
+            BtnExportCommunityPosts.Enabled = false;
+        });
+
         PBProgress.InvokeIfRequired(() =>
         {
             PBProgress.Style = ProgressBarStyle.Marquee;
@@ -1885,6 +1890,11 @@ public partial class FMain
         BtnImport.InvokeIfRequired(() =>
         {
             BtnImport.Enabled = true;
+        });
+
+        BtnExportCommunityPosts.InvokeIfRequired(() =>
+        {
+            BtnExportCommunityPosts.Enabled = true;
         });
 
         PBProgress.InvokeIfRequired(() =>

@@ -159,6 +159,15 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 新增會影響「這則訊息算不算留言」這個分類的邏輯時，改 `ChatStatsCalculator.Classify` 跟 `ChatMessageExclusionKeys`，不要繞回 `FMain.Methods.cs` 裡另外寫一份判斷。
 
+## 社群貼文匯出（WinForms 端，`FMain.CommunityPostsExport.cs`）
+
+一次性匯出功能：輸入頻道 ID、按下「匯出社群貼文」，直接呼叫 `SharedYTJsonParser.StreamCommunityPostsAsync`（`FetchWholeCommunityPosts = true`）把整個頻道的社群貼文全部拉完再存成 Excel，沒有 ListView 預覽、沒有即時更新（跟聊天室擷取是完全獨立的路徑，共用的只有 `RunLongTask`／`TerminateLongTask` 這組互斥控制與匯出用的具名樣式／`IMAGE()` 公式慣例）。
+
+- `CommunityPostExportUtil`（`Common/Utils/CommunityPostExportUtil.cs`）：`FlattenRuns`（把 `List<RunsData>` 串成純文字，`ContentTexts`／`RepostCaptionTexts` 都用這個）與 `SummarizeAttachmentTypes`（組出「圖片 x2、影片、測驗」這種摘要文字）是抽出來的純邏輯，由 `YTLiveChatCatcher.Tests` 覆蓋。
+- 產出 4 個分頁（`StringSet.SheetName7`～`SheetName10`）：「社群貼文」主分頁（每篇一列，含頭像 `IMAGE()`／內容／轉發資訊／附件摘要／超連結／隱藏的貼文 ID 技術欄位）、「貼文圖片」「貼文影片」「投票與測驗」則是攤平附件（`Attachments`）後依 `IsVideo`／`IsPoll` 分流，都用隱藏的「貼文 ID」欄位對照回主分頁；沒有對應附件類型的貼文時，該分頁直接不建立（不是建一個空分頁）。測驗貼文（`IsQuiz = true`）跟一般投票共用同一個分頁，靠「是否為測驗」欄位區分。
+- 跟 `DoExportTask`（聊天記錄匯出）一樣，用 `try { await ...; } finally { TerminateLongTask(...); }` 收尾，**不要**改回 `.ContinueWith(...)`——這個對話早先修過的 bug 模式（見上方「程式風格」段落），預設 `ContinueWith` 會吞掉例外，讓使用者看不到真正的失敗原因。
+- 目前沒有取消 UI（`BtnExportCommunityPosts_Click` 傳 `CancellationToken.None`）——這個操作沒有像聊天室擷取一樣的「停止」按鈕，超出這次的範圍；未來若要加，不要直接借用 `SharedFetchCancellationTokenSource`（那個欄位語意是「取消即時聊天擷取」，混用會讓兩個完全獨立的操作互相影響取消時機）。
+
 ## 當機復原（`CaptureRecoveryStore`）
 
 擷取聊天室是一個可能持續數小時的過程，畫面上的資料只存在記憶體裡，完全依賴使用者自己記得手動匯出。`CaptureRecoveryStore`（`Common/Utils/CaptureRecoveryStore.cs`）在每次 `StartFetchLiveChatData` 收到新批次時，就先把原始資料附加寫進 `%LocalAppData%\YTLiveChatCatcher\recovery.jsonl`（JSON Lines，一行一批次，附加寫入成本不隨累積資料量變貴），再交給 `DoProcessMessages` 處理成 `ListView` 項目——即使處理過程本身出問題，這批已收到的原始資料也已經安全落地。

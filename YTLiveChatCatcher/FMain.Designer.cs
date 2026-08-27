@@ -66,6 +66,7 @@ namespace YTLiveChatCatcher
             BtnOpenVideoUrl = new Button();
             LSecChUa = new Label();
             TBSecChUa = new TextBox();
+            BtnExportCommunityPosts = new Button();
             SuspendLayout();
             // 
             // BtnStart
@@ -434,12 +435,23 @@ namespace YTLiveChatCatcher
             TBSecChUa.Size = new Size(613, 23);
             TBSecChUa.TabIndex = 18;
             TBSecChUa.TextChanged += TBSecChUa_TextChanged;
-            // 
+            //
+            // BtnExportCommunityPosts
+            //
+            BtnExportCommunityPosts.Location = new Point(792, 61);
+            BtnExportCommunityPosts.Name = "BtnExportCommunityPosts";
+            BtnExportCommunityPosts.Size = new Size(182, 23);
+            BtnExportCommunityPosts.TabIndex = 40;
+            BtnExportCommunityPosts.Text = "匯出社群貼文";
+            BtnExportCommunityPosts.UseVisualStyleBackColor = true;
+            BtnExportCommunityPosts.Click += BtnExportCommunityPosts_Click;
+            //
             // FMain
-            // 
+            //
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(994, 611);
+            Controls.Add(BtnExportCommunityPosts);
             Controls.Add(TBSecChUa);
             Controls.Add(LSecChUa);
             Controls.Add(BtnOpenVideoUrl);
@@ -525,6 +537,7 @@ namespace YTLiveChatCatcher
         private Button BtnOpenVideoUrl;
         private Label LSecChUa;
         private TextBox TBSecChUa;
+        private Button BtnExportCommunityPosts;
     }
 }
 

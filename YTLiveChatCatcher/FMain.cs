@@ -442,6 +442,86 @@ public partial class FMain : Form
         }
     }
 
+    private async void BtnExportCommunityPosts_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            string channelID = string.Empty;
+
+            TBChannelID.InvokeIfRequired(() =>
+            {
+                channelID = TBChannelID.Text.Trim();
+            });
+
+            if (string.IsNullOrEmpty(channelID))
+            {
+                MessageBox.Show(
+                    "匯出失敗，請先輸入頻道 ID。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                return;
+            }
+
+            string cleanedFileName = CustomFunction.RemoveInvalidFilePathCharacters(
+                $"{StringSet.SheetName7}_{channelID}_{DateTime.Now:yyyyMMdd}",
+                "_");
+
+            SaveFileDialog saveFileDialog = new()
+            {
+                Filter = "Excel 活頁簿|*.xlsx",
+                Title = "儲存檔案",
+                FileName = cleanedFileName
+            };
+
+            DialogResult dialogResult = saveFileDialog.ShowDialog();
+
+            if (dialogResult != DialogResult.OK)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(saveFileDialog.FileName))
+            {
+                MessageBox.Show(
+                    "請選擇有效的檔案名稱。",
+                    Text,
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return;
+            }
+
+            RunLongTask();
+
+            // 比照 BtnExport_Click／BtnImport_Click：用 try/finally 而不是 .ContinueWith(...)，
+            // 確保 DoExportCommunityPostsTask 拋出的例外會正確往外傳給下面的 catch，
+            // 不會被靜默吞掉。
+            try
+            {
+                await DoExportCommunityPostsTask(
+                    channelID,
+                    saveFileDialog,
+                    CancellationToken.None);
+            }
+            finally
+            {
+                TerminateLongTask(isImport: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+
+            MessageBox.Show(
+                $"發生錯誤：{ex.GetExceptionMessage()}",
+                Text,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+
     private void BtnClear_Click(object sender, EventArgs e)
     {
         try
