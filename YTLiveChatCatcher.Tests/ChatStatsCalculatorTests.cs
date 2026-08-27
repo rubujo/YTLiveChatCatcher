@@ -17,12 +17,29 @@ public class ChatStatsCalculatorTests
         // 對應這次真正修正的 bug：主要受眾使用的新臺幣格式，之前完全沒被辨識出來。
         { "NT$100", "NT$", 100 },
         { "NT$1,234.50", "NT$", 1234.5 },
-        { "$10.00", "$", 10 },
+        // 裸 "$" 在本應用程式固定使用的 zh-TW 請求語系下實測是新臺幣（見下面
+        // TryParsePurchaseAmount_裸錢字符正規化為新臺幣 的說明），正規化成 "NT$"。
+        { "$10.00", "NT$", 10 },
         { "US$5", "US$", 5 },
         { "HK$50", "HK$", 50 },
         { "A$20", "A$", 20 },
         { "¥1,000", "¥", 1000 },
     };
+
+    [Fact]
+    public void TryParsePurchaseAmount_裸錢字符正規化為新臺幣()
+    {
+        // 直接對同一筆真實新臺幣超級留言（東森新聞直播，同一個訊息 ID）分別用
+        // hl=zh-TW 與 hl=en 發請求驗證過：前者回傳裸 "$15.00"（沒有任何字首），
+        // 後者回傳 "NT$15.00"。本應用程式固定用 hl=zh-TW（DisplayLanguage.Chinese_Traditional），
+        // 所以裸 "$" 在這裡幾乎必然是新臺幣，不是美金——不正規化的話，同一種貨幣會因為
+        // YouTube 偶爾省略字首而被拆成 "NT$" 與 "$" 兩個獨立的統計項目。
+        bool success = ChatStatsCalculator.TryParsePurchaseAmount("$15.00", out string currencySymbol, out double amount);
+
+        Assert.True(success);
+        Assert.Equal("NT$", currencySymbol);
+        Assert.Equal(15.0, amount);
+    }
 
     [Theory]
     [MemberData(nameof(ValidPurchaseAmounts))]

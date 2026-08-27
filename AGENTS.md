@@ -50,6 +50,8 @@ dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 
 型別是 `EnumSet.DisplayLanguage?`，不指定時建構子呼叫 `LangUtil.GetDisplayLanguageFromCulture()` 依 `CultureInfo.CurrentUICulture` 自動判斷（完整文化特性名稱 → 中文特例走 `CultureInfo.Parent` 鏈判斷 zh-Hans／zh-Hant → 主要語言代碼 → 找不到退回英文，細節見該方法的 XML 文件註解）。`YTLiveChatCatcher` 明確指定 `Chinese_Traditional`，不受自動判斷影響；其他消費端若沒有明確指定，行為會依執行環境而變。測試見 `YTJsonParser.Tests/LangUtilTests.cs`。
 
+**`DisplayLanguage` 換算出的 `hl`／`gl`（`RegionData`）不是只影響本函式庫自己標籤要顯示的文字，也會實際改變 YouTube 回應內容本身的格式**——這點容易被忽略，因為大部分欄位（訊息內文、時間標記）看起來只是「換一種語言顯示」，但金額這類欄位的格式差異足以造成統計錯誤，見上面「顯示語言」文件註解與下面「WinForms 端的純計算邏輯」段落的 `TryParsePurchaseAmount` 說明。新增任何會解析 YouTube 回應文字內容（不是純結構／ID／數值欄位）的邏輯時，先假設格式會隨 `hl`／`gl` 改變，需要時直接對同一筆真實資料換不同 `hl` 重新請求驗證，不要只用單一語系測試過就當作通用。已針對整個核心程式庫掃過一輪同類風險（`grep` 所有 `int/double/long.Parse`／`.Contains(GetLocalizeString(...))` 呼叫點）：數字解析全部只用在結構層級的欄位（`timestampUsec`、輪詢間隔毫秒值），不是使用者看得到的顯示文字，沒有這個問題；`ParseSubMenuItemsContinuation` 的預設路徑用陣列索引而非文字比對，語系無關；唯一另一個「比對 YouTube 渲染文字」的地方是 `SetRendererData` 內判斷 `liveChatMembershipItemRenderer` 是加入／升級／里程碑的關鍵字比對（`KeySet.MemberUpgrade`／`KeySet.MemberMilestone`，已有 5 種語言的 `DictionarySet` 翻譯）——這個機制本身就是設計成語系感知的，不是像金額那樣完全沒考慮語系；但這次審查用兩場真實直播、累計約 7 分鐘輪詢只捕捉到「加入會員」事件（9 筆，皆正確落入預設分類），沒能捕捉到真正的升級或里程碑事件，因此**目前用的關鍵字文字本身是否仍與 YouTube 現況相符，尚未被這次驗證直接證實**，之後若要繼續確認，需要找真的會出現升級／里程碑事件的直播（例如創作者自己測試觸發）。
+
 ## 取得會員限定內容用的 Cookie
 
 `YTJsonParser` 本身**不提供**任何讀取或解密瀏覽器（Chrome／Edge／Firefox）Cookie 資料庫的方法。原因：
@@ -151,7 +153,7 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 修法：把不依賴 WinForms 的判斷邏輯抽到 `YTLiveChatCatcher/Common/Utils/ChatStatsCalculator.cs`（純 `static` 類別，只依賴 `YTJsonParser`／BCL，沒有任何 `System.Windows.Forms` 參照），由 `YTLiveChatCatcher.Tests` 覆蓋：
 
-- `TryParsePurchaseAmount`：用 `[GeneratedRegex]` 正確拆解貨幣符號與金額（`"NT$100"` → `"NT$"`／`100`），不假設一律是新臺幣或美金。
+- `TryParsePurchaseAmount`：用 `[GeneratedRegex]` 正確拆解貨幣符號與金額（`"NT$100"` → `"NT$"`／`100`），不假設一律是新臺幣或美金；**裸 `"$"`（沒有任何字首）正規化成 `"NT$"`**——直接對同一筆真實新臺幣超級留言分別用 `hl=zh-TW` 與 `hl=en` 發請求驗證過，前者回傳裸 `"$15.00"`，後者回傳 `"NT$15.00"`：貨幣符號的字首格式取決於發送請求時的 `hl`／`gl`，不是只取決於實際交易貨幣。本應用程式固定用 `hl=zh-TW`（`DisplayLanguage.Chinese_Traditional`），裸 `"$"` 在這裡幾乎必然是新臺幣，不正規化的話同一種貨幣會被拆成兩個統計項目。若 `DisplayLanguage` 未來改成非正體中文，這個正規化規則需要一併重新檢視。
 - `Classify`：依訊息類型／徽章判斷這則訊息該如何影響各項統計，回傳 `MessageStatsClassification`。`RegisterNewListViewItemStats` 只負責依這個分類結果做欄位遞增／集合新增，不再自己判斷。
 - `ChatMessageExclusionKeys`：「留言數量」統計要排除的訊息類型清單，`ChatStatsCalculator.Classify` 的 `CountsAsChatMessage` 與 `DoExportTask` 組 Excel「留言數量」公式時**共用同一份**（後者用 `.Select(SharedYTJsonParser.GetLocalizeString)` 動態組出排除清單），不是兩處各自維護——這是消滅前述第二個 bug 的根本做法：兩處不可能再各自漂移，而不是靠人工記得同步。
 

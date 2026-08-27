@@ -102,11 +102,18 @@ public static partial class ChatStatsCalculator
     }
 
     /// <summary>
-    /// 嘗試解析超級留言／貼圖的金額文字（例如 "NT$100"、"$10.00"、"¥1,000"）為貨幣符號與數字金額。
-    /// <para>YouTube 依付款方實際使用的貨幣格式化這段文字，不受 <see cref="EnumSet.DisplayLanguage"/> 影響，
-    /// 可能出現任何貨幣符號（NT$、US$、HK$、¥ 等），不能假設一律是新臺幣或美金，也不能只認裸 "$" 開頭
+    /// 嘗試解析超級留言／貼圖的金額文字（例如 "NT$100"、"US$10.00"、"¥1,000"）為貨幣符號與數字金額。
+    /// <para>可能出現任何貨幣符號（NT$、US$、HK$、¥ 等），不能假設一律是新臺幣或美金，也不能只認裸 "$" 開頭
     /// ——這是舊版 <c>purchaseAmountText.StartsWith('$')</c> 的錯誤假設，會讓 "NT$100" 這種帶國別字首的
     /// 金額完全被忽略，不同貨幣也不能直接相加當同一個數字看待。</para>
+    /// <para><b>貨幣符號的字首格式取決於發送請求時的 <c>hl</c>／<c>gl</c>（對應 <see cref="EnumSet.DisplayLanguage"/>），
+    /// 不是只取決於實際交易貨幣</b>——曾直接對同一筆真實新臺幣超級留言（同一個訊息 ID）分別用
+    /// <c>hl=zh-TW</c> 與 <c>hl=en</c> 發請求驗證過：前者回傳裸 <c>"$15.00"</c>（沒有任何字首），
+    /// 後者回傳 <c>"NT$15.00"</c>。<see cref="YTLiveChatCatcher.FMain"/> 固定使用
+    /// <see cref="EnumSet.DisplayLanguage.Chinese_Traditional"/>（<c>hl=zh-TW</c>），因此裸 <c>"$"</c>
+    /// 在這個應用程式看到的實際上幾乎必然是新臺幣，不是美金——這裡刻意把裸 <c>"$"</c> 正規化成
+    /// <c>"NT$"</c>，避免同一種貨幣（新臺幣）因為 YouTube 偶爾省略字首而被拆成兩個獨立的統計項目。
+    /// 如果未來 <c>DisplayLanguage</c> 改成非正體中文，這個正規化規則需要一併重新檢視。</para>
     /// </summary>
     /// <param name="purchaseAmountText">字串，購買金額文字</param>
     /// <param name="currencySymbol">out 字串，貨幣符號（例如 "NT$"）</param>
@@ -124,7 +131,11 @@ public static partial class ChatStatsCalculator
             return false;
         }
 
-        currencySymbol = match.Groups["symbol"].Value.Trim();
+        string symbol = match.Groups["symbol"].Value.Trim();
+
+        // 在本應用程式固定使用的 zh-TW 請求語系下，YouTube 對新臺幣金額有時會省略 "NT" 字首、
+        // 只回傳裸 "$"，見上方文件註解的實測紀錄；正規化成 "NT$"，避免同一種貨幣被拆成兩個統計項目。
+        currencySymbol = symbol == "$" ? "NT$" : symbol;
 
         return double.TryParse(match.Groups["amount"].Value, out amount);
     }
