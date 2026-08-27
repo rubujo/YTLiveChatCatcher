@@ -190,6 +190,99 @@ public partial class YTJsonParser
     }
 
     /// <summary>
+    /// 透過 YouTube 影片的 ID 值取得該影片所屬頻道的頻道 ID 值
+    /// <para>解析 /watch 頁面內 ytInitialPlayerResponse 的 videoDetails.channelId
+    /// （與 <see cref="GetVideoTitleAsync"/>／<see cref="IsVideoStreamingAsync"/> 相同的 JSON 來源）。</para>
+    /// </summary>
+    /// <param name="videoID">字串，影片 ID 值</param>
+    /// <param name="cancellationToken">CancellationToken，預設值為 default</param>
+    /// <returns>Task&lt;string&gt;，解析失敗時為空字串</returns>
+    public async Task<string> GetChannelIDFromVideoAsync(string videoID, CancellationToken cancellationToken = default)
+    {
+        string channelID = string.Empty,
+               url = $"{StringSet.Origin}/watch?v={videoID}";
+
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        SetHttpRequestMessageHeader(httpRequestMessage);
+
+        HttpResponseMessage httpResponseMessage;
+
+        try
+        {
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetChannelIDFromVideoAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
+
+            return channelID;
+        }
+
+        using (httpResponseMessage)
+        {
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            if (string.IsNullOrEmpty(htmlContent))
+            {
+                LogMessages.Error(_logger, nameof(GetChannelIDFromVideoAsync), "變數 \"htmlContent\" 為空白或是 null！");
+
+                return channelID;
+            }
+
+            if (httpResponseMessage.StatusCode == HttpStatusCode.OK)
+            {
+                HtmlParser htmlParser = new();
+                IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+                IHtmlCollection<IElement> scriptElements = htmlDocument.QuerySelectorAll("script");
+                IElement? targetScriptElement = scriptElements
+                    .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialPlayerResponse = "));
+
+                if (targetScriptElement == null)
+                {
+                    LogMessages.Error(_logger, nameof(GetChannelIDFromVideoAsync), "找不到 \"ytInitialPlayerResponse\"！");
+
+                    return channelID;
+                }
+
+                string scriptContent = ExtractBalancedJsonObject(targetScriptElement.InnerHtml);
+
+                if (string.IsNullOrEmpty(scriptContent))
+                {
+                    LogMessages.Error(_logger, nameof(GetChannelIDFromVideoAsync), "無法從 \"ytInitialPlayerResponse\" 取出完整的 JSON 物件！");
+
+                    return channelID;
+                }
+
+                JsonElement jeRoot;
+
+                try
+                {
+                    jeRoot = JsonSerializer.Deserialize<JsonElement>(scriptContent);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetChannelIDFromVideoAsync), $"解析 ytInitialPlayerResponse JSON 失敗：{ex.GetExceptionMessage()}");
+
+                    return channelID;
+                }
+
+                channelID = jeRoot.Get("videoDetails")?.Get("channelId")?.GetString() ?? string.Empty;
+            }
+            else
+            {
+                LogMessages.HttpError(
+                    _logger,
+                    nameof(GetChannelIDFromVideoAsync),
+                    httpResponseMessage.StatusCode.ToString(),
+                    htmlContent);
+            }
+
+            return channelID;
+        }
+    }
+
+    /// <summary>
     /// 檢查影片是否「目前正在直播中」
     /// <para>2026/8 更新：改為解析 /watch 頁面內 ytInitialPlayerResponse 的
     /// microformat.playerMicroformatRenderer.liveBroadcastDetails.isLiveNow（並以

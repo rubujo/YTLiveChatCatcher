@@ -146,6 +146,10 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 修法：`finally` 在 `Dispose` 之前，先用 `ReferenceEquals(SharedFetchCancellationTokenSource, fetchCancellationTokenSource)` 確認 `SharedFetchCancellationTokenSource` 仍然是「這一份」才把它清成 `null`（同時也用這個判斷式決定要不要呼叫 `BtnStop_Click` 還原 UI 狀態）——如果使用者已經又按過一次「開始」，`SharedFetchCancellationTokenSource` 這時已經指向新一輪的新實例，不該被這個舊的背景工作清掉／誤還原成「已停止」的 UI 狀態。這類「背景清理工作用局部參照 `Dispose` 自己，但共用欄位忘記同步清空」的模式，之後新增類似的背景工作生命週期管理時要特別小心。
 
+## 影片／頻道 ID 互相反查
+
+`YouTubeUrlUtil.GetYouTubeChannelID`（頻道網址／`@handle` → 頻道 ID）與 `YTJsonParser.GetLatestStreamingVideoIDAsync`（頻道 ID → 該頻道目前直播的影片 ID）已存在；`YTJsonParser.GetChannelIDFromVideoAsync`（影片 ID → 該影片所屬頻道的頻道 ID）補上反方向。三者共用同一個 `/watch` 頁面的 `ytInitialPlayerResponse` JSON 來源（`videoDetails.channelId`／`.title`／`microformat...isLiveNow`），跟 `GetVideoTitleAsync`／`IsVideoStreamingAsync` 是同一份請求格式，只是取用的欄位不同。WinForms 端 `TBVideoID_TextChanged` 只在 `TBChannelID` 欄位當下是空的時候才自動帶入解析出的頻道 ID（跟 `BtnStart_Click`「頻道 ID 空時才用影片 ID 反查」的方向相反、互補），避免覆蓋使用者已經手動輸入的頻道 ID。
+
 ## WinForms 端消費 RendererData 的正確方式（`FMain.Methods.cs`）
 
 `RendererData` 裡有幾種類型本質上是「以 `ID`（或其他欄位）關聯回既有訊息的更新／刪除事件」，不是獨立的新留言：`留言已被刪除`（`ID` = 目標訊息 ID）、`使用者已被封鎖`（`AuthorExternalChannelID` = 被封鎖使用者的頻道 ID）、`回覆數更新`（`ID` = `ReplyCountEntityKey`）、`投票結果更新`（`ID` = 建立投票時的 `liveChatPollId`），以及 `replaceChatItemAction` 產生的「同一個 `ID` 再次出現」情境。把這些當成全新留言加入 `ListView` 會在畫面上多出垃圾列、虛灌統計數字，Excel 匯出也會原封不動地把垃圾列匯出。

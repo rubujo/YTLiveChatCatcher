@@ -115,8 +115,11 @@ public partial class FMain : Form
         }
     }
 
-    private void TBVideoID_TextChanged(object sender, EventArgs e)
+    private async void TBVideoID_TextChanged(object sender, EventArgs e)
     {
+        // 此事件必定於 UI 執行緒觸發，不需要透過 InvokeIfRequired 轉送
+        // （InvokeIfRequired 吃的是 void 委派，若傳入 async lambda 會變成 async void，
+        // 第一個 await 之後拋出的例外無法被這裡的 try/catch 攔截）。
         TextBox? textBox = (TextBox?)sender;
 
         if (textBox == null)
@@ -124,10 +127,28 @@ public partial class FMain : Form
             return;
         }
 
-        textBox.InvokeIfRequired(() =>
+        try
         {
-            textBox.Text = YouTubeUrlUtil.GetYouTubeVideoID(textBox.Text.Trim());
-        });
+            string videoID = YouTubeUrlUtil.GetYouTubeVideoID(textBox.Text.Trim());
+
+            textBox.Text = videoID;
+
+            // 跟 BtnStart_Click「頻道 ID 空時才用影片 ID 反查最新直播影片」的方向相反、互補：
+            // 只在頻道 ID 欄位還是空的時候才自動帶入，避免覆蓋使用者已經手動輸入的頻道 ID。
+            if (!string.IsNullOrEmpty(videoID) && string.IsNullOrEmpty(TBChannelID.Text.Trim()))
+            {
+                string channelID = await SharedYTJsonParser.GetChannelIDFromVideoAsync(videoID);
+
+                if (!string.IsNullOrEmpty(channelID))
+                {
+                    TBChannelID.Text = channelID;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+        }
     }
 
     private void BtnOpenVideoUrl_Click(object sender, EventArgs e)
