@@ -75,4 +75,51 @@ public class CommunityPostStreamingTests
         Assert.Single(repostPost.Attachments!);
         Assert.Equal("https://example.com/post4.jpg", repostPost.Attachments![0].Url);
     }
+
+    [Fact]
+    public async Task StreamCommunityPostsAsync_續傳請求回應無法解析時應清空Continuation並結束串流_不能無限重試()
+    {
+        // 對應實測發現的卡死問題：GetEarlierPostsAsync 曾經在「onResponseReceivedEndpoints 這個欄位
+        // 不存在」（不論是因為 GetJsonElementAsync 重試耗盡後放棄，還是回應結構不符預期）時，直接
+        // return 而完全不呼叫 SetContinuation，導致 ytConfigData.Continuation 停留在舊值，
+        // StreamCommunityPostsAsync 外層 while 迴圈的結束條件永遠不成立，變成每隔
+        // MinimumIntervalMs（1 秒）就重送同一個已經沒用的 continuation token，永遠不會結束、也不會報錯，
+        // 使用者只會看到匯出進度卡住不動。這裡模擬「續傳請求回應缺少 onResponseReceivedEndpoints」
+        // （用一個空物件 "{}" 代表），驗證修正後的行為：只送出一次續傳請求就正常結束列舉，不會無限重試。
+        string html = ReadFixture("community_page_with_continuation.html");
+
+        FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
+            .When(HttpMethod.Get, "/posts", html)
+            .When(HttpMethod.Post, "/browse", "{}");
+
+        using HttpClient httpClient = new(handler);
+        using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
+
+        // 用一個較短的逾時保護測試本身：若修正失效（迴圈真的無限重試下去），
+        // 這裡會在逾時後強制取消，讓測試明確失敗（逾時／取消），而不是整個測試執行緒被卡死。
+        using CancellationTokenSource timeoutCts = new(TimeSpan.FromSeconds(10));
+        using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            timeoutCts.Token,
+            TestContext.Current.CancellationToken);
+
+        List<PostData> allPosts = [];
+
+        await foreach (IReadOnlyList<PostData> batch in ytJsonParser.StreamCommunityPostsAsync(
+            "TEST_CHANNEL_ID",
+            options: new CommunityPostStreamOptions { FetchWholeCommunityPosts = true },
+            cancellationToken: linkedCts.Token))
+        {
+            allPosts.AddRange(batch);
+        }
+
+        Assert.False(timeoutCts.IsCancellationRequested, "串流在逾時內沒有自然結束，代表 Continuation 沒有被正確清空，續傳迴圈仍在無限重試。");
+
+        PostData post = Assert.Single(allPosts);
+
+        Assert.Equal("post-1", post.PostID);
+
+        int browseRequestCount = handler.Requests.Count(r => (r.RequestUri?.ToString() ?? string.Empty).Contains("/browse"));
+
+        Assert.Equal(1, browseRequestCount);
+    }
 }

@@ -119,6 +119,15 @@ public partial class YTJsonParser
 
         if (!onResponseReceivedEndpointsArray.HasValue)
         {
+            // 2026/8 修正：這裡代表這次輪詢沒有取得可解析的資料——可能是 GetJsonElementAsync 重試耗盡後
+            // 放棄（回傳預設值 JsonElement），也可能是回應結構不符預期。務必清空 Continuation，讓
+            // StreamCommunityPostsAsync 外層迴圈的 while 條件自然變 false 而結束，不能讓 ytConfigData
+            // 帶著同一個（已經沒用的）continuation token 無限重試下去。比對 StreamLiveChatDataAsync
+            // 對應位置的 `if (string.IsNullOrEmpty(jsonElement.ToString())) { break; }`——這裡原本沒有
+            // 對應的安全閥，實測會造成「匯出社群貼文」在單次請求失敗時卡死：不會結束、也不會報錯，
+            // 畫面上就是進度停在某個數字、進度條繼續轉但永遠不會完成。
+            SetContinuation(arrayEnumerator: null, ytConfigData: ytConfigData);
+
             return postDatas;
         }
 
