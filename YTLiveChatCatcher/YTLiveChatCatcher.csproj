@@ -30,7 +30,7 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
 		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />
 		<PackageReference Include="Microsoft.Maui.Graphics" Version="10.0.100" />
-		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+		<PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="10.0.11" />
 		<PackageReference Include="NLog" Version="6.2.0" />
 		<PackageReference Include="NLog.Extensions.Logging" Version="6.2.0" />
