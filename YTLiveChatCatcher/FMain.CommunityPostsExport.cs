@@ -119,7 +119,6 @@ public partial class FMain
         worksheet.Column(1).Width = 5.0;
         worksheet.Column(3).Width = 60.0;
         worksheet.Column(9).Width = 40.0;
-        worksheet.Column(11).Width = 30.0;
 
         string[] headers =
         [
@@ -238,8 +237,13 @@ public partial class FMain
         // 作者／發布時間／投票數／會員限定／轉發／轉發者／附件摘要這幾欄一開始沒有設定寬度，
         // 會停在 Excel 預設寬度（約 8.43 字元），標題或內容稍長就會被截斷。內容（3）／轉發文字（9）
         // 已經用 WrapText + 固定寬度處理，AutoFit 對這兩欄會失效（見 DoExportTask 內同類修正的說明），
-        // 這裡不動；縮圖（1）／貼文網址（11）／貼文 ID（12，隱藏）已有固定寬度，也不動。
+        // 這裡不動；縮圖（1）／貼文 ID（12，隱藏）已有固定寬度，也不動。
+        // 貼文網址（11）先前也是固定寬度（30），但實際網址（尤其含編碼參數的網址）常遠超過 30 字元，
+        // 沒有 WrapText 時會整段溢出、視覺上像是把後面一大片空白欄位也「佔用」了，改成 AutoFit
+        // 依實際內容自動加寬，上限拉高到 80 字元以涵蓋大多數常見網址長度。
         int[] autoFitColumnIndexes = [2, 4, 5, 6, 7, 8, 10];
+
+        worksheet.Column(11).AutoFit(20.0, 80.0);
 
         foreach (int columnIndex in autoFitColumnIndexes)
         {
@@ -271,7 +275,6 @@ public partial class FMain
 
         worksheet.DefaultRowHeight = 28;
         worksheet.Column(2).Width = 5.0;
-        worksheet.Column(3).Width = 40.0;
 
         string[] headers = ["貼文 ID", "縮圖", "網址"];
 
@@ -317,6 +320,10 @@ public partial class FMain
             rowIdx++;
         }
 
+        // 網址（3）原本是固定寬度（40），實際網址常遠超過 40 字元，沒有 WrapText 時會整段溢出到
+        // 後面一大片空白欄位，改成 AutoFit 依實際內容自動加寬。
+        worksheet.Column(3).AutoFit(20.0, 80.0);
+
         worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
     }
 
@@ -343,7 +350,6 @@ public partial class FMain
         worksheet.DefaultRowHeight = 28;
         worksheet.Column(2).Width = 5.0;
         worksheet.Column(3).Width = 40.0;
-        worksheet.Column(4).Width = 30.0;
 
         string[] headers = ["貼文 ID", "縮圖", "標題", "網址", "發布時間", "長度", "觀看次數", "頻道"];
 
@@ -424,6 +430,10 @@ public partial class FMain
         {
             worksheet.Column(columnIndex).AutoFit(8.0, 30.0);
         }
+
+        // 網址（4）原本是固定寬度（30），實際網址常遠超過 30 字元，沒有 WrapText 時會整段溢出到
+        // 後面一大片空白欄位，改成 AutoFit（上限拉高到 80，跟其他分頁的網址欄一致）。
+        worksheet.Column(4).AutoFit(20.0, 80.0);
 
         worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
     }
