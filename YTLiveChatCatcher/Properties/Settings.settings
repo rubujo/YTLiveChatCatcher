@@ -6,7 +6,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="UserAgent" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36</Value>
+      <Value Profile="(Default)">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36</Value>
     </Setting>
     <Setting Name="EnableDebug" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -18,7 +18,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="SecChUa" Type="System.String" Scope="User">
-      <Value Profile="(Default)">"Chromium";v="151", "Google Chrome";v="151", "Not_A Brand";v="99"</Value>
+      <Value Profile="(Default)">"Chromium";v="152", "Google Chrome";v="152", "Not_A Brand";v="99"</Value>
     </Setting>
     <Setting Name="SecChUaMobile" Type="System.String" Scope="Application">
       <Value Profile="(Default)">?0</Value>
