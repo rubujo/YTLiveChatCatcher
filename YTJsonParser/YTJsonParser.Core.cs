@@ -244,10 +244,15 @@ public partial class YTJsonParser
                     default:
                     case EnumSet.DataType.LiveChat:
                         {
-                            // 2026/8 更新：popout 頁面（/live_chat?is_popout=1&v=）在直播與重播下，
-                            // 皆直接於 contents.liveChatRenderer 提供 continuation 與初始訊息，
-                            // 不再需要額外的中繼請求（該中繼請求已於 2025/10 API 變更後失效）。
-                            // 已實測驗證：直播與重播兩種情境皆可經由 ParseStreamingContinuation／ParseActions 取得資料。
+                            // 2026/8 更新：popout 頁面（/live_chat?is_popout=1&v=）在絕大多數直播／重播下，
+                            // 皆直接於 contents.liveChatRenderer 提供 continuation 與初始訊息，不需要額外的
+                            // 中繼請求。但實測發現並非所有重播都適用：部分影片（例如聊天室在直播期間曾被
+                            // 限制過的新人「初配信」）popout 頁面會回傳 contents.messageRenderer
+                            // 「聊天室已停用」的假象，真正的聊天室其實還在，只是網頁版把它做成「需要按
+                            // 『顯示聊天重播』重新載入」的狀態——continuation 只出現在 /watch 頁面內嵌的
+                            // liveChatRenderer.continuations[0].reloadContinuationData，且後續必須改打
+                            // get_live_chat_replay（而非一般輪詢用的 get_live_chat）。下方在 popout 頁面
+                            // 拿不到 continuation 時，才 fallback 改讀 /watch 頁面，避免每次都多一次請求。
                             string[] continuationData = ParseStreamingContinuation(jeYtInitialData, liveChatOptions ?? new LiveChatStreamOptions());
 
                             initialData.YTConfigData.Continuation = continuationData[0];
@@ -255,7 +260,19 @@ public partial class YTJsonParser
 
                             if (string.IsNullOrEmpty(initialData.YTConfigData.Continuation))
                             {
-                                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法從 ytInitialData 取得 continuation 權杖。");
+                                LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "無法從 ytInitialData 取得 continuation 權杖，嘗試改用重新載入流程。");
+
+                                string reloadContinuation = await GetReplayReloadContinuationAsync(videoIDorChannelID, cancellationToken).ConfigureAwait(false);
+
+                                if (!string.IsNullOrEmpty(reloadContinuation))
+                                {
+                                    initialData.YTConfigData.Continuation = reloadContinuation;
+                                    initialData.YTConfigData.IsReplayReload = true;
+                                }
+                                else
+                                {
+                                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), "重新載入流程同樣無法取得 continuation 權杖，該影片的聊天室可能真的已被關閉。");
+                                }
                             }
                         }
 
@@ -276,6 +293,117 @@ public partial class YTJsonParser
     }
 
     /// <summary>
+    /// 取得聊天室重播「重新載入」流程所需的 continuation
+    /// <para>2026/8 新增：popout 聊天室頁面（/live_chat?is_popout=1）對部分重播影片會回傳
+    /// contents.messageRenderer「聊天室已停用」的假象，實際聊天室仍存在，只是網頁版把它做成
+    /// 需要按下「顯示聊天重播」才會重新載入的狀態。真正的 continuation 只出現在一般影片頁面
+    /// （/watch）內嵌的 contents.twoColumnWatchNextResults.conversationBar.liveChatRenderer
+    /// .continuations[0].reloadContinuationData，取得後須改打 get_live_chat_replay 端點
+    /// （GetJsonElementAsync 依 YTConfigData.IsReplayReload 切換），而不是一般輪詢用的
+    /// get_live_chat——已實測驗證：對「已停用」假象的重播影片，這條路徑能正常取得訊息。</para>
+    /// </summary>
+    /// <param name="videoID">字串，YouTube 影片的 ID 值</param>
+    /// <param name="cancellationToken">CancellationToken</param>
+    /// <returns>Task&lt;string&gt;，取得失敗時回傳空字串</returns>
+    private async Task<string> GetReplayReloadContinuationAsync(string videoID, CancellationToken cancellationToken)
+    {
+        string url = $"{StringSet.Origin}/watch?v={videoID}";
+
+        using HttpRequestMessage httpRequestMessage = new(HttpMethod.Get, url);
+
+        if (!string.IsNullOrEmpty(SharedCookies))
+        {
+            SetHttpRequestMessageHeader(httpRequestMessage);
+        }
+
+        LogMessages.Debug(_logger, nameof(GetReplayReloadContinuationAsync), GetRedactedRequestSummary(httpRequestMessage));
+
+        HttpResponseMessage httpResponseMessage;
+
+        try
+        {
+            httpResponseMessage = await SharedHttpClient!.SendAsync(httpRequestMessage, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogMessages.Error(_logger, nameof(GetReplayReloadContinuationAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
+
+            return string.Empty;
+        }
+
+        using (httpResponseMessage)
+        {
+            if (httpResponseMessage.StatusCode != HttpStatusCode.OK)
+            {
+                LogMessages.HttpError(
+                    _logger,
+                    nameof(GetReplayReloadContinuationAsync),
+                    httpResponseMessage.StatusCode.ToString(),
+                    await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+
+                return string.Empty;
+            }
+
+            string htmlContent = await httpResponseMessage.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+
+            if (string.IsNullOrEmpty(htmlContent))
+            {
+                return string.Empty;
+            }
+
+            HtmlParser htmlParser = new();
+            IHtmlDocument htmlDocument = htmlParser.ParseDocument(htmlContent);
+
+            // /watch 頁面內嵌 ytInitialData 的方式跟 popout 頁面不同（少了 window[...] = 這層包裝），
+            // 跟 Community 分頁的 var ytInitialData = 是同一種格式。
+            IElement? elementYtInitialData = htmlDocument
+                .QuerySelectorAll("script")
+                .FirstOrDefault(n => n.InnerHtml.Contains("var ytInitialData ="));
+
+            if (elementYtInitialData == null)
+            {
+                return string.Empty;
+            }
+
+            string jsonYtInitialData = elementYtInitialData.InnerHtml.Replace("var ytInitialData = ", string.Empty);
+
+            if (jsonYtInitialData.EndsWith(';'))
+            {
+                jsonYtInitialData = jsonYtInitialData[0..^1];
+            }
+
+            JsonElement jeYtInitialData;
+
+            try
+            {
+                jeYtInitialData = JsonSerializer.Deserialize<JsonElement>(jsonYtInitialData);
+            }
+            catch (JsonException ex)
+            {
+                LogMessages.Error(_logger, nameof(GetReplayReloadContinuationAsync), $"解析 ytInitialData JSON 失敗：{ex.GetExceptionMessage()}");
+
+                return string.Empty;
+            }
+
+            JsonElement? liveChatRenderer = jeYtInitialData
+                .Get("contents")
+                ?.Get("twoColumnWatchNextResults")
+                ?.Get("conversationBar")
+                ?.Get("liveChatRenderer");
+
+            JsonElement? firstContinuation = liveChatRenderer
+                ?.Get("continuations")
+                ?.ToArrayEnumerator()
+                ?.Get(0);
+
+            return firstContinuation
+                ?.Get("reloadContinuationData")
+                ?.Get("continuation")
+                ?.ToString() ?? string.Empty;
+        }
+    }
+
+    /// <summary>
     /// 取得 JsonElement
     /// </summary>
     /// <param name="ytConfigData">YTConfigData</param>
@@ -289,9 +417,13 @@ public partial class YTJsonParser
     {
         JsonElement jsonElement = new();
 
-        // 2026/8 更新：實測 get_live_chat_replay 端點已回傳 400 INVALID_ARGUMENT，
-        // 無論直播或重播，continuation 一律改用 get_live_chat 端點輪詢。
-        string methodName = "get_live_chat";
+        // 2026/8 修正：get_live_chat_replay 並非「一律回傳 400」——先前的結論是拿一般輪詢用的
+        // invalidationContinuationData 權杖去打這個端點才會 400，該端點真正吃的是
+        // GetReplayReloadContinuationAsync 取得的 reloadContinuationData／回應內建的
+        // liveChatReplayContinuationData 權杖。ytConfigData.IsReplayReload 只有在那條 fallback
+        // 路徑被觸發時才會是 true，一般情況（popout 頁面就能取得 continuation）仍然使用
+        // get_live_chat，行為不變。
+        string methodName = ytConfigData?.IsReplayReload == true ? "get_live_chat_replay" : "get_live_chat";
 
         string url = dataType switch
         {

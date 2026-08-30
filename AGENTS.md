@@ -77,7 +77,13 @@ dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 
 ## YouTube 端點沒有官方文件，會不定期變動
 
-`YTJsonParser` 呼叫的是 YouTube 網頁版背後的 InnerTube 內部 API（未公開、無版本保證），過去曾發生過破壞性改版讓 continuation 擷取邏輯完全失效。目前統一使用 `GET /live_chat?is_popout=1&v={videoID}`（直播、重播皆同一端點）取得 `contents.liveChatRenderer`，並以 `POST /youtubei/v1/live_chat/get_live_chat` 輪詢（`get_live_chat_replay` 端點目前回傳 400，勿使用）。
+`YTJsonParser` 呼叫的是 YouTube 網頁版背後的 InnerTube 內部 API（未公開、無版本保證），過去曾發生過破壞性改版讓 continuation 擷取邏輯完全失效。`GET /live_chat?is_popout=1&v={videoID}` 取得 `contents.liveChatRenderer` 這條路徑對**目前正在直播中**的影片仍然正常（實測過，continuation 直接可用），並以 `POST /youtubei/v1/live_chat/get_live_chat` 輪詢。
+
+**但對已結束的重播影片，這條路徑幾乎必定失效，不是少數邊緣案例**：2026/8 曾一度把舊版「重播改讀 `/watch` 頁面、改打 `get_live_chat_replay`」的路徑整個拿掉，改成「直播、重播統一打 popout」，並在註解裡宣稱「已實測驗證直播與重播兩種情境皆可行」——這個結論是真實發生過的迴歸（regression）。實測抽測 35 支涵蓋 VTuber、遊戲實況、新聞直播等完全不同類型的已結束重播影片，popout 頁面**全部**回傳 `contents.messageRenderer`「這部直播影片的聊天室已停用。」的假象，一支都沒有直接給出可用的 continuation；但聊天室通常其實還在，只是網頁版把它做成「需要按『顯示聊天重播』重新載入」的狀態：真正的 continuation 只出現在 `/watch` 頁面內嵌的 `contents.twoColumnWatchNextResults.conversationBar.liveChatRenderer.continuations[0].reloadContinuationData`，且後續必須改打 `get_live_chat_replay`（不是一般輪詢用的 `get_live_chat`），回應內的訊息包在多一層的 `replayChatItemAction.actions[]`、下一頁 continuation 型別是 `liveChatReplayContinuationData`——這兩者的解析邏輯（`ParseActions`／`ParseContinuation`）其實從未被拿掉，只是先前入口沒有機會觸發到它們。真正完全沒開放聊天室重播的影片（`/watch` 頁面的 `conversationBar` 底下也找不到 `liveChatRenderer`）目前實測抽到 3 支，兩條路徑都會正確回傳空結果，不會誤判、不會拋例外。
+
+**結論**：`/watch` fallback（`GetReplayReloadContinuationAsync`）現在要當成**重播聊天室的常態路徑**看待，不是「極少數情況才會用到的備援」；popout 直接可用只在「目前正在直播中」的情境下才能穩定期待。
+
+現在的實作：`GetYTConfigDataAsync` 在 popout 頁面沒能取得 continuation 時，會呼叫 `GetReplayReloadContinuationAsync` 改讀 `/watch` 頁面當 fallback，成功的話設定 `YTConfigData.IsReplayReload = true`，`GetJsonElementAsync` 依這個旗標切換 `get_live_chat`／`get_live_chat_replay`。兩條路徑都拿不到 continuation，才代表該影片的聊天室是真的被關閉（見下方「重播聊天室常態性關閉」）。**教訓**：這類「無官方文件、只能靠實測歸納規則」的端點，任何「一律／統一改用」的簡化都必須先問「測試樣本有沒有涵蓋到日期較新、互動狀態較特殊（例如剛開台就被限制過聊天室）的影片」，而不是幾支正常重播影片測過就直接寫進註解當結論。
 
 **如果聊天室擷取功能又不動了**：先用 `.claude/skills/yt-fetch-diagnose/SKILL.md` 描述的步驟，直接對 YouTube 發請求比對目前的 JSON 結構跟程式碼裡假設的路徑是否還吻合，而不是憑空猜測或改用其他假設。
 

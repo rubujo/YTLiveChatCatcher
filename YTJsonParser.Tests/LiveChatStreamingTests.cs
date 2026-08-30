@@ -99,6 +99,57 @@ public class LiveChatStreamingTests
     }
 
     [Fact]
+    public async Task StreamLiveChatDataAsync_popout回傳已停用假象但watch頁面有重新載入權杖時_改用get_live_chat_replay取得訊息()
+    {
+        // 對應真實案例：popout 聊天室頁面（/live_chat?is_popout=1）對部分重播影片（例如聊天室
+        // 在直播期間曾被限制過的「初配信」）會回傳 contents.messageRenderer「已停用」的假象，
+        // 但 /watch 頁面內嵌的 liveChatRenderer 其實還在，只是需要透過 reloadContinuationData
+        // 重新載入、且後續必須改打 get_live_chat_replay（而非一般輪詢用的 get_live_chat）。
+        string disabledHtml = ReadFixture("live_popout_disabled.html");
+        string watchReloadHtml = ReadFixture("watch_page_replay_reload.html");
+        string replayResponseJson = ReadFixture("get_live_chat_replay_response.json");
+
+        FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
+            .When(HttpMethod.Get, "/live_chat?is_popout=1", disabledHtml)
+            .When(HttpMethod.Get, "/watch?v=", watchReloadHtml)
+            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat_replay", replayResponseJson);
+
+        using HttpClient httpClient = new(handler);
+        using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
+
+        List<RendererData> allMessages = [];
+        int batchCount = 0;
+
+        using CancellationTokenSource cts = new();
+
+        await foreach (IReadOnlyList<RendererData> batch in ytJsonParser.StreamLiveChatDataAsync(
+            "TEST_VIDEO_ID",
+            options: new LiveChatStreamOptions { ForceIntervalMs = 0 },
+            cancellationToken: cts.Token))
+        {
+            allMessages.AddRange(batch);
+            batchCount++;
+
+            // fixture 的 continuation 固定不變，取得第一批（僅有的一批真實訊息）後即停止，避免無窮迴圈。
+            if (batchCount >= 1)
+            {
+                cts.Cancel();
+            }
+        }
+
+        Assert.Single(allMessages);
+        Assert.Contains(allMessages, m => m.ID == "msg-replay-1" && m.MessageContent == "這是聊天室重播的訊息");
+
+        // 確認真的有改打 get_live_chat_replay，而不是一般輪詢用的 get_live_chat。
+        Assert.Contains(
+            handler.Requests,
+            r => r.RequestUri!.ToString().Contains("/youtubei/v1/live_chat/get_live_chat_replay"));
+        Assert.DoesNotContain(
+            handler.Requests,
+            r => r.RequestUri!.ToString().Contains("/youtubei/v1/live_chat/get_live_chat?"));
+    }
+
+    [Fact]
     public async Task StreamLiveChatDataAsync_請求URL會使用is_popout統一端點()
     {
         string popoutHtml = ReadFixture("live_popout_disabled.html");

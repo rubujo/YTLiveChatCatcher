@@ -168,4 +168,11 @@ public class YTConfigData
     /// </summary>
     [JsonPropertyName("timeZone")]
     public string? TimeZone { get; set; }
+
+    /// <summary>
+    /// 是否需要透過「重新載入」流程取得聊天室重播內容（見 GetReplayReloadContinuationAsync 的說明）。
+    /// 為 true 時，GetJsonElementAsync 改打 get_live_chat_replay 端點，而不是一般輪詢用的 get_live_chat。
+    /// 純粹是內部狀態，不對應任何 ytcfg／ytInitialData 欄位，不需要 JsonPropertyName。
+    /// </summary>
+    public bool IsReplayReload { get; set; }
 }
