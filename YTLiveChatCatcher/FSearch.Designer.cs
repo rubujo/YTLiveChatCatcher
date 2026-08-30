@@ -54,6 +54,7 @@
             TBKeyword.Name = "TBKeyword";
             TBKeyword.Size = new Size(799, 23);
             TBKeyword.TabIndex = 1;
+            TBKeyword.AccessibleName = "關鍵字";
             // 
             // BtnSearch
             // 
@@ -61,6 +62,7 @@
             BtnSearch.Name = "BtnSearch";
             BtnSearch.Size = new Size(75, 23);
             BtnSearch.TabIndex = 2;
+            BtnSearch.AccessibleName = "搜尋";
             BtnSearch.Text = "搜尋";
             BtnSearch.UseVisualStyleBackColor = true;
             BtnSearch.Click += BtnSearch_Click;
@@ -71,6 +73,7 @@
             BtnClear.Name = "BtnClear";
             BtnClear.Size = new Size(75, 23);
             BtnClear.TabIndex = 3;
+            BtnClear.AccessibleName = "清除";
             BtnClear.Text = "清除";
             BtnClear.UseVisualStyleBackColor = true;
             BtnClear.Click += BtnClear_Click;
@@ -86,8 +89,13 @@
             LVFilteredList.TabIndex = 4;
             LVFilteredList.UseCompatibleStateImageBehavior = false;
             LVFilteredList.View = View.Details;
+            LVFilteredList.VirtualMode = true;
+            LVFilteredList.VirtualListSize = 0;
+            LVFilteredList.AccessibleName = "搜尋結果";
+            LVFilteredList.AccessibleDescription = "顯示符合搜尋關鍵字的聊天室內容列表";
             LVFilteredList.MouseClick += LVFilteredList_MouseClick;
             LVFilteredList.MouseDoubleClick += LVFilteredList_MouseDoubleClick;
+            LVFilteredList.RetrieveVirtualItem += LVFilteredList_RetrieveVirtualItem;
             // 
             // LChatCount
             // 
@@ -112,6 +120,7 @@
             BtnExport.Name = "BtnExport";
             BtnExport.Size = new Size(75, 23);
             BtnExport.TabIndex = 7;
+            BtnExport.AccessibleName = "匯出 Excel 檔案";
             BtnExport.Text = "匯出 *.xlsx";
             BtnExport.UseVisualStyleBackColor = true;
             BtnExport.Click += BtnExport_Click;
@@ -129,6 +138,7 @@
             Controls.Add(BtnSearch);
             Controls.Add(TBKeyword);
             Controls.Add(LKeyword);
+            AcceptButton = BtnSearch;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FSearch";

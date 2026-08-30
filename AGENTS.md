@@ -152,6 +152,19 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 
 `YouTubeUrlUtil.GetYouTubeChannelID`（頻道網址／`@handle` → 頻道 ID）與 `YTJsonParser.GetLatestStreamingVideoIDAsync`（頻道 ID → 該頻道目前直播的影片 ID）已存在；`YTJsonParser.GetChannelIDFromVideoAsync`（影片 ID → 該影片所屬頻道的頻道 ID）補上反方向。三者共用同一個 `/watch` 頁面的 `ytInitialPlayerResponse` JSON 來源（`videoDetails.channelId`／`.title`／`microformat...isLiveNow`），跟 `GetVideoTitleAsync`／`IsVideoStreamingAsync` 是同一份請求格式，只是取用的欄位不同。WinForms 端 `TBVideoID_TextChanged` 只在 `TBChannelID` 欄位當下是空的時候才自動帶入解析出的頻道 ID（跟 `BtnStart_Click`「頻道 ID 空時才用影片 ID 反查」的方向相反、互補），避免覆蓋使用者已經手動輸入的頻道 ID。
 
+## `LVLiveChatList`／`LVFilteredList` 是 VirtualMode，不能直接碰 `.Items`
+
+2026/8 為了因應長時間直播累積數千則訊息時的效能，兩個 ListView 都改成 `VirtualMode = true`。**VirtualMode 下 `ListView.Items`／`SelectedItems`／`CheckedItems` 集合完全禁止存取，讀寫都會丟 `InvalidOperationException`**（[官方文件](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.listview.virtualmode) 明確記載）。新增／修改任何觸碰這兩個 ListView 的程式碼時：
+
+- **唯一真實資料來源**是 `FMain.SharedListViewItems`（`FMain.Variables.cs`）／`FSearch.SharedFilteredListViewItems`，不是 `.Items`。新增／清空／查詢筆數都對這兩個 `List<ListViewItem>` 操作，異動後要同步 `listView.VirtualListSize = 對應清單.Count;`，否則 ListView 顯示的筆數跟實際資料對不上。
+- **顯示資料**靠 `RetrieveVirtualItem` 事件（`LVLiveChatList_RetrieveVirtualItem`／`LVFilteredList_RetrieveVirtualItem`）供應，`e.Item = 對應清單[e.ItemIndex];`。
+- **選取項目**改用 `GetSelectedListViewItems()`（`ListViewExtension.cs`，以 `SelectedIndices` 為底，兩種模式都適用），不要再用 `.SelectedItems`。`FocusedItem`／拖放事件不受影響，VirtualMode 下仍受支援。
+- **捲動可見範圍**改用 `ListView` 層級、以索引為準的 `EnsureVisible(int)`，不是 `ListViewItem.EnsureVisible()` 這個實例版；且務必先更新完 `VirtualListSize` 才呼叫，順序寫反的話索引可能還沒被 ListView 視為有效範圍。
+- **就地更新既有列**（`ApplyMessageDeletedMarker`／`ApplyUserBannedMarker`／`ApplyReplyCountUpdate`／`ApplyPollResultUpdate`／`ApplyExistingListViewItemUpdate`）修改 `ListViewItem` 的 `SubItems`／顏色／字型後，**不會自動觸發重繪**（非 VirtualMode 才會）——一定要呼叫 `RedrawListViewItem(lvItem)`（內部用 `SharedListViewItems.IndexOf(lvItem)` 找索引，再呼叫 `LVLiveChatList.RedrawItems(index, index, false)`），否則畫面要等使用者捲動或縮放視窗才會反映最新內容。這是實機驗證才抓得到的問題，光看程式碼編譯通過不代表畫面真的會更新，新增類似的就地更新邏輯時務必記得補這一步、並且實際跑一次確認。
+- `FSearch` 讀取完整聊天記錄（例如搜尋的來源資料）不能再用 `_LVLiveChatList.GetListViewItems()`，改用 `FMain.GetSharedListViewItems()`（`FMain.Methods.cs` 公開方法）。
+
+`BtnClear_Click` 清空聊天室時，除了清空上述背景清單跟三個索引字典，也一併呼叫 `LVLiveChatList.SmallImageList?.Images.Clear();`——頭像圖片快取先前沒有隨清除聊天室釋放，長時間執行、多場直播的情境下會無限累積在記憶體裡。
+
 ## WinForms 端消費 RendererData 的正確方式（`FMain.Methods.cs`）
 
 `RendererData` 裡有幾種類型本質上是「以 `ID`（或其他欄位）關聯回既有訊息的更新／刪除事件」，不是獨立的新留言：`留言已被刪除`（`ID` = 目標訊息 ID）、`使用者已被封鎖`（`AuthorExternalChannelID` = 被封鎖使用者的頻道 ID）、`回覆數更新`（`ID` = `ReplyCountEntityKey`）、`投票結果更新`（`ID` = 建立投票時的 `liveChatPollId`），以及 `replaceChatItemAction` 產生的「同一個 `ID` 再次出現」情境。把這些當成全新留言加入 `ListView` 會在畫面上多出垃圾列、虛灌統計數字，Excel 匯出也會原封不動地把垃圾列匯出。

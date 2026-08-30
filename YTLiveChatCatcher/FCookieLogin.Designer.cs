@@ -50,6 +50,7 @@ namespace YTLiveChatCatcher
             WebViewLogin.Name = "WebViewLogin";
             WebViewLogin.Size = new Size(860, 520);
             WebViewLogin.TabIndex = 0;
+            WebViewLogin.AccessibleName = "YouTube 登入頁面";
             WebViewLogin.ZoomFactor = 1D;
             //
             // LManualCookie
@@ -68,6 +69,7 @@ namespace YTLiveChatCatcher
             TBManualCookie.Name = "TBManualCookie";
             TBManualCookie.Size = new Size(860, 23);
             TBManualCookie.TabIndex = 2;
+            TBManualCookie.AccessibleName = "手動貼上 Cookie 字串";
             //
             // CBRememberCookie
             //
@@ -76,6 +78,7 @@ namespace YTLiveChatCatcher
             CBRememberCookie.Name = "CBRememberCookie";
             CBRememberCookie.Size = new Size(280, 19);
             CBRememberCookie.TabIndex = 3;
+            CBRememberCookie.AccessibleName = "記住我";
             CBRememberCookie.Text = "記住我（以 Windows DPAPI 加密儲存在本機）";
             CBRememberCookie.UseVisualStyleBackColor = true;
             //
@@ -94,6 +97,7 @@ namespace YTLiveChatCatcher
             BtnConfirm.Name = "BtnConfirm";
             BtnConfirm.Size = new Size(160, 30);
             BtnConfirm.TabIndex = 5;
+            BtnConfirm.AccessibleName = "使用以上登入內容";
             BtnConfirm.Text = "使用以上登入內容";
             BtnConfirm.UseVisualStyleBackColor = true;
             BtnConfirm.Click += BtnConfirm_Click;
@@ -104,6 +108,7 @@ namespace YTLiveChatCatcher
             BtnLogout.Name = "BtnLogout";
             BtnLogout.Size = new Size(180, 30);
             BtnLogout.TabIndex = 6;
+            BtnLogout.AccessibleName = "登出／清除已儲存資料";
             BtnLogout.Text = "登出／清除已儲存資料";
             BtnLogout.UseVisualStyleBackColor = true;
             BtnLogout.Click += BtnLogout_Click;
@@ -114,6 +119,7 @@ namespace YTLiveChatCatcher
             BtnCancel.Name = "BtnCancel";
             BtnCancel.Size = new Size(127, 30);
             BtnCancel.TabIndex = 7;
+            BtnCancel.AccessibleName = "取消";
             BtnCancel.Text = "取消";
             BtnCancel.UseVisualStyleBackColor = true;
             BtnCancel.Click += BtnCancel_Click;
@@ -131,6 +137,8 @@ namespace YTLiveChatCatcher
             Controls.Add(TBManualCookie);
             Controls.Add(LManualCookie);
             Controls.Add(WebViewLogin);
+            AcceptButton = BtnConfirm;
+            CancelButton = BtnCancel;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FCookieLogin";

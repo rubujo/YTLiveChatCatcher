@@ -64,6 +64,15 @@ public partial class FMain
     private readonly List<BadgeData> SharedBadges = [];
 
     /// <summary>
+    /// <see cref="FMain.FMain_Load"/> 內把 <c>LVLiveChatList</c> 設成 <c>VirtualMode = true</c> 之後，
+    /// 這是它唯一的真實資料來源——VirtualMode 下 <c>ListView.Items</c> 集合完全禁止存取（讀寫都會丟
+    /// <see cref="InvalidOperationException"/>），必須自己維護這份背景清單，透過
+    /// <c>RetrieveVirtualItem</c> 事件（<see cref="LVLiveChatList_RetrieveVirtualItem"/>）供應資料，
+    /// 並在異動筆數後同步更新 <c>LVLiveChatList.VirtualListSize</c>。
+    /// </summary>
+    private readonly List<ListViewItem> SharedListViewItems = [];
+
+    /// <summary>
     /// 依訊息 ID（<see cref="RendererData.ID"/>）索引現有的 ListViewItem。
     /// <para>用於「留言已被刪除」／「投票結果更新」等以 ID 關聯回原始留言的事件，
     /// 讓這類事件能 O(1) 找到對應列並就地更新，而不是被誤判成新留言加入清單。

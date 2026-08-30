@@ -10,6 +10,12 @@ namespace YTLiveChatCatcher;
 
 public partial class FSearch : Form
 {
+    /// <summary>
+    /// LVFilteredList 是 VirtualMode，這是它唯一的真實資料來源，取代目前透過
+    /// <c>LVFilteredList.Items</c> 存取的所有地方（VirtualMode 下該集合完全禁止存取）。
+    /// </summary>
+    private readonly List<ListViewItem> SharedFilteredListViewItems = [];
+
     public FSearch(FMain fmain)
     {
         InitializeComponent();
@@ -27,6 +33,15 @@ public partial class FSearch : Form
         _BtnSearch = fmain.Controls
             .OfType<Button>()
             .FirstOrDefault(n => n.Name == "BtnSearch")!;
+    }
+
+    /// <summary>
+    /// LVFilteredList 的 VirtualMode 資料供應：每次要顯示／重繪某一列時都會透過這個事件跟
+    /// <see cref="SharedFilteredListViewItems"/> 要資料。
+    /// </summary>
+    private void LVFilteredList_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
+    {
+        e.Item = SharedFilteredListViewItems[e.ItemIndex];
     }
 
     private void FSearch_Load(object sender, EventArgs e)
@@ -88,7 +103,9 @@ public partial class FSearch : Form
             {
                 LVFilteredList.InvokeIfRequired(() =>
                 {
-                    ListViewItem?[] dataSet = _LVLiveChatList.GetListViewItems()
+                    // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
+                    // GetSharedListViewItems()（見 FMain.Methods.cs）。
+                    ListViewItem?[] dataSet = _FMain.GetSharedListViewItems()
                         .Where(n => n.SubItems[0].Text.Contains(keyword) ||
                             n.SubItems[2].Text.Contains(keyword) ||
                             n.SubItems[5].Text.Contains(keyword))
@@ -98,7 +115,8 @@ public partial class FSearch : Form
 
                     if (dataSet.Length <= 0)
                     {
-                        LVFilteredList.Items.Clear();
+                        SharedFilteredListViewItems.Clear();
+                        LVFilteredList.VirtualListSize = 0;
 
                         MessageBox.Show(
                             $"關鍵字「{keyword}」查無資料。",
@@ -111,14 +129,15 @@ public partial class FSearch : Form
                         LVFilteredList.SmallImageList = _LVLiveChatList.SmallImageList;
 
                         LVFilteredList.BeginUpdate();
-                        LVFilteredList.Items.Clear();
-                        LVFilteredList.Items.AddRange(dataSet!);
+                        SharedFilteredListViewItems.Clear();
+                        SharedFilteredListViewItems.AddRange(dataSet!);
+                        LVFilteredList.VirtualListSize = SharedFilteredListViewItems.Count;
                         LVFilteredList.EndUpdate();
                     }
 
                     LChatCount.InvokeIfRequired(() =>
                     {
-                        LChatCount.Text = $"留言數量：{LVFilteredList.Items.Count} 個";
+                        LChatCount.Text = $"留言數量：{SharedFilteredListViewItems.Count} 個";
                     });
                 });
             }
@@ -154,11 +173,12 @@ public partial class FSearch : Form
                     TBKeyword.Clear();
                 });
 
-                LVFilteredList.Items.Clear();
+                SharedFilteredListViewItems.Clear();
+                LVFilteredList.VirtualListSize = 0;
 
                 LChatCount.InvokeIfRequired(() =>
                 {
-                    LChatCount.Text = $"留言數量：{LVFilteredList.Items.Count} 個";
+                    LChatCount.Text = $"留言數量：{SharedFilteredListViewItems.Count} 個";
                 });
             });
         }
@@ -205,7 +225,7 @@ public partial class FSearch : Form
     {
         try
         {
-            if (LVFilteredList.Items.Count <= 0)
+            if (SharedFilteredListViewItems.Count <= 0)
             {
                 MessageBox.Show(
                   "匯出失敗，請先確認聊天室內容是否有資料。",
@@ -275,7 +295,7 @@ public partial class FSearch : Form
                 return;
             }
 
-            List<ListViewItem> listAllData = [.. LVFilteredList.GetListViewItems()];
+            List<ListViewItem> listAllData = [.. SharedFilteredListViewItems];
 
             BtnExport.InvokeIfRequired(() =>
             {
@@ -301,6 +321,8 @@ public partial class FSearch : Form
             {
                 PBProgress.Style = ProgressBarStyle.Marquee;
             });
+
+            UseWaitCursor = true;
 
             // 原本用 .ContinueWith(...) 收尾：預設的 ContinueWith 不論前面的 Task 是成功或失敗都會執行，
             // 且回傳的 Task 只反映 ContinueWith 委派本身的結果——這代表 DoExportTask 拋出的例外會被吞掉，
@@ -343,6 +365,8 @@ public partial class FSearch : Form
                 {
                     PBProgress.Style = ProgressBarStyle.Blocks;
                 });
+
+                UseWaitCursor = false;
             }
         }
         catch (Exception ex)

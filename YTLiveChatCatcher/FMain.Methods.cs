@@ -195,6 +195,32 @@ public partial class FMain
     }
 
     /// <summary>
+    /// LVLiveChatList 的 VirtualMode 資料供應：VirtualMode 下 ListView 不自己保存項目，
+    /// 每次要顯示／重繪某一列時都會透過這個事件跟 <see cref="SharedListViewItems"/> 要資料。
+    /// </summary>
+    private void LVLiveChatList_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
+    {
+        e.Item = SharedListViewItems[e.ItemIndex];
+    }
+
+    /// <summary>
+    /// 通知 LVLiveChatList 重繪指定的既有列。
+    /// <para>VirtualMode 下修改 <see cref="ListViewItem"/> 的 SubItems／顏色／字型不會自動觸發重繪
+    /// （非 VirtualMode 才會），就地更新既有列的內容之後都要呼叫這個方法，否則畫面要等使用者
+    /// 捲動或縮放視窗才會反映最新內容。</para>
+    /// </summary>
+    /// <param name="lvItem">ListViewItem</param>
+    private void RedrawListViewItem(ListViewItem lvItem)
+    {
+        int index = SharedListViewItems.IndexOf(lvItem);
+
+        if (index >= 0)
+        {
+            LVLiveChatList.RedrawItems(index, index, false);
+        }
+    }
+
+    /// <summary>
     /// 使用 Text-To-Speech 說話
     /// </summary>
     /// <param name="listView">ListView</param>
@@ -205,8 +231,17 @@ public partial class FMain
         {
             listView.InvokeIfRequired(() =>
             {
-                ListView.SelectedListViewItemCollection selectedItems = listView.SelectedItems;
-                ListViewItem listViewItem = selectedItems[^1];
+                // VirtualMode 下 listView.SelectedItems 禁止存取，改用 SelectedIndices 為底的
+                // GetSelectedListViewItems()（ListViewExtension.cs）取代，兩種模式都適用。
+                // 點擊 ListView 空白處（沒有任何列）不會有任何選取項目，這裡務必略過，
+                // 不能直接假設一定有選取——原本的 selectedItems[^1] 在這種情況下也會拋例外，
+                // 這裡順手補上防呆，而不是延續同樣的風險。
+                ListViewItem? listViewItem = listView.GetSelectedListViewItems().LastOrDefault();
+
+                if (listViewItem == null)
+                {
+                    return;
+                }
 
                 string type = listViewItem.SubItems[5].Text;
                 string authorName = listViewItem.SubItems[0].Text;
@@ -1044,7 +1079,9 @@ public partial class FMain
     {
         listView.InvokeIfRequired(() =>
         {
-            ListView.SelectedListViewItemCollection selectedItems = listView.SelectedItems;
+            // VirtualMode 下 listView.SelectedItems 禁止存取，改用 SelectedIndices 為底的
+            // GetSelectedListViewItems()（ListViewExtension.cs）取代，兩種模式都適用。
+            IEnumerable<ListViewItem> selectedItems = listView.GetSelectedListViewItems();
 
             string copiedContent = string.Empty;
 
@@ -1072,6 +1109,13 @@ public partial class FMain
                 }
 
                 copiedContent += $"{tempContent}{Environment.NewLine}";
+            }
+
+            // 沒有選取任何列時 copiedContent 會是空字串——Clipboard.SetText 對空字串會直接拋
+            // ArgumentException（跟 null 一樣不允許），這裡先擋掉，避免雙擊 ListView 空白處炸掉。
+            if (string.IsNullOrEmpty(copiedContent))
+            {
+                return;
             }
 
             Clipboard.SetText(copiedContent);
@@ -1148,6 +1192,17 @@ public partial class FMain
     public YTJsonParser GetSharedYTJsonParser()
     {
         return SharedYTJsonParser;
+    }
+
+    /// <summary>
+    /// 取得 SharedListViewItems
+    /// <para>LVLiveChatList 是 VirtualMode，Items 集合禁止存取，FSearch 要讀取完整聊天記錄
+    /// 只能透過這個方法，不能再用 <c>LVLiveChatList.GetListViewItems()</c>。</para>
+    /// </summary>
+    /// <returns>IReadOnlyList&lt;ListViewItem&gt;</returns>
+    public IReadOnlyList<ListViewItem> GetSharedListViewItems()
+    {
+        return SharedListViewItems;
     }
 
     /// <summary>
@@ -1433,6 +1488,8 @@ public partial class FMain
                         leaderboardRank,
                         replyCount);
 
+                    RedrawListViewItem(existingItemForId);
+
                     continue;
                 }
 
@@ -1629,11 +1686,15 @@ public partial class FMain
             // 跟實際收到的順序不一致。改成直接呼叫，讓 InvokeAsyncIfRequired 的 await 真正等到這批資料
             // 完整插入畫面後才算完成，才能保證批次之間嚴格照收到的順序處理。
             LVLiveChatList.BeginUpdate();
-            LVLiveChatList.Items.AddRange([.. listTempItem]);
+            SharedListViewItems.AddRange(listTempItem);
+            LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
 
-            if (LVLiveChatList.Items.Count > 0)
+            if (SharedListViewItems.Count > 0)
             {
-                LVLiveChatList.Items[^1].EnsureVisible();
+                // VirtualMode 下捲動可見範圍要用 ListView 層級、以索引為準的多載，
+                // 不是 ListViewItem.EnsureVisible() 這個實例版；且一定要先更新完 VirtualListSize
+                // 才能呼叫，否則索引可能還沒被 ListView 視為有效範圍。
+                LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
             }
 
             LVLiveChatList.EndUpdate();
@@ -1792,6 +1853,8 @@ public partial class FMain
         }
 
         MarkListViewItemAsRemoved(lvItem, "〔已刪除〕");
+
+        RedrawListViewItem(lvItem);
     }
 
     /// <summary>
@@ -1810,6 +1873,8 @@ public partial class FMain
         foreach (ListViewItem lvItem in lvItems)
         {
             MarkListViewItemAsRemoved(lvItem, "〔使用者已被封鎖〕");
+
+            RedrawListViewItem(lvItem);
         }
     }
 
@@ -1851,6 +1916,8 @@ public partial class FMain
         }
 
         lvItem.SubItems[13].Text = replyCount ?? string.Empty;
+
+        RedrawListViewItem(lvItem);
     }
 
     /// <summary>
@@ -1868,6 +1935,8 @@ public partial class FMain
         }
 
         lvItem.SubItems[2].Text = messageContent ?? string.Empty;
+
+        RedrawListViewItem(lvItem);
     }
 
     /// <summary>
@@ -1918,6 +1987,11 @@ public partial class FMain
         PBProgress.InvokeIfRequired(() =>
         {
             PBProgress.Style = ProgressBarStyle.Marquee;
+        });
+
+        this.InvokeIfRequired(() =>
+        {
+            UseWaitCursor = true;
         });
     }
 
@@ -1970,6 +2044,11 @@ public partial class FMain
         PBProgress.InvokeIfRequired(() =>
         {
             PBProgress.Style = ProgressBarStyle.Blocks;
+        });
+
+        this.InvokeIfRequired(() =>
+        {
+            UseWaitCursor = false;
         });
 
         string taskWord = isImport ? "匯入" : "匯出";

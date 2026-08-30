@@ -279,8 +279,14 @@ public partial class FMain
             await LVLiveChatList.InvokeAsyncIfRequired(() =>
             {
                 LVLiveChatList.BeginUpdate();
-                LVLiveChatList.Items.AddRange([.. listTempItem]);
-                LVLiveChatList.Items[^1].EnsureVisible();
+                SharedListViewItems.AddRange(listTempItem);
+                LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+
+                if (SharedListViewItems.Count > 0)
+                {
+                    LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
+                }
+
                 LVLiveChatList.EndUpdate();
             });
 

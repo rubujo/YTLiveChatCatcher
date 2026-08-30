@@ -75,6 +75,7 @@ namespace YTLiveChatCatcher
             BtnStart.Name = "BtnStart";
             BtnStart.Size = new Size(75, 23);
             BtnStart.TabIndex = 8;
+            BtnStart.AccessibleName = "開始";
             BtnStart.Text = "開始";
             BtnStart.UseVisualStyleBackColor = true;
             BtnStart.Click += BtnStart_Click;
@@ -87,6 +88,7 @@ namespace YTLiveChatCatcher
             TBLog.ScrollBars = ScrollBars.Vertical;
             TBLog.Size = new Size(696, 109);
             TBLog.TabIndex = 28;
+            TBLog.AccessibleName = "記錄";
             // 
             // TBChannelID
             // 
@@ -94,6 +96,7 @@ namespace YTLiveChatCatcher
             TBChannelID.Name = "TBChannelID";
             TBChannelID.Size = new Size(303, 23);
             TBChannelID.TabIndex = 2;
+            TBChannelID.AccessibleName = "頻道 ID";
             TBChannelID.TextChanged += TBChannelID_TextChanged;
             // 
             // BtnStop
@@ -102,6 +105,7 @@ namespace YTLiveChatCatcher
             BtnStop.Name = "BtnStop";
             BtnStop.Size = new Size(75, 23);
             BtnStop.TabIndex = 9;
+            BtnStop.AccessibleName = "停止";
             BtnStop.Text = "停止";
             BtnStop.UseVisualStyleBackColor = true;
             BtnStop.Click += BtnStop_Click;
@@ -112,6 +116,7 @@ namespace YTLiveChatCatcher
             TBVideoID.Name = "TBVideoID";
             TBVideoID.Size = new Size(198, 23);
             TBVideoID.TabIndex = 4;
+            TBVideoID.AccessibleName = "影片 ID";
             TBVideoID.TextChanged += TBVideoID_TextChanged;
             // 
             // LLiveChat
@@ -151,6 +156,7 @@ namespace YTLiveChatCatcher
             TBInterval.Name = "TBInterval";
             TBInterval.Size = new Size(100, 23);
             TBInterval.TabIndex = 7;
+            TBInterval.AccessibleName = "間隔（秒）";
             TBInterval.KeyPress += TBInterval_KeyPress;
             // 
             // LInterval
@@ -175,10 +181,15 @@ namespace YTLiveChatCatcher
             LVLiveChatList.TabIndex = 26;
             LVLiveChatList.UseCompatibleStateImageBehavior = false;
             LVLiveChatList.View = View.Details;
+            LVLiveChatList.VirtualMode = true;
+            LVLiveChatList.VirtualListSize = 0;
+            LVLiveChatList.AccessibleName = "聊天室內容";
+            LVLiveChatList.AccessibleDescription = "顯示擷取到的直播聊天室內容列表";
             LVLiveChatList.DragDrop += LVLiveChatList_DragDrop;
             LVLiveChatList.DragEnter += LVLiveChatList_DragEnter;
             LVLiveChatList.MouseClick += LVLiveChatList_MouseClick;
             LVLiveChatList.MouseDoubleClick += LVLiveChatList_MouseDoubleClick;
+            LVLiveChatList.RetrieveVirtualItem += LVLiveChatList_RetrieveVirtualItem;
             // 
             // LLog
             // 
@@ -196,6 +207,7 @@ namespace YTLiveChatCatcher
             BtnExport.Name = "BtnExport";
             BtnExport.Size = new Size(75, 23);
             BtnExport.TabIndex = 22;
+            BtnExport.AccessibleName = "匯出 Excel 檔案";
             BtnExport.Text = "匯出 *.xlsx";
             BtnExport.UseVisualStyleBackColor = true;
             BtnExport.Click += BtnExport_Click;
@@ -213,6 +225,7 @@ namespace YTLiveChatCatcher
             BtnClear.Name = "BtnClear";
             BtnClear.Size = new Size(75, 23);
             BtnClear.TabIndex = 24;
+            BtnClear.AccessibleName = "清除";
             BtnClear.Text = "清除";
             BtnClear.UseVisualStyleBackColor = true;
             BtnClear.Click += BtnClear_Click;
@@ -224,6 +237,7 @@ namespace YTLiveChatCatcher
             CBExportAuthorPhoto.Name = "CBExportAuthorPhoto";
             CBExportAuthorPhoto.Size = new Size(74, 19);
             CBExportAuthorPhoto.TabIndex = 23;
+            CBExportAuthorPhoto.AccessibleName = "匯出頭像";
             CBExportAuthorPhoto.Text = "匯出頭像";
             CBExportAuthorPhoto.UseVisualStyleBackColor = true;
             CBExportAuthorPhoto.CheckedChanged += CBExportAuthorPhoto_CheckedChanged;
@@ -304,6 +318,7 @@ namespace YTLiveChatCatcher
             CBEnableTTS.Name = "CBEnableTTS";
             CBEnableTTS.Size = new Size(74, 19);
             CBEnableTTS.TabIndex = 19;
+            CBEnableTTS.AccessibleName = "啟用文字轉語音";
             CBEnableTTS.Text = "啟用 TTS";
             CBEnableTTS.UseVisualStyleBackColor = true;
             CBEnableTTS.CheckedChanged += CBEnableTTS_CheckedChanged;
@@ -333,6 +348,7 @@ namespace YTLiveChatCatcher
             TBUserAgent.Name = "TBUserAgent";
             TBUserAgent.Size = new Size(613, 23);
             TBUserAgent.TabIndex = 15;
+            TBUserAgent.AccessibleName = "使用者代理字串";
             TBUserAgent.TextChanged += TBUserAgent_TextChanged;
             //
             // BtnCookieLogin
@@ -341,6 +357,7 @@ namespace YTLiveChatCatcher
             BtnCookieLogin.Name = "BtnCookieLogin";
             BtnCookieLogin.Size = new Size(182, 23);
             BtnCookieLogin.TabIndex = 10;
+            BtnCookieLogin.AccessibleName = "登入 YouTube 帳號";
             BtnCookieLogin.Text = "登入 YouTube 帳號...";
             BtnCookieLogin.UseVisualStyleBackColor = true;
             BtnCookieLogin.Click += BtnCookieLogin_Click;
@@ -373,6 +390,7 @@ namespace YTLiveChatCatcher
             CBEnableDebug.Name = "CBEnableDebug";
             CBEnableDebug.Size = new Size(122, 19);
             CBEnableDebug.TabIndex = 38;
+            CBEnableDebug.AccessibleName = "啟用輸出除錯資訊";
             CBEnableDebug.Text = "啟用輸出除錯資訊";
             CBEnableDebug.UseVisualStyleBackColor = true;
             CBEnableDebug.CheckedChanged += CBEnableDebug_CheckedChanged;
@@ -383,6 +401,7 @@ namespace YTLiveChatCatcher
             BtnSearchUserAgent.Name = "BtnSearchUserAgent";
             BtnSearchUserAgent.Size = new Size(156, 23);
             BtnSearchUserAgent.TabIndex = 16;
+            BtnSearchUserAgent.AccessibleName = "搜尋使用者代理字串";
             BtnSearchUserAgent.Text = "搜尋使用者代理字串";
             BtnSearchUserAgent.UseVisualStyleBackColor = true;
             BtnSearchUserAgent.Click += BtnSearchUserAgent_Click;
@@ -394,6 +413,7 @@ namespace YTLiveChatCatcher
             BtnSearch.Name = "BtnSearch";
             BtnSearch.Size = new Size(73, 23);
             BtnSearch.TabIndex = 20;
+            BtnSearch.AccessibleName = "搜尋";
             BtnSearch.Text = "搜尋";
             BtnSearch.UseVisualStyleBackColor = true;
             BtnSearch.Click += BtnSearch_Click;
@@ -404,6 +424,7 @@ namespace YTLiveChatCatcher
             BtnImport.Name = "BtnImport";
             BtnImport.Size = new Size(75, 23);
             BtnImport.TabIndex = 21;
+            BtnImport.AccessibleName = "匯入 Excel 檔案";
             BtnImport.Text = "匯入 *.xlsx";
             BtnImport.UseVisualStyleBackColor = true;
             BtnImport.Click += BtnImport_Click;
@@ -414,6 +435,7 @@ namespace YTLiveChatCatcher
             BtnOpenVideoUrl.Name = "BtnOpenVideoUrl";
             BtnOpenVideoUrl.Size = new Size(105, 23);
             BtnOpenVideoUrl.TabIndex = 5;
+            BtnOpenVideoUrl.AccessibleName = "開啟影片的網址";
             BtnOpenVideoUrl.Text = "開啟影片的網址";
             BtnOpenVideoUrl.UseVisualStyleBackColor = true;
             BtnOpenVideoUrl.Click += BtnOpenVideoUrl_Click;
@@ -434,6 +456,7 @@ namespace YTLiveChatCatcher
             TBSecChUa.Name = "TBSecChUa";
             TBSecChUa.Size = new Size(613, 23);
             TBSecChUa.TabIndex = 18;
+            TBSecChUa.AccessibleName = "Sec-CH-UA";
             TBSecChUa.TextChanged += TBSecChUa_TextChanged;
             //
             // BtnExportCommunityPosts
@@ -442,6 +465,7 @@ namespace YTLiveChatCatcher
             BtnExportCommunityPosts.Name = "BtnExportCommunityPosts";
             BtnExportCommunityPosts.Size = new Size(182, 23);
             BtnExportCommunityPosts.TabIndex = 40;
+            BtnExportCommunityPosts.AccessibleName = "匯出社群貼文";
             BtnExportCommunityPosts.Text = "匯出社群貼文";
             BtnExportCommunityPosts.UseVisualStyleBackColor = true;
             BtnExportCommunityPosts.Click += BtnExportCommunityPosts_Click;
@@ -489,6 +513,7 @@ namespace YTLiveChatCatcher
             Controls.Add(TBChannelID);
             Controls.Add(TBLog);
             Controls.Add(BtnStart);
+            AcceptButton = BtnStart;
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             Name = "FMain";

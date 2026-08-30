@@ -378,7 +378,7 @@ public partial class FMain : Form
     {
         try
         {
-            if (LVLiveChatList.Items.Count <= 0)
+            if (SharedListViewItems.Count <= 0)
             {
                 MessageBox.Show(
                   "匯出失敗，請先確認聊天室內容是否有資料。",
@@ -446,7 +446,7 @@ public partial class FMain : Form
                 return;
             }
 
-            List<ListViewItem> listAllData = [.. LVLiveChatList.GetListViewItems()];
+            List<ListViewItem> listAllData = [.. SharedListViewItems];
 
             RunLongTask();
 
@@ -565,7 +565,12 @@ public partial class FMain : Form
         {
             LVLiveChatList.InvokeIfRequired(() =>
             {
-                LVLiveChatList.Items.Clear();
+                SharedListViewItems.Clear();
+                LVLiveChatList.VirtualListSize = 0;
+
+                // 頭像圖片快取（依作者名稱為 key）在清除聊天室之前不會自動釋放，同一次執行期間
+                // 清除、開始擷取下一場直播時會無限累積在記憶體裡，這裡一併清空。
+                LVLiveChatList.SmallImageList?.Images.Clear();
             });
 
             // 清除刪除／封鎖／回覆數更新／投票結果更新事件用的關聯索引，
@@ -788,7 +793,7 @@ public partial class FMain : Form
 
     private void BtnSearch_Click(object sender, EventArgs e)
     {
-        if (LVLiveChatList.Items.Count > 0)
+        if (SharedListViewItems.Count > 0)
         {
             FSearch FSearch = new(this);
 
