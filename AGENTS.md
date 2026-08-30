@@ -191,6 +191,12 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 - 記錄檔**只在**成功完整匯出 `LVLiveChatList`（不是搜尋結果的篩選子集）或使用者主動按「清空聊天室」時才清除——單純按「停止擷取」不會清除，因為停止不代表使用者已經拿到資料的安全備份，「忘記匯出就關掉程式」正是這個機制要保護的情境之一。
 - `SerializeBatchLine`／`ParseBatchLines` 是抽出來的純邏輯（不碰真實檔案系統），供 `YTLiveChatCatcher.Tests` 覆蓋；`AppendBatch`／`LoadBatches`／`Clear`／`Exists` 這幾個會動到真實檔案的方法刻意沒有測試覆蓋，因為它們固定寫死存取使用者實際執行這個應用程式時真正會用到的同一個檔案路徑，測試直接操作有覆寫掉使用者真實復原記錄的風險。
 
+## Excel 匯出的欄位寬度與 IMAGE() 公式（EPPlus）
+
+**EPPlus 的 `AutoFit()`／`AutoFitColumns()` 對 `WrapText = true` 的儲存格完全不計入自動寬度計算**：用一支獨立的測試專案實測驗證過，`ExcelColumn.AutoFit()` 與 `ExcelRange.AutoFitColumns()` 兩種呼叫方式都有這個限制——只要目標儲存格的 `WrapText` 為 `true`，該欄的自動寬度計算就形同没有內容，欄寬永遠停在呼叫前的值，不會拋出例外也不會有任何警告，非常容易誤以為 AutoFit 有生效。`DoExportTask`（`FMain.Methods.cs`，聊天記錄匯出）曾經對每一欄內容儲存格一律套用 `WrapText = true`，這應該就是 2022/5/30 那次把「回覆數」欄改回固定寬度、放棄 `AutoFitColumns()` 的真正原因（很可能是在全部欄位都設 `WrapText = true` 的狀態下試過，因為看起來沒有效果才放棄）。已修正為**只有「訊息」這種長度變化很大的自由輸入文字欄位才需要 `WrapText = true`**，其餘單一值欄位（作者名稱／金額／時間／類型／排行榜／回覆數／技術欄位等）改成不設 `WrapText`，讓 `Column(i).AutoFit(minWidth, maxWidth)` 依實際內容＋標題文字動態決定寬度；`worksheet2`～`worksheet5`（時間熱點／自定義表情符號／會員徽章／超級貼圖）的內容從來沒有設定過 `WrapText`，AutoFit 才會一直正常運作，不是這幾張分頁比較特別。**社群貼文匯出（`FMain.CommunityPostsExport.cs`）的四張分頁也比照這個修正**，把先前完全沒設定寬度（停在 Excel 預設約 8.43 字元）的欄位補上 `AutoFit(minWidth, maxWidth)`。新增／調整 Excel 匯出欄位時：需要 `WrapText` 的欄位（自由輸入的長文字）就不要對它呼叫 AutoFit，兩者不能同時套用在同一個儲存格上；用 `AutoFit(最小寬度, 最大寬度)` 而不是無上限的 `AutoFit()`，避免單一離群值（例如洗版訊息、含追蹤參數的長網址）把整欄撐到不合理的寬度。
+
+**重複的頭像／縮圖網址改用儲存格參照公式，不要每一列各自寫一次 `IMAGE()`**：聊天記錄匯出的「頭像」欄（`AuthorPhotoUrl`）與社群貼文匯出「社群貼文」分頁的縮圖欄（`AuthorThumbnailUrl`）都很容易在多列之間出現完全相同的網址——同一位觀眾在同一場直播常常留言好幾十則，頭像網址不會變；社群貼文本來就是同一個頻道匯出，除了轉發貼文以外每一列的作者頭像也幾乎都相同。若每一列各自寫一次 `IMAGE("同一個網址")`，Excel 開啟／重新計算時就會對同一張圖片重複發送好幾十次請求，浪費效能也拖慢開啟速度。做法：用 `Dictionary<string, string>` 記錄「這個網址第一次出現時寫在哪一格」（`ExcelRange.Address`，例如 `"A5"`），同一個網址第二次以後不再呼叫 `IMAGE()`，直接把 `.Formula` 設成那個儲存格位址（例如 `"A5"`，不含開頭的 `=`），讓 Excel 用一般的儲存格參照公式重複使用同一次計算結果。這個做法已經在兩個地方套用，新增其他「同一批匯出資料裡網址很可能重複」的圖片欄位時（例如未來若替投票／測驗的選項圖片也想做這個優化）比照辦理。
+
 ## 已知技術債
 
 `EPPlus` 使用 Polyform Noncommercial 授權（`ExcelPackage.License.SetNonCommercialOrganization(...)`，`FMain.EPPlusUtil.cs`／`FMain.Methods.cs` 各呼叫一次，分別對應匯入／匯出兩個獨立進入點，非重複程式碼）。本專案為免費、非商業性質，符合此授權條款；商業用途需另外購買授權，更新版本前留意授權條款是否變動。

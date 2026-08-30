@@ -36,6 +36,13 @@ public partial class FMain
     /// <param name="listview">ListView</param>
     public static void InitListView(ListView listview)
     {
+        // 2026/8 修正：可見欄位（Width > 0）加總過去曾經超過 LVLiveChatList 控制項本身的寬度
+        // （Designer.cs 的 Size.Width），導致最右側幾欄被控制項邊界擠壓、標題文字看起來截斷／重疊。
+        // 這裡刻意讓可見欄位加總比控制項寬度少 30px 以上的緩衝：(1) 直播進行中訊息一多，ListView
+        // 會出現垂直捲軸，捲軸本身會吃掉一截水平空間（尤其在非 100% DPI 縮放下更寬）；(2) 本應用程式
+        // 用 AutoScaleMode.Font 讓整個表單跟著系統 DPI 縮放，每個欄位寬度是各自獨立四捨五入換算，
+        // 加總後未必剛好等於控制項寬度的換算結果，抓死剛好相等在非 100% 縮放（例如 125%）下容易再度
+        // 溢出。新增或調整欄位寬度時，維持這個緩衝，不要讓加總逼近控制項寬度。
         ColumnHeader[] columnHeaders =
         [
             new()
@@ -51,7 +58,7 @@ public partial class FMain
                 Name = "AuthorBages",
                 Text = "徽章",
                 TextAlign = HorizontalAlignment.Left,
-                Width = 100,
+                Width = 85,
                 DisplayIndex = 1
             },
             new()
@@ -59,7 +66,7 @@ public partial class FMain
                 Name = "Message",
                 Text = "訊息",
                 TextAlign = HorizontalAlignment.Left,
-                Width = 320,
+                Width = 275,
                 DisplayIndex = 2
             },
             new()
@@ -67,7 +74,7 @@ public partial class FMain
                 Name = "PurchaseAmount",
                 Text = "金額",
                 TextAlign = HorizontalAlignment.Left,
-                Width = 80,
+                Width = 68,
                 DisplayIndex = 3
             },
             new()
@@ -75,7 +82,7 @@ public partial class FMain
                 Name = "TimestampUsec",
                 Text = "時間",
                 TextAlign = HorizontalAlignment.Center,
-                Width = 150,
+                Width = 125,
                 DisplayIndex = 4
             },
             new()
@@ -83,7 +90,7 @@ public partial class FMain
                 Name = "Type",
                 Text = "類型",
                 TextAlign = HorizontalAlignment.Center,
-                Width = 100,
+                Width = 85,
                 DisplayIndex = 5
             },
             new()
@@ -143,9 +150,9 @@ public partial class FMain
             new()
             {
                 Name = "LeaderboardRank",
-                Text = "排行榜名次",
+                Text = "排行榜",
                 TextAlign = HorizontalAlignment.Center,
-                Width = 80,
+                Width = 95,
                 DisplayIndex = 12
             },
             new()
@@ -153,7 +160,7 @@ public partial class FMain
                 Name = "ReplyCount",
                 Text = "回覆數",
                 TextAlign = HorizontalAlignment.Center,
-                Width = 60,
+                Width = 65,
                 DisplayIndex = 13
             },
             new()
@@ -330,6 +337,12 @@ public partial class FMain
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate) &&
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate));
 
+            // 同一位使用者在同一場直播常常留言好幾十則，頭像網址完全相同；每一列都各自寫一次
+            // IMAGE() 公式，Excel 開啟時就會對同一張圖片重複發送好幾十次請求。這裡記錄「這個網址
+            // 第一次出現時寫在哪一格」，同一個網址第二次以後只用儲存格參照公式（例如 "A5"）指回
+            // 那一格，讓 Excel 重複使用同一次計算結果，不會為了同一張圖片重複對外請求。
+            Dictionary<string, string> firstImageCellAddressByUrl = new(StringComparer.Ordinal);
+
             foreach (ListViewItem listViewItem in dataSet)
             {
                 ExcelRange firstRange = worksheet1.Cells[startIdx1, 1];
@@ -340,10 +353,21 @@ public partial class FMain
 
                 if (CBExportAuthorPhoto.Checked)
                 {
-                    if (!string.IsNullOrEmpty(listViewItem.SubItems[9].Text))
+                    string authorPhotoUrl = listViewItem.SubItems[9].Text;
+
+                    if (!string.IsNullOrEmpty(authorPhotoUrl))
                     {
-                        firstRange.Formula = $"IMAGE(\"{listViewItem.SubItems[9].Text}\")";
-                    } 
+                        if (firstImageCellAddressByUrl.TryGetValue(authorPhotoUrl, out string? firstCellAddress))
+                        {
+                            firstRange.Formula = firstCellAddress;
+                        }
+                        else
+                        {
+                            firstRange.Formula = $"IMAGE(\"{authorPhotoUrl}\")";
+
+                            firstImageCellAddressByUrl[authorPhotoUrl] = firstRange.Address;
+                        }
+                    }
                 }
 
                 for (int j = 0; j < listViewItem.SubItems.Count; j++)
@@ -356,7 +380,18 @@ public partial class FMain
                     excelRange.Value = listViewSubItem.Text;
                     excelRange.Style.Font.Color.SetColor(listViewItem.SubItems[j].ForeColor);
                     excelRange.Style.Fill.SetBackground(listViewItem.BackColor);
-                    excelRange.Style.WrapText = true;
+
+                    // 2026/8 修正：原本不分欄位一律 WrapText = true，實測發現這會讓下方新增的 AutoFit
+                    // 完全失效——EPPlus 對 WrapText = true 的儲存格不計入自動寬度計算（用一支獨立的
+                    // 測試專案分別驗證過 Column.AutoFit() 與 ExcelRange.AutoFitColumns() 兩種呼叫方式，
+                    // 兩者都有這個限制），導致所有欄位的寬度永遠停在 widthSet 的初始值，即使標題或內容
+                    // 明顯需要更寬也不會跟著調整。只有「訊息」（j == 2）是長度變化很大的自由輸入文字，
+                    // 真的需要 WrapText 讓長訊息換行顯示；其餘都是長度相對固定的單一值欄位，改成讓
+                    // AutoFit 依實際內容決定寬度，不要整批套用 WrapText。
+                    if (j == 2)
+                    {
+                        excelRange.Style.WrapText = true;
+                    }
 
                     if (j == 9)
                     {
@@ -477,6 +512,41 @@ public partial class FMain
 
 
                 #endregion
+            }
+
+            // 2026/8 修正：這張分頁原本只在寫入內容前套用 widthSet 的固定寬度，寫完內容後完全沒有
+            // 依實際內容／標題文字自動調整，跟 worksheet2～worksheet5（時間熱點／自定義表情符號／會員
+            // 徽章／超級貼圖）寫完內容後都會呼叫 AutoFit() 的既有慣例不一致——例如「頭像網址」
+            // （AuthorPhotoUrl）／「外部頻道 ID」欄位遇到較長的網址／ID 時，固定寬度沒有跟著調整。
+            // 這裡補上 AutoFit，但刻意排除三種欄位：
+            // (1) 第 1 欄「頭像」是 IMAGE() 公式欄，AutoFit 會依公式文字長度而非圖片視覺寬度計算，數字沒有意義；
+            // (2) 第 15 欄（回覆數）同時也是右側「統計資訊」區塊的標籤欄，2022/5/30 已經刻意改回固定寬度
+            //     （見上方 summaryTitleRange 旁的註解），對這欄重新套用 AutoFit 會跟那次的決定衝突；
+            // (3) widthSet 內原本就設為 0 的欄位（訊息 ID 值／標頭背景顏色／回覆數關聯鍵值）是刻意隱藏的
+            //     技術欄位，不應該被 AutoFit 撐開變成可見欄位。
+            // 用 AutoFit(最小寬度, 最大寬度) 而不是無上限的 AutoFit()：「頭像網址」這類自由輸入文字欄位，
+            // 只要整批資料裡出現一筆異常長的內容（例如含追蹤參數的長網址），無上限的 AutoFit 會讓那一欄
+            // 被單一離群值撐到不合理的寬度。下限用原本 widthSet 設定的寬度（不會比修正前更窄），
+            // 上限抓 60 字元寬度。
+            //
+            // 這個 AutoFit 之所以能生效，前提是上面內容迴圈裡已經把 WrapText = true 限縮成只有
+            // 「訊息」欄位才設定——用一支獨立的測試專案實測驗證過：EPPlus 的 Column.AutoFit() 與
+            // ExcelRange.AutoFitColumns() 兩種呼叫方式，只要目標儲存格的 WrapText 為 true，
+            // 就完全不會被納入自動寬度計算，欄寬永遠停在呼叫前的值。這應該就是 2022/5/30 那次改回固定
+            // 寬度的真正原因（當時很可能是在全部欄位都設 WrapText = true 的狀態下試過 AutoFit，
+            // 因為沒有效果才放棄），而不是 AutoFit 本身不適合這張分頁；worksheet2～worksheet5
+            // 的內容從來沒有設定過 WrapText，AutoFit 才會一直正常運作。
+            for (int i = 2; i <= widthSet.Length; i++)
+            {
+                if (i == 15)
+                {
+                    continue;
+                }
+
+                if (widthSet[i - 1] > 0)
+                {
+                    worksheet1.Column(i).AutoFit(widthSet[i - 1], 60.0);
+                }
             }
 
             worksheet1.Calculate(n => n.AlwaysRefreshImageFunction = false);

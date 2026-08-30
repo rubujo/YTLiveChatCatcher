@@ -143,6 +143,11 @@ public partial class FMain
 
         int rowIdx = 2;
 
+        // 一次匯出通常是同一個頻道的貼文，AuthorThumbnailUrl 在絕大多數列都完全相同
+        // （只有轉發自其他頻道的貼文例外）。每一列各自寫一次 IMAGE() 公式會讓 Excel 開啟時對
+        // 同一張頭像圖重複發送請求；同一個網址第二次以後改用儲存格參照公式指回第一次出現的那一格。
+        Dictionary<string, string> firstThumbnailCellAddressByUrl = new(StringComparer.Ordinal);
+
         foreach (PostData post in posts)
         {
             ExcelRange thumbnailRange = worksheet.Cells[rowIdx, 1];
@@ -151,7 +156,16 @@ public partial class FMain
 
             if (!string.IsNullOrEmpty(post.AuthorThumbnailUrl))
             {
-                thumbnailRange.Formula = $"IMAGE(\"{post.AuthorThumbnailUrl}\")";
+                if (firstThumbnailCellAddressByUrl.TryGetValue(post.AuthorThumbnailUrl, out string? firstCellAddress))
+                {
+                    thumbnailRange.Formula = firstCellAddress;
+                }
+                else
+                {
+                    thumbnailRange.Formula = $"IMAGE(\"{post.AuthorThumbnailUrl}\")";
+
+                    firstThumbnailCellAddressByUrl[post.AuthorThumbnailUrl] = thumbnailRange.Address;
+                }
             }
 
             ExcelRange authorRange = worksheet.Cells[rowIdx, 2];
@@ -219,6 +233,17 @@ public partial class FMain
             postIdRange.Value = post.PostID ?? string.Empty;
 
             rowIdx++;
+        }
+
+        // 作者／發布時間／投票數／會員限定／轉發／轉發者／附件摘要這幾欄一開始沒有設定寬度，
+        // 會停在 Excel 預設寬度（約 8.43 字元），標題或內容稍長就會被截斷。內容（3）／轉發文字（9）
+        // 已經用 WrapText + 固定寬度處理，AutoFit 對這兩欄會失效（見 DoExportTask 內同類修正的說明），
+        // 這裡不動；縮圖（1）／貼文網址（11）／貼文 ID（12，隱藏）已有固定寬度，也不動。
+        int[] autoFitColumnIndexes = [2, 4, 5, 6, 7, 8, 10];
+
+        foreach (int columnIndex in autoFitColumnIndexes)
+        {
+            worksheet.Column(columnIndex).AutoFit(8.0, 30.0);
         }
 
         worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
@@ -392,6 +417,14 @@ public partial class FMain
             rowIdx++;
         }
 
+        // 發布時間／長度／觀看次數／頻道這幾欄一開始沒有設定寬度，理由同「社群貼文」分頁的對應修正。
+        int[] autoFitColumnIndexes = [5, 6, 7, 8];
+
+        foreach (int columnIndex in autoFitColumnIndexes)
+        {
+            worksheet.Column(columnIndex).AutoFit(8.0, 30.0);
+        }
+
         worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
     }
 
@@ -491,6 +524,15 @@ public partial class FMain
                 rowIdx++;
             }
         }
+
+        // 是否為測驗／得票數／得票率／是否為正確答案／該貼文總票數這幾欄一開始沒有設定寬度，
+        // 理由同「社群貼文」分頁的對應修正。「是否為正確答案」標題本身就有 7 個字，下限拉高到 14，
+        // 避免連標題本身都放不下。
+        worksheet.Column(4).AutoFit(8.0, 20.0);
+        worksheet.Column(5).AutoFit(8.0, 20.0);
+        worksheet.Column(6).AutoFit(8.0, 20.0);
+        worksheet.Column(7).AutoFit(14.0, 20.0);
+        worksheet.Column(8).AutoFit(8.0, 20.0);
 
         worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
     }

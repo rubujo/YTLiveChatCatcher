@@ -171,7 +171,7 @@ namespace YTLiveChatCatcher
             LVLiveChatList.HeaderStyle = ColumnHeaderStyle.Nonclickable;
             LVLiveChatList.Location = new Point(12, 169);
             LVLiveChatList.Name = "LVLiveChatList";
-            LVLiveChatList.Size = new Size(961, 273);
+            LVLiveChatList.Size = new Size(973, 273);
             LVLiveChatList.TabIndex = 26;
             LVLiveChatList.UseCompatibleStateImageBehavior = false;
             LVLiveChatList.View = View.Details;
