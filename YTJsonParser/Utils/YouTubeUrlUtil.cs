@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using AngleSharp;
+﻿using AngleSharp;
 using AngleSharp.Dom;
 using Rubujo.YouTube.Utility.Sets;
 
@@ -8,7 +7,7 @@ namespace Rubujo.YouTube.Utility.Utils;
 /// <summary>
 /// YouTube 網址解析工具
 /// </summary>
-public static partial class YouTubeUrlUtil
+public static class YouTubeUrlUtil
 {
     /// <summary>
     /// 從 YouTube 頻道網址取得頻道 ID 值
@@ -101,33 +100,59 @@ public static partial class YouTubeUrlUtil
 
     /// <summary>
     /// 從 YouTube 影片的網址取得影片的 ID 值
-    /// <para>來源：https://stackoverflow.com/a/15219045</para>
-    /// <para>原作者：rvalvik</para>
-    /// <para>原授權：CC BY-SA 3.0</para>
-    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
+    /// <para>支援 <c>/watch?v=</c>、<c>youtu.be/</c>、<c>/embed/</c>、<c>/v/</c>、<c>/e/</c> 這幾種常見形式，
+    /// 結尾若帶有 <c>&amp;list=</c>／<c>&amp;t=</c>／<c>?si=</c> 等分享／追蹤參數會一併排除；
+    /// 無法辨識時原字串整個回傳（例如輸入本來就已經是純影片 ID）。</para>
     /// </summary>
     /// <param name="videoUrl">字串，影片的網址</param>
     /// <returns>字串</returns>
     public static string GetYouTubeVideoID(string videoUrl)
     {
-        Regex regex = RegexYouTubeUrl();
-
-        string videoID = regex.Replace(videoUrl, string.Empty);
-
-        // 移除任何查詢參數（例如 &list=、&t=、&si= 等分享／追蹤參數），只保留純影片 ID。
-        int queryIndex = videoID.IndexOfAny(['&', '?']);
-
-        if (queryIndex >= 0)
+        if (!Uri.TryCreate(videoUrl, UriKind.Absolute, out Uri? uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
         {
-            videoID = videoID[..queryIndex];
+            return videoUrl;
         }
 
-        if (string.IsNullOrEmpty(videoID))
+        string[] segments = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        string? videoID = uri.Host switch
         {
-            videoID = videoUrl;
+            "youtu.be" => segments.Length > 0 ? segments[0] : null,
+            "youtube.com" or "www.youtube.com" when segments is ["watch"] => GetQueryStringValue(uri.Query, "v"),
+            "youtube.com" or "www.youtube.com" when segments.Length >= 2 &&
+                (segments[0] == "embed" || segments[0] == "v" || segments[0] == "e") => segments[1],
+            _ => null,
+        };
+
+        return string.IsNullOrEmpty(videoID) ? videoUrl : videoID;
+    }
+
+    /// <summary>
+    /// 從查詢字串中取出指定名稱的參數值
+    /// </summary>
+    /// <param name="query">字串，<see cref="Uri.Query"/>（含開頭的 <c>?</c>），可為空字串</param>
+    /// <param name="name">字串，參數名稱</param>
+    /// <returns>字串，找不到時為 null</returns>
+    private static string? GetQueryStringValue(string query, string name)
+    {
+        if (string.IsNullOrEmpty(query) || query[0] != '?')
+        {
+            return null;
         }
 
-        return videoID;
+        foreach (string pair in query[1..].Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int equalsIndex = pair.IndexOf('=');
+            string key = equalsIndex >= 0 ? pair[..equalsIndex] : pair;
+
+            if (key == name)
+            {
+                return equalsIndex >= 0 ? Uri.UnescapeDataString(pair[(equalsIndex + 1)..]) : string.Empty;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -139,15 +164,4 @@ public static partial class YouTubeUrlUtil
     {
         return $"{StringSet.Origin}/channel/{channelID}";
     }
-
-    /// <summary>
-    /// 正規表示式（YouTube 影片的網址）
-    /// <para>來源：https://stackoverflow.com/a/15219045</para>
-    /// <para>原作者：rvalvik</para>
-    /// <para>原授權：CC BY-SA 3.0</para>
-    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
-    /// </summary>
-    /// <returns>Regex</returns>
-    [GeneratedRegex("(?:(http|https):\\/\\/(?:www\\.)?youtu\\.?be(?:\\.com)?\\/(?:embed\\/|watch\\?v=|\\?v=|v\\/|e\\/|[^\\[]+\\/|watch.*v=)?)")]
-    private static partial Regex RegexYouTubeUrl();
 }

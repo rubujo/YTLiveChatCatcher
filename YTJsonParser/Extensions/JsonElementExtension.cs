@@ -1,13 +1,10 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace Rubujo.YouTube.Utility.Extensions;
 
 /// <summary>
-/// JsonElement 的擴充方法
-/// <para>來源：https://stackoverflow.com/a/61561343</para>
-/// <para>原作者：dbc</para>
-/// <para>原授權：CC BY-SA 4.0</para>
-/// <para>CC BY-SA 4.0：https://creativecommons.org/licenses/by-sa/4.0/</para>
+/// JsonElement 的擴充方法：對 JsonElement 做「安全導覽」，型別不符或找不到目標時一律回傳 null，
+/// 讓呼叫端可以用 <c>?.</c> 串接多層存取，不需要每一層都自己檢查 ValueKind 或包 try/catch。
 /// </summary>
 public static class JsonElementExtension
 {
@@ -26,14 +23,7 @@ public static class JsonElementExtension
             return null;
         }
 
-        try
-        {
-            return jsonElement.TryGetProperty(propertyName, out JsonElement value) ? value : null;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
+        return jsonElement.TryGetProperty(propertyName, out JsonElement value) ? value : null;
     }
 
     /// <summary>
@@ -44,72 +34,44 @@ public static class JsonElementExtension
     /// <returns>JsonElement?</returns>
     public static JsonElement? Get(this JsonElement jsonElement, int index)
     {
-        JsonElement? value;
-
-        if (jsonElement.ValueKind == JsonValueKind.Null ||
-            jsonElement.ValueKind == JsonValueKind.Undefined)
+        if (jsonElement.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
 
-        try
-        {
-            value = jsonElement.EnumerateArray().ElementAtOrDefault(index);
-        }
-        catch (Exception)
-        {
-            value = null;
-        }
-
-        return value?.ValueKind != JsonValueKind.Undefined ? value : null;
+        return jsonElement.ToArrayEnumerator()?.Get(index);
     }
 
     /// <summary>
     /// 將 JsonElement 轉換成 JsonElement.ArrayEnumerator
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
-    /// <param name="index">數值，索引值</param>
-    /// <returns>JsonElement.ArrayEnumerator</returns>
+    /// <returns>JsonElement.ArrayEnumerator?</returns>
     public static JsonElement.ArrayEnumerator? ToArrayEnumerator(this JsonElement jsonElement)
     {
-        JsonElement.ArrayEnumerator? value;
-
-        if (jsonElement.ValueKind != JsonValueKind.Array)
-        {
-            return null;
-        }
-
-        try
-        {
-            value = jsonElement.EnumerateArray();
-        }
-        catch (Exception)
-        {
-            value = null;
-        }
-
-        return value;
+        return jsonElement.ValueKind == JsonValueKind.Array ? jsonElement.EnumerateArray() : null;
     }
 
     /// <summary>
     /// 取得 JsonElement.ArrayEnumerator 內指定索引的 JsonElement
     /// </summary>
-    /// <param name="jsonElement">JsonElement</param>
+    /// <param name="arrayEnumerator">JsonElement.ArrayEnumerator</param>
     /// <param name="index">數值，索引值</param>
-    /// <returns>JsonElement.ArrayEnumerator</returns>
+    /// <returns>JsonElement?</returns>
     public static JsonElement? Get(this JsonElement.ArrayEnumerator arrayEnumerator, int index)
     {
-        JsonElement? value;
+        int currentIndex = 0;
 
-        try
+        foreach (JsonElement element in arrayEnumerator)
         {
-            value = arrayEnumerator.ElementAtOrDefault(index);
-        }
-        catch (Exception)
-        {
-            value = null;
+            if (currentIndex == index)
+            {
+                return element;
+            }
+
+            currentIndex++;
         }
 
-        return value;
+        return null;
     }
 }

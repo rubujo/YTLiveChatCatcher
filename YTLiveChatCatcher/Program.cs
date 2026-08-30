@@ -114,11 +114,8 @@ internal static class Program
     }
 
     /// <summary>
-    /// 更新設定
-    /// <para>來源：https://stackoverflow.com/a/23924277</para>
-    /// <para>原作者：Grant</para>
-    /// <para>原授權：CC BY-SA 3.0</para>
-    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
+    /// 更新設定：偵測到新版本時，把使用者先前版本的 user.config 設定值搬移到新版本，
+    /// 並清空這個一次性的搬移旗標，避免下次啟動重複執行。
     /// </summary>
     private static void UpdateConfig()
     {

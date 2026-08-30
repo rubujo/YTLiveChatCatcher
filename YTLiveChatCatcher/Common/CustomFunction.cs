@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Speech.Synthesis;
-using System.Text.RegularExpressions;
+using System.Text;
 
 namespace YTLiveChatCatcher.Common;
 
@@ -67,21 +67,29 @@ public class CustomFunction
 
     /// <summary>
     /// 移除檔案路徑中的無效字元
-    /// <para>來源：https://stackoverflow.com/a/8626562</para>
-    /// <para>原作者：Gary Kindel</para>
-    /// <para>原授權：CC BY-SA 3.0</para>
-    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
     /// <param name="filename">字串，檔案名稱</param>
     /// <param name="replaceChar">字串，替換無效字元的字元</param>
     /// <returns>字串</returns>
     public static string RemoveInvalidFilePathCharacters(string filename, string replaceChar)
     {
-        string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+        HashSet<char> invalidChars = [.. Path.GetInvalidFileNameChars(), .. Path.GetInvalidPathChars()];
 
-        Regex regex = new(string.Format("[{0}]", Regex.Escape(regexSearch)));
+        StringBuilder builder = new(filename.Length);
 
-        return regex.Replace(filename, replaceChar);
+        foreach (char c in filename)
+        {
+            if (invalidChars.Contains(c))
+            {
+                builder.Append(replaceChar);
+            }
+            else
+            {
+                builder.Append(c);
+            }
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
@@ -95,10 +103,6 @@ public class CustomFunction
 
     /// <summary>
     /// 開啟網頁瀏覽器
-    /// <para>來源 1：https://github.com/dotnet/runtime/issues/17938#issuecomment-235502080</para>
-    /// <para>原作者：mellinoe</para>
-    /// <para>來源 2：https://github.com/dotnet/runtime/issues/17938#issuecomment-249383422</para>
-    /// <para>原作者：brockallen</para>
     /// </summary>
     /// <param name="url">字串，網址</param>
     public static void OpenBrowser(string url)

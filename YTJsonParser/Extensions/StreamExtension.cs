@@ -1,5 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
-using System.Text;
+using Microsoft.Maui.Graphics;
 
 namespace Rubujo.YouTube.Utility.Extensions;
 
@@ -10,7 +9,6 @@ public static class StreamExtension
 {
     /// <summary>
     /// 轉換成 byte[]
-    /// <para>來源：https://code-maze.com/create-byte-array-from-stream-in-csharp</para>
     /// </summary>
     /// <param name="stream">Stream</param>
     /// <returns>byte[]</returns>
@@ -26,59 +24,53 @@ public static class StreamExtension
     }
 
     /// <summary>
-    /// 取得 ImageFormat
-    /// <para>來源：https://gist.github.com/markcastle/3cc99c8e5756c7e27532900a5f8a2a93</para>
-    /// <para>原作者：markcastle</para>
-    /// <para>原授權：Copyright 2017 Captive Reality Ltd</para>
-    /// <para>Copyright 2017 Captive Reality Ltd：https://gist.github.com/markcastle/3cc99c8e5756c7e27532900a5f8a2a93</para>
+    /// 依照各圖片格式官方規格定義的檔頭 magic number 判斷 Stream 的圖片格式
     /// </summary>
     /// <param name="stream">Stream</param>
-    /// <returns>ImageFormat</returns>
+    /// <returns>ImageFormat?，判斷不出來或串流過短時為 null</returns>
     public static ImageFormat? GetImageFormat(this Stream stream)
     {
-        byte[] bytesBMP = Encoding.ASCII.GetBytes("BM");
-        byte[] bytesGIF = Encoding.ASCII.GetBytes("GIF");
-        byte[] bytesPNG = [137, 80, 78, 71];
-        byte[] bytesTIFF = [73, 73, 42];
-        byte[] bytesJPEG = [255, 216, 255, 224];
+        byte[] bytes = stream.ToByteArray();
 
-        byte[] streamBytes = stream.ToByteArray();
-
-        // 來源串流過短（例如空的或失敗的下載）時直接視為無法辨識，避免 Buffer.BlockCopy 拋例外。
-        if (streamBytes.Length < 4)
-        {
-            return null;
-        }
-
-        // 複製前 4 個 byte 到 bytesBuffer。
-        byte[] bytesBuffer = new byte[4];
-
-        Buffer.BlockCopy(streamBytes, 0, bytesBuffer, 0, bytesBuffer.Length);
-
-        // 檢查 bytesBuffer 的 Sequence。
-        if (bytesBMP.SequenceEqual(bytesBuffer.Take(bytesBMP.Length)))
+        if (StartsWith(bytes, [0x42, 0x4D]))
         {
             return ImageFormat.Bmp;
         }
-        else if (bytesGIF.SequenceEqual(bytesBuffer.Take(bytesGIF.Length)))
+
+        if (StartsWith(bytes, "GIF87a"u8) || StartsWith(bytes, "GIF89a"u8))
         {
             return ImageFormat.Gif;
         }
-        else if (bytesPNG.SequenceEqual(bytesBuffer.Take(bytesPNG.Length)))
+
+        if (StartsWith(bytes, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
         {
             return ImageFormat.Png;
         }
-        else if (bytesTIFF.SequenceEqual(bytesBuffer.Take(bytesTIFF.Length)))
+
+        // TIFF 小端序（"II*\0"）／大端序（"MM\0*"）皆有效。
+        if (StartsWith(bytes, [0x49, 0x49, 0x2A, 0x00]) || StartsWith(bytes, [0x4D, 0x4D, 0x00, 0x2A]))
         {
             return ImageFormat.Tiff;
         }
-        else if (bytesJPEG.SequenceEqual(bytesBuffer.Take(bytesJPEG.Length)))
+
+        // JPEG 的第 4 個位元組會依實際內容（JFIF、Exif、無 APPn 區段等）而不同，
+        // 只有前 3 個位元組（SOI 標記＋下一個標記的起始位元組）是所有 JPEG 共通的。
+        if (StartsWith(bytes, [0xFF, 0xD8, 0xFF]))
         {
             return ImageFormat.Jpeg;
         }
-        else
-        {
-            return null;
-        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 判斷位元組陣列開頭是否符合指定的簽章
+    /// </summary>
+    /// <param name="bytes">byte[]</param>
+    /// <param name="signature">ReadOnlySpan&lt;byte&gt;</param>
+    /// <returns>布林值</returns>
+    private static bool StartsWith(byte[] bytes, ReadOnlySpan<byte> signature)
+    {
+        return bytes.Length >= signature.Length && bytes.AsSpan(0, signature.Length).SequenceEqual(signature);
     }
 }

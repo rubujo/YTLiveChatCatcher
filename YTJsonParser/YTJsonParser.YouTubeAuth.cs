@@ -13,10 +13,6 @@ public partial class YTJsonParser
 {
     /// <summary>
     /// 設定 HttpRequestMessage 的標頭
-    /// <para>來源：https://stackoverflow.com/a/13287224</para>
-    /// <para>原作者：Greg Beech</para>
-    /// <para>原授權：CC BY-SA 3.0</para>
-    /// <para>CC BY-SA 3.0：https://creativecommons.org/licenses/by-sa/3.0/</para>
     /// </summary>
     /// <param name="httpRequestMessage">HttpRequestMessage</param>
     /// <param name="ytConfigData">YTConfigData</param>

@@ -85,6 +85,8 @@ dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj
 
 理解 InnerTube 協議格式時，可以參考 chat-downloader、yt-dlp、其他語言的類似專案的公開文件／原始碼**去理解資料格式與端點行為**，但實作本身一律依據自己實際發送請求觀察到的 JSON 結果重新撰寫，不得複製其他專案的程式碼進來。既有程式碼中標註「參考：」某網址，代表該處的解析邏輯或欄位命名依循該資料格式撰寫，不代表程式碼是複製的。
 
+**跟授權疑慮相關的重寫記錄請見 `NOTICE.md`**：2026/8 為了讓專案能誠實宣告 CC0-1.0，把幾個曾經明確標註「原授權：CC BY-SA／CC BY-NC-SA」的工具函式（`BetterCacheManager`／`JsonElementExtension`／`GetYouTubeVideoID`／`RemoveInvalidFilePathCharacters` 等）依行為規格獨立重新實作。新增程式碼時若又想「參考」某個 Stack Overflow 答案或部落格文章的具體程式碼寫法（不是只理解格式／演算法），先假設那段程式碼帶有著作權限制，寫規格、鎖測試、獨立實作，不要直接複製貼上再標註來源了事——標註來源不代表就能自由改變授權。
+
 ## 已確認支援的 LiveChat 元素種類
 
 一般留言、超級留言、超級貼圖、加入／升級／里程碑會員、贈送會員（`liveChatSponsorshipsGiftPurchaseAnnouncementRenderer`）、接收會員贈送、新版個別小禮物（`giftMessageViewModel`）、置頂／導向橫幅（`addBannerToLiveChatCommand` -> `bannerRenderer`）、跑馬燈（ticker，會取出內嵌的完整原始 Renderer）、捐款／購買／版主／自動版主訊息、創作者投票（`showLiveChatActionPanelAction` -> `pollRenderer`）與投票的即時得票率更新（見下方「即時更新機制」）、留言刪除（`removeChatItemAction`）、使用者被封鎖（`removeChatItemByAuthorAction`）、留言被取代／修改（`replaceChatItemAction`）、超級留言／貼圖的排行榜徽章（`leaderboardBadge`，掛在訊息上而非獨立 action，對應 `RendererData.LeaderboardRank`）、超級留言的回覆討論串人數更新（見下方）。
