@@ -157,7 +157,6 @@ namespace YTLiveChatCatcher
             TBInterval.Size = new Size(100, 23);
             TBInterval.TabIndex = 7;
             TBInterval.AccessibleName = "間隔（秒）";
-            TBInterval.KeyPress += TBInterval_KeyPress;
             // 
             // LInterval
             // 

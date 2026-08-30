@@ -1291,7 +1291,10 @@ public partial class FMain
         });
 
         // 設定提示。
-        SharedTooltip.SetToolTip(TBInterval, "僅在未勾選「隨機間隔秒數」以及為「重播」時會生效。");
+        SharedTooltip.SetToolTip(TBInterval, "顯示目前擷取聊天室內容的輪詢間隔秒數，由系統依 YouTube 回應自動調整，唯讀。");
+        SharedTooltip.SetToolTip(TBUserAgent, "已提供預設值，一般情況下不需要修改。若擷取聊天室內容持續失敗，可嘗試點選右方「搜尋使用者代理字串」按鈕更新為較新的版本。");
+        SharedTooltip.SetToolTip(TBSecChUa, "已提供預設值，一般情況下不需要修改，通常與上方的使用者代理字串搭配更新。");
+        SharedTooltip.SetToolTip(BtnCookieLogin, "登入 YouTube 帳號後，可取得您已加入會員之頻道的會員專屬直播聊天室內容。一般公開直播不需要登入。");
 
         // 設定控制項的狀態。
         SetControlsState(true);

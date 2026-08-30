@@ -187,15 +187,6 @@ public partial class FMain : Form
         }
     }
 
-    private void TBInterval_KeyPress(object sender, KeyPressEventArgs e)
-    {
-        // 參考：https://nevinyrral.pixnet.net/blog/post/27551930
-        if ((e.KeyChar < 48 | e.KeyChar > 57) & e.KeyChar != 8)
-        {
-            e.Handled = true;
-        }
-    }
-
     private async void BtnStart_Click(object sender, EventArgs e)
     {
         // 此事件必定於 UI 執行緒觸發，不需要透過 InvokeIfRequired 轉送
