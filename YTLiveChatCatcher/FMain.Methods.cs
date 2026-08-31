@@ -683,7 +683,19 @@ public partial class FMain
                 }
             }
 
-            worksheet1.Calculate(n => n.AlwaysRefreshImageFunction = false);
+            // 2026/8 修正：這裡原本會呼叫 worksheet1.Calculate(...)。EPPlus 官方文件證實 Calculate()
+            // 對含有 IMAGE() 公式的儲存格，會由 EPPlus 自己發送 HTTP 請求把圖片下載下來、內嵌成真正的
+            // 圖片物件寫進檔案（不是單純把公式字串留給 Excel 自己評估）。實測匯出一份含數百則訊息、
+            // 每則都有頭像 IMAGE() 公式的檔案，EPPlus 自己的批次下載機制大量逾時／被 Google CDN 限流，
+            // 超過一半的頭像最終變成 #VALUE! 錯誤，而不是正確顯示圖片；EPPlus 官方文件對這種規模的
+            // 批次下載沒有任何說明或建議上限，屬於未處理的失敗模式，不是已知限制。
+            // Calculate() 對 IMAGE() 公式而言純粹是 EPPlus 自己「順便先算好、內嵌預覽」的選用功能，
+            // 不呼叫也完全不影響檔案本身的正確性——workbook.xml 已經設定 fullCalcOnLoad="1"，
+            // 使用者用真正的 Excel（365，具備雲端連線能力）開啟檔案時，Excel 自己就會正確重新計算並
+            // 顯示所有公式（含 IMAGE()），用的是遠比 EPPlus 自製下載器更可靠的官方雲端基礎設施，
+            // 也完全不會把圖片內嵌進 EPPlus 產生的檔案裡（避免檔案肥大，符合當初改用 IMAGE() 公式
+            // 而不是直接內嵌圖片的初衷）。因此這裡刻意不再呼叫 Calculate()，讓 IMAGE() 公式維持原始
+            // 未計算狀態，交給使用者端的 Excel 自己處理。
 
             #endregion
 
@@ -936,7 +948,8 @@ public partial class FMain
                     }
                 }
 
-                worksheet3.Calculate(n => n.AlwaysRefreshImageFunction = false);
+                // 2026/8 修正：刻意不呼叫 worksheet3.Calculate(...)，理由同 worksheet1 上方的詳細說明——
+                // EPPlus 自己對 IMAGE() 公式的批次下載機制不可靠，交給使用者端的 Excel 自己計算即可。
             }
 
             #endregion
@@ -1048,7 +1061,8 @@ public partial class FMain
                     }
                 }
 
-                worksheet4.Calculate(n => n.AlwaysRefreshImageFunction = false);
+                // 2026/8 修正：刻意不呼叫 worksheet4.Calculate(...)，理由同 worksheet1 上方的詳細說明——
+                // EPPlus 自己對 IMAGE() 公式的批次下載機制不可靠，交給使用者端的 Excel 自己計算即可。
             }
 
             #endregion
@@ -1139,7 +1153,8 @@ public partial class FMain
                     }
                 }
 
-                worksheet5.Calculate(n => n.AlwaysRefreshImageFunction = false);
+                // 2026/8 修正：刻意不呼叫 worksheet5.Calculate(...)，理由同 worksheet1 上方的詳細說明——
+                // EPPlus 自己對 IMAGE() 公式的批次下載機制不可靠，交給使用者端的 Excel 自己計算即可。
             }
 
             #endregion

@@ -250,7 +250,17 @@ public partial class FMain
             worksheet.Column(columnIndex).AutoFit(8.0, 30.0);
         }
 
-        worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
+        // 2026/8 修正：刻意不呼叫 worksheet.Calculate(...)。EPPlus 官方文件證實 Calculate() 對含有
+        // IMAGE() 公式的儲存格，會由 EPPlus 自己發送 HTTP 請求把圖片下載下來、內嵌成真正的圖片物件
+        // 寫進檔案（不是單純把公式字串留給 Excel 自己評估）。實測匯出一份含數百篇貼文、每篇都有
+        // 縮圖 IMAGE() 公式的檔案，EPPlus 自己的批次下載機制大量逾時／被 Google CDN 限流，超過一半的
+        // 縮圖最終變成 #VALUE! 錯誤，而不是正確顯示圖片；EPPlus 官方文件對這種規模的批次下載沒有任何
+        // 說明或建議上限，屬於未處理的失敗模式，不是已知限制。Calculate() 對 IMAGE() 公式而言純粹是
+        // EPPlus 自己「順便先算好、內嵌預覽」的選用功能，不呼叫也完全不影響檔案本身的正確性——
+        // workbook.xml 已經設定 fullCalcOnLoad="1"，使用者用真正的 Excel（365，具備雲端連線能力）
+        // 開啟檔案時，Excel 自己就會正確重新計算並顯示所有公式（含 IMAGE()），用的是遠比 EPPlus
+        // 自製下載器更可靠的官方雲端基礎設施，也完全不會把圖片內嵌進 EPPlus 產生的檔案裡（避免檔案
+        // 肥大，符合當初改用 IMAGE() 公式而不是直接內嵌圖片的初衷）。
     }
 
     /// <summary>
@@ -324,7 +334,17 @@ public partial class FMain
         // 後面一大片空白欄位，改成 AutoFit 依實際內容自動加寬。
         worksheet.Column(3).AutoFit(20.0, 80.0);
 
-        worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
+        // 2026/8 修正：刻意不呼叫 worksheet.Calculate(...)。EPPlus 官方文件證實 Calculate() 對含有
+        // IMAGE() 公式的儲存格，會由 EPPlus 自己發送 HTTP 請求把圖片下載下來、內嵌成真正的圖片物件
+        // 寫進檔案（不是單純把公式字串留給 Excel 自己評估）。實測匯出一份含數百篇貼文、每篇都有
+        // 縮圖 IMAGE() 公式的檔案，EPPlus 自己的批次下載機制大量逾時／被 Google CDN 限流，超過一半的
+        // 縮圖最終變成 #VALUE! 錯誤，而不是正確顯示圖片；EPPlus 官方文件對這種規模的批次下載沒有任何
+        // 說明或建議上限，屬於未處理的失敗模式，不是已知限制。Calculate() 對 IMAGE() 公式而言純粹是
+        // EPPlus 自己「順便先算好、內嵌預覽」的選用功能，不呼叫也完全不影響檔案本身的正確性——
+        // workbook.xml 已經設定 fullCalcOnLoad="1"，使用者用真正的 Excel（365，具備雲端連線能力）
+        // 開啟檔案時，Excel 自己就會正確重新計算並顯示所有公式（含 IMAGE()），用的是遠比 EPPlus
+        // 自製下載器更可靠的官方雲端基礎設施，也完全不會把圖片內嵌進 EPPlus 產生的檔案裡（避免檔案
+        // 肥大，符合當初改用 IMAGE() 公式而不是直接內嵌圖片的初衷）。
     }
 
     /// <summary>
@@ -435,7 +455,17 @@ public partial class FMain
         // 後面一大片空白欄位，改成 AutoFit（上限拉高到 80，跟其他分頁的網址欄一致）。
         worksheet.Column(4).AutoFit(20.0, 80.0);
 
-        worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
+        // 2026/8 修正：刻意不呼叫 worksheet.Calculate(...)。EPPlus 官方文件證實 Calculate() 對含有
+        // IMAGE() 公式的儲存格，會由 EPPlus 自己發送 HTTP 請求把圖片下載下來、內嵌成真正的圖片物件
+        // 寫進檔案（不是單純把公式字串留給 Excel 自己評估）。實測匯出一份含數百篇貼文、每篇都有
+        // 縮圖 IMAGE() 公式的檔案，EPPlus 自己的批次下載機制大量逾時／被 Google CDN 限流，超過一半的
+        // 縮圖最終變成 #VALUE! 錯誤，而不是正確顯示圖片；EPPlus 官方文件對這種規模的批次下載沒有任何
+        // 說明或建議上限，屬於未處理的失敗模式，不是已知限制。Calculate() 對 IMAGE() 公式而言純粹是
+        // EPPlus 自己「順便先算好、內嵌預覽」的選用功能，不呼叫也完全不影響檔案本身的正確性——
+        // workbook.xml 已經設定 fullCalcOnLoad="1"，使用者用真正的 Excel（365，具備雲端連線能力）
+        // 開啟檔案時，Excel 自己就會正確重新計算並顯示所有公式（含 IMAGE()），用的是遠比 EPPlus
+        // 自製下載器更可靠的官方雲端基礎設施，也完全不會把圖片內嵌進 EPPlus 產生的檔案裡（避免檔案
+        // 肥大，符合當初改用 IMAGE() 公式而不是直接內嵌圖片的初衷）。
     }
 
     /// <summary>
@@ -544,6 +574,16 @@ public partial class FMain
         worksheet.Column(7).AutoFit(14.0, 20.0);
         worksheet.Column(8).AutoFit(8.0, 20.0);
 
-        worksheet.Calculate(n => n.AlwaysRefreshImageFunction = false);
+        // 2026/8 修正：刻意不呼叫 worksheet.Calculate(...)。EPPlus 官方文件證實 Calculate() 對含有
+        // IMAGE() 公式的儲存格，會由 EPPlus 自己發送 HTTP 請求把圖片下載下來、內嵌成真正的圖片物件
+        // 寫進檔案（不是單純把公式字串留給 Excel 自己評估）。實測匯出一份含數百篇貼文、每篇都有
+        // 縮圖 IMAGE() 公式的檔案，EPPlus 自己的批次下載機制大量逾時／被 Google CDN 限流，超過一半的
+        // 縮圖最終變成 #VALUE! 錯誤，而不是正確顯示圖片；EPPlus 官方文件對這種規模的批次下載沒有任何
+        // 說明或建議上限，屬於未處理的失敗模式，不是已知限制。Calculate() 對 IMAGE() 公式而言純粹是
+        // EPPlus 自己「順便先算好、內嵌預覽」的選用功能，不呼叫也完全不影響檔案本身的正確性——
+        // workbook.xml 已經設定 fullCalcOnLoad="1"，使用者用真正的 Excel（365，具備雲端連線能力）
+        // 開啟檔案時，Excel 自己就會正確重新計算並顯示所有公式（含 IMAGE()），用的是遠比 EPPlus
+        // 自製下載器更可靠的官方雲端基礎設施，也完全不會把圖片內嵌進 EPPlus 產生的檔案裡（避免檔案
+        // 肥大，符合當初改用 IMAGE() 公式而不是直接內嵌圖片的初衷）。
     }
 }
