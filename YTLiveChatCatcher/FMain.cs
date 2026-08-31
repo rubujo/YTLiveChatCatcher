@@ -53,6 +53,10 @@ public partial class FMain : Form
             InitLiveChatCather(SharedHttpClient);
             CheckCaptureRecovery();
 
+            // 清理過期的頭像落地快取，丟到背景執行緒跑，不要讓目錄掃描／刪檔的 I/O 拖慢啟動流程；
+            // AvatarDiskCache.PruneExpiredEntries() 內部已經自行處理例外，這裡不需要再包 try/catch。
+            _ = Task.Run(AvatarDiskCache.PruneExpiredEntries);
+
             CheckAppVersion(SharedHttpClient);
         }
         catch (Exception ex)
@@ -349,6 +353,13 @@ public partial class FMain : Form
             {
                 // 清除間隔欄位的內容。
                 TBInterval.Text = string.Empty;
+            });
+
+            // 保證在沒有任何 BeginUpdate 視窗、也不會再有後續批次的時間點強制重繪一次，撿回擷取結束前
+            // 最後幾筆還在下載中的頭像（理由同 FMain.Methods.cs 頭像下載完成處的說明）。
+            LVLiveChatList.InvokeIfRequired(() =>
+            {
+                LVLiveChatList.Invalidate();
             });
 
             WriteLog("已停止取得聊天室的內容。");

@@ -1,5 +1,6 @@
 ﻿using GetCachable;
 using Rubujo.YouTube.Utility.Extensions;
+using YTLiveChatCatcher.Common.Utils;
 
 namespace YTLiveChatCatcher.Extensions;
 
@@ -53,11 +54,28 @@ public static class ListViewExtension
                     throw new Exception("變數 \"httpClient\" 是 null！");
                 }
 
-                byte[] bytes = await httpClient.GetByteArrayAsync(imageUrl);
+                // 2026/8 新增：先查落地快取（跨應用程式重啟／跨不同場次直播都能沿用），
+                // 沒命中才真的發送網路請求，下載完成後順手寫回落地快取供下次使用。
+                byte[]? bytes = AvatarDiskCache.TryRead(imageUrl);
+
+                if (bytes == null)
+                {
+                    bytes = await httpClient.GetByteArrayAsync(imageUrl);
+
+                    AvatarDiskCache.Write(imageUrl, bytes);
+                }
 
                 using MemoryStream memoryStream = new(bytes);
+                using Image loadedImage = Image.FromStream(memoryStream);
 
-                return Image.FromStream(memoryStream);
+                // 2026/8 修正：Image.FromStream 預設不會把像素資料複製進記憶體，而是延遲讀取來源
+                // 串流；原本直接把 loadedImage 回傳出去，上面的 using 會在這個方法返回時把
+                // memoryStream Dispose 掉，之後 ImageList 真正要繪製這張圖片（發生在更後面、
+                // 非同步完成後的畫面重繪階段）時，讀取的其實是已經釋放的串流——這是 GDI+ 層級的
+                // 靜默失敗（不會拋出可攔截的例外），實際症狀是圖片「成功」加入 ImageList、
+                // Images.Count 也正確累加，畫面上卻永遠是空白。改成 new Bitmap(loadedImage) 建立
+                // 一份不依賴來源串流的獨立複本，才能安全地在 memoryStream 釋放後繼續使用。
+                return new Bitmap(loadedImage);
             }
             catch (Exception ex)
             {

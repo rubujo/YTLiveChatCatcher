@@ -228,10 +228,15 @@ public partial class FMain
                                     WriteLog(errorMessage);
                                 }
 
-                                // 2026/8 修正：理由同 DoProcessMessages 對應的修正——VirtualMode 下頭像下載
-                                // 完成不會自動觸發這一列重繪，匯入一次會湧入大量訊息、下載完成時通常也已經
-                                // 沒有後續批次會順便重繪掉，這裡主動補一次。
-                                RedrawListViewItem(lvItem);
+                                // 2026/8 修正（真正的根本原因，理由同 DoProcessMessages 對應的修正）：
+                                // VirtualMode 下用字串鍵值的 ImageKey 是已知不可靠的做法，必須改用整數索引
+                                // 的 ImageIndex；下載完成後才知道實際索引，用 IndexOfKey 查出來再指定。
+                                int imageIndex = LVLiveChatList.SmallImageList.Images.IndexOfKey(imgKey);
+
+                                if (imageIndex >= 0)
+                                {
+                                    lvItem.ImageIndex = imageIndex;
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -239,8 +244,6 @@ public partial class FMain
                             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
                         }
                     });
-
-                    lvItem.ImageKey = imgKey;
                 }
 
                 // 先過濾以避免加入到重複的資料：優先以訊息 ID 判斷，沒有 ID 值時才退回舊版判斷方式，
@@ -284,6 +287,7 @@ public partial class FMain
             await LVLiveChatList.InvokeAsyncIfRequired(() =>
             {
                 LVLiveChatList.BeginUpdate();
+                AutoFitListViewColumns(LVLiveChatList, listTempItem);
                 SharedListViewItems.AddRange(listTempItem);
                 LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
 
@@ -293,6 +297,12 @@ public partial class FMain
                 }
 
                 LVLiveChatList.EndUpdate();
+
+                // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面批次
+                // 因為 RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見 DoProcessMessages
+                // 頭像下載完成處的說明）。匯入大檔案時批次數量可能很多，改用節流版避免短時間內
+                // 觸發大量重複的重繪。
+                InvalidateLiveChatListThrottled();
             });
 
             UpdateSummaryInfo();

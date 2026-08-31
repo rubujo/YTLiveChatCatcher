@@ -130,9 +130,15 @@ public partial class FSearch : Form
 
                         LVFilteredList.BeginUpdate();
                         SharedFilteredListViewItems.Clear();
+                        FMain.AutoFitListViewColumns(LVFilteredList, dataSet.OfType<ListViewItem>().ToList());
                         SharedFilteredListViewItems.AddRange(dataSet!);
                         LVFilteredList.VirtualListSize = SharedFilteredListViewItems.Count;
                         LVFilteredList.EndUpdate();
+
+                        // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，避免
+                        // 複製過來的 ListViewItem 引用了共用 ImageList 裡剛好還在下載中的頭像
+                        // （理由同 FMain.Methods.cs 頭像下載完成處的說明）。
+                        LVFilteredList.Invalidate();
                     }
 
                     LChatCount.InvokeIfRequired(() =>

@@ -73,6 +73,16 @@ public partial class FMain
     private readonly List<ListViewItem> SharedListViewItems = [];
 
     /// <summary>
+    /// 上一次對 <c>LVLiveChatList</c> 呼叫 <see cref="Control.Invalidate()"/> 的時間戳記，供
+    /// <see cref="InvalidateLiveChatListThrottled"/> 節流用。重播影片一次可能連續處理數十個批次
+    /// （集中在數秒內完成），每個批次的 EndUpdate() 後都會嘗試補一次 Invalidate() 撿回被
+    /// BeginUpdate 視窗吃掉的頭像重繪（見 AGENTS.md 的說明），若不節流，密集批次期間會在極短時間內
+    /// 觸發大量重繪，即使 VirtualMode 下每次成本只跟目前可視列數有關（不是整份聊天記錄），密集疊加
+    /// 還是有感覺卡頓的風險。
+    /// </summary>
+    private DateTime SharedLastLiveChatListInvalidateUtc = DateTime.MinValue;
+
+    /// <summary>
     /// 依訊息 ID（<see cref="RendererData.ID"/>）索引現有的 ListViewItem。
     /// <para>用於「留言已被刪除」／「投票結果更新」等以 ID 關聯回原始留言的事件，
     /// 讓這類事件能 O(1) 找到對應列並就地更新，而不是被誤判成新留言加入清單。

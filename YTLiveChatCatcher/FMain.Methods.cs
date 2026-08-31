@@ -185,10 +185,16 @@ public partial class FMain
 
         listview.Columns.AddRange(columnHeaders);
 
+        // 2026/8 修正：原本用 Depth32Bit，但 WinForms ImageList 在 32-bit 色深下對 alpha 通道的處理
+        // 已知有瑕疵（.NET 8 起 32-bit 才是預設值，之前一直是 8-bit）——即使來源圖片（頭像固定是
+        // JPEG，本身沒有 alpha 通道）沒有透明度需求，內部格式轉換仍可能把 alpha 處理成 0（全透明），
+        // 造成圖片實際上加入成功、SmallImageList.Images 也確實有這筆資料，畫面上卻完全看不到（已用
+        // 診斷紀錄逐步排除下載失敗／未加入 ImageList／找不到列這幾種可能，才查到這個已知限制）。
+        // 頭像不需要透明背景，改用 Depth24Bit 完全避開 alpha 通道處理，不受這個限制影響。
         ImageList imageList = new()
         {
             ImageSize = new Size(32, 32),
-            ColorDepth = ColorDepth.Depth32Bit
+            ColorDepth = ColorDepth.Depth24Bit
         };
 
         listview.SmallImageList = imageList;
@@ -201,6 +207,99 @@ public partial class FMain
     private void LVLiveChatList_RetrieveVirtualItem(object? sender, RetrieveVirtualItemEventArgs e)
     {
         e.Item = SharedListViewItems[e.ItemIndex];
+    }
+
+    // 對應 InitListView 的 columnHeaders 陣列索引，每個可見欄位各自的上限寬度；HasIcon 只有
+    // 「作者名稱」是 true（該欄位左側還要留給頭像圖示的空間）。
+    //
+    // 2026/8 修正：原本這裡不含「訊息」欄位（索引 2），改成由其他欄位變寬時「跟訊息欄搶位子」
+    // （從訊息欄扣掉等量寬度），把總欄寬預算鎖死在 InitListView 開頭那段安全緩衝的範圍內——
+    // 但訊息內容本身才是使用者最需要看清楚的部分，不應該為了遷就這個預算被截斷。改成訊息欄
+    // 也一併列入自動加寬，且每一欄都獨立依內容加寬，不再互相搶位子；加總後若超出 ListView
+    // 目前的可視寬度，讓 WinForms 自然出現水平捲軸即可——這是使用者能理解、可以主動捲動看到
+    // 完整內容的標準行為，比把內容硬截斷成「...」永久看不到更好。
+    private static readonly (int ColumnIndex, int MaxWidth, bool HasIcon)[] AutoFitColumnRules =
+    [
+        (0, 200, true),   // 作者名稱
+        (1, 130, false),  // 徽章
+        (2, 500, false),  // 訊息
+        (3, 110, false),  // 金額
+        (4, 210, false),  // 時間（TimestampUsec，實際內容是已轉成當地語系格式的日期時間字串，長度變化很大）
+        (5, 120, false),  // 類型
+        (12, 140, false), // 排行榜
+        (13, 100, false), // 回覆數
+    ];
+
+    private const int AutoFitAuthorNameIconWidth = 32;
+    private const int AutoFitCellPadding = 16;
+
+    /// <summary>
+    /// 依這一批新加入的內容動態調整各欄位寬度，讓內容不再被省略號截斷。
+    /// <para>每一欄都獨立依內容加寬（互不影響彼此），只會變寬、不會縮回去（避免捲動到不同批次時欄寬
+    /// 忽大忽小）；加總後若超出 ListView 目前的可視寬度，交給 WinForms 自然出現水平捲軸。
+    /// LVLiveChatList／LVFilteredList 共用同一份 InitListView 建立的欄位配置，這裡也一併共用，
+    /// 兩邊都要呼叫。</para>
+    /// </summary>
+    /// <param name="listView">ListView，LVLiveChatList 或 LVFilteredList</param>
+    /// <param name="newItems">List&lt;ListViewItem&gt;，這一批新增的項目</param>
+    public static void AutoFitListViewColumns(ListView listView, List<ListViewItem> newItems)
+    {
+        if (newItems.Count == 0)
+        {
+            return;
+        }
+
+        using Graphics graphics = listView.CreateGraphics();
+
+        foreach ((int columnIndex, int maxWidth, bool hasIcon) in AutoFitColumnRules)
+        {
+            int requiredWidth = listView.Columns[columnIndex].Width;
+
+            foreach (ListViewItem item in newItems)
+            {
+                // 第 0 欄（作者名稱）用的是 ListViewItem.Text 本身，其餘欄位才是對應索引的 SubItems。
+                string text = columnIndex == 0 ? item.Text : item.SubItems[columnIndex].Text;
+                int measuredWidth = TextRenderer.MeasureText(graphics, text, listView.Font).Width + AutoFitCellPadding;
+
+                if (hasIcon)
+                {
+                    measuredWidth += AutoFitAuthorNameIconWidth;
+                }
+
+                requiredWidth = Math.Max(requiredWidth, measuredWidth);
+            }
+
+            listView.Columns[columnIndex].Width = Math.Min(requiredWidth, maxWidth);
+        }
+    }
+
+    /// <summary>
+    /// 最短間隔（毫秒）：兩次 <see cref="InvalidateLiveChatListThrottled"/> 之間至少要間隔這麼久，
+    /// 才會真的呼叫 <c>LVLiveChatList.Invalidate()</c>。對人眼而言遠低於能感知到延遲的門檻，
+    /// 但足以避免重播密集批次期間短時間內觸發大量重複的整可視範圍重繪。
+    /// </summary>
+    private const int LiveChatListInvalidateThrottleMs = 250;
+
+    /// <summary>
+    /// 節流版的 <c>LVLiveChatList.Invalidate()</c>：每個批次的 EndUpdate() 之後都要補一次 Invalidate()
+    /// 撿回頭像下載完成時被 BeginUpdate 視窗吃掉的重繪（見 AGENTS.md 的說明），但重播密集批次期間
+    /// 可能在數秒內連續呼叫數十次，這裡限制最短間隔，超過門檻才真的觸發重繪。
+    /// <para>這裡只節流「per-batch 的補償重繪」這個情境，不能拿來取代整場擷取真正停止時
+    /// （<see cref="BtnStop_Click"/>）的那次 Invalidate()——那次是保證流程結束後只會觸發一次的
+    /// 最終收尾動作，不在密集迴圈裡，沒有節流的必要，也不應該被節流影響到而漏掉。</para>
+    /// </summary>
+    private void InvalidateLiveChatListThrottled()
+    {
+        DateTime now = DateTime.UtcNow;
+
+        if ((now - SharedLastLiveChatListInvalidateUtc).TotalMilliseconds < LiveChatListInvalidateThrottleMs)
+        {
+            return;
+        }
+
+        SharedLastLiveChatListInvalidateUtc = now;
+
+        LVLiveChatList.Invalidate();
     }
 
     /// <summary>
@@ -1641,13 +1740,31 @@ public partial class FMain
                                     WriteLog(errorMessage);
                                 }
 
-                                // 2026/8 修正：VirtualMode 下，SmallImageList.Images 多出一張圖片不會自動觸發
-                                // 這一列重繪（非 VirtualMode 才會）。直播時訊息會持續進來，靠後續批次的
-                                // BeginUpdate／EndUpdate 順便重繪掉，所以這個缺口不明顯；但重播一次會湧入
-                                // 大量訊息（遠多於直播的逐則到達），此時仍在下載中的頭像數量成比例增加，
-                                // 且重播抓完後就不會再有後續批次觸發重繪，導致這些頭像永遠下載完成但畫面上
-                                // 一直是空白——這裡下載完成後主動補一次重繪，讓已完成下載的頭像顯示出來。
-                                RedrawListViewItem(lvItem);
+                                // 2026/8 修正（真正的根本原因）：VirtualMode 下透過 RetrieveVirtualItem 供應的
+                                // 項目，用字串鍵值的 ImageKey 是已知不可靠的做法——即使 ImageList.Images 裡
+                                // 確實有這個 key（用暫時性的診斷紀錄逐步確認過下載／加入 ImageList／
+                                // SharedListViewItems 索引查找全部正確執行），圖示還是不會顯示，這是
+                                // WinForms VirtualMode 的既有限制，跟資料是否正確、重繪時機是否正確都無關。
+                                // 必須改用整數索引的 ImageIndex 才能正常運作。下載是非同步的，建立
+                                // ListViewItem 當下還不知道這張圖片最後會落在 ImageList 的哪個索引，
+                                // 要等這裡下載完成（或確認先前已經快取過）之後，用 IndexOfKey 查出實際
+                                // 索引再指定；ImageIndex／ImageKey 兩者互斥，指定 ImageIndex 會自動清掉
+                                // 先前可能設過的 ImageKey，不需要另外清除。
+                                int imageIndex = LVLiveChatList.SmallImageList.Images.IndexOfKey(imgKey);
+
+                                if (imageIndex >= 0)
+                                {
+                                    lvItem.ImageIndex = imageIndex;
+                                }
+
+                                // VirtualMode 下 SmallImageList.Images 多出一張圖片、或 ImageIndex 被改變，
+                                // 都不會自動觸發這一列重繪（非 VirtualMode 才會）。這裡不直接呼叫
+                                // RedrawListViewItem(lvItem)：實測過 RedrawItems 在批次密集時很容易撞上
+                                // 下一個批次自己的 BeginUpdate 視窗而被吃掉、不會補跑（微軟官方文件已記載
+                                // 這個限制）。改成呼叫端統一在每個批次自己的 EndUpdate() 之後、以及整場
+                                // 擷取結束時各補一次節流過的 Invalidate()（見 DoProcessMessages／
+                                // LoadXLSX／BtnStop_Click），確保一定會落在沒有任何 BeginUpdate 視窗的
+                                // 時間點。
                             }
                         }
                         catch (Exception ex)
@@ -1655,8 +1772,6 @@ public partial class FMain
                             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
                         }
                     });
-
-                    lvItem.ImageKey = imgKey;
                 }
 
                 // 登記進關聯用的索引，讓之後同一批次或後續批次的刪除／封鎖／回覆數更新／
@@ -1697,6 +1812,7 @@ public partial class FMain
             // 跟實際收到的順序不一致。改成直接呼叫，讓 InvokeAsyncIfRequired 的 await 真正等到這批資料
             // 完整插入畫面後才算完成，才能保證批次之間嚴格照收到的順序處理。
             LVLiveChatList.BeginUpdate();
+            AutoFitListViewColumns(LVLiveChatList, listTempItem);
             SharedListViewItems.AddRange(listTempItem);
             LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
 
@@ -1709,6 +1825,11 @@ public partial class FMain
             }
 
             LVLiveChatList.EndUpdate();
+
+            // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面批次因為
+            // RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見上方頭像下載完成處的說明）。
+            // 重播密集批次可能短時間內連續呼叫這裡，改用節流版避免短時間內觸發大量重複的重繪。
+            InvalidateLiveChatListThrottled();
 
             UpdateSummaryInfo();
         }
