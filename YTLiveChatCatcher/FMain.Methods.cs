@@ -1640,6 +1640,14 @@ public partial class FMain
                                 {
                                     WriteLog(errorMessage);
                                 }
+
+                                // 2026/8 修正：VirtualMode 下，SmallImageList.Images 多出一張圖片不會自動觸發
+                                // 這一列重繪（非 VirtualMode 才會）。直播時訊息會持續進來，靠後續批次的
+                                // BeginUpdate／EndUpdate 順便重繪掉，所以這個缺口不明顯；但重播一次會湧入
+                                // 大量訊息（遠多於直播的逐則到達），此時仍在下載中的頭像數量成比例增加，
+                                // 且重播抓完後就不會再有後續批次觸發重繪，導致這些頭像永遠下載完成但畫面上
+                                // 一直是空白——這裡下載完成後主動補一次重繪，讓已完成下載的頭像顯示出來。
+                                RedrawListViewItem(lvItem);
                             }
                         }
                         catch (Exception ex)

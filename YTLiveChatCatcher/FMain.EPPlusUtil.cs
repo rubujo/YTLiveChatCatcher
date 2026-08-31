@@ -227,6 +227,11 @@ public partial class FMain
                                 {
                                     WriteLog(errorMessage);
                                 }
+
+                                // 2026/8 修正：理由同 DoProcessMessages 對應的修正——VirtualMode 下頭像下載
+                                // 完成不會自動觸發這一列重繪，匯入一次會湧入大量訊息、下載完成時通常也已經
+                                // 沒有後續批次會順便重繪掉，這裡主動補一次。
+                                RedrawListViewItem(lvItem);
                             }
                         }
                         catch (Exception ex)
