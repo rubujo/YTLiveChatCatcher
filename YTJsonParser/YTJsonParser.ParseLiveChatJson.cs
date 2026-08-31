@@ -385,8 +385,12 @@ public partial class YTJsonParser
 
                     if (playerSeekContinuationData.HasValue)
                     {
-                        // 略過不進行任何的處理。
+                        // 略過不進行任何的處理（重播回應常會同時附上這個 continuation，供播放器拖曳
+                        // 進度條時使用，跟聊天室輪詢無關）。2026/8 修正：先前這裡漏了 continue，
+                        // 即使辨識出是已知、故意略過的類型，還是會往下掉到「尚未支援的內容」誤發警告。
                         LogMessages.Trace(_logger, "ParseContinuation -> playerSeekContinuationData", playerSeekContinuationData.Value.GetRawText());
+
+                        continue;
                     }
 
                     #endregion
