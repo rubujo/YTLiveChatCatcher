@@ -10,6 +10,17 @@ namespace YTLiveChatCatcher.Extensions;
 public static class ListViewExtension
 {
     /// <summary>
+    /// 單一 ImageList 允許累積的頭像圖示上限。
+    /// <para>2026/9 新增：只有使用者手動按「清除」才會釋放 SmallImageList.Images（見
+    /// FMain.cs 的 BtnClear_Click，單純按「停止」不會清空，這是刻意設計，讓當機復原情境下
+    /// 重新載入時舊頭像還在）。超長時間、超熱門直播的不重複留言者數量在極端情況下可能逼近或
+    /// 超過 Windows 每個處理程序的 GDI 控制代碼配額（預設 10,000），這裡設一個遠低於配額的
+    /// 軟上限，超過後不再新增頭像圖示（不影響訊息本身正常擷取，該作者只是這次沒有專屬頭像
+    /// 圖示），避免耗盡 GDI 資源拖累或搞壞其他視窗繪製。使用者可以隨時按「清除」重置這個上限。</para>
+    /// </summary>
+    private const int MaxImageListEntries = 5000;
+
+    /// <summary>
     /// 取得選擇的 ListViewItem
     /// </summary>
     /// <param name="listView">ListView</param>
@@ -44,6 +55,12 @@ public static class ListViewExtension
             return string.Empty;
         }
 
+        // 已達軟上限，不再新增頭像圖示（見 MaxImageListEntries 的說明），直接跳過、不觸發下載。
+        if (imageCollection.Count >= MaxImageListEntries)
+        {
+            return string.Empty;
+        }
+
         // 以 key 為鍵值，將 Image 暫存 10 分鐘。
         Image image = await BetterCacheManager.GetCachableData(key, async () =>
         {
@@ -56,7 +73,9 @@ public static class ListViewExtension
 
                 // 2026/8 新增：先查落地快取（跨應用程式重啟／跨不同場次直播都能沿用），
                 // 沒命中才真的發送網路請求，下載完成後順手寫回落地快取供下次使用。
-                byte[]? bytes = AvatarDiskCache.TryRead(imageUrl);
+                // 2026/9 修正：改用非同步版本（TryReadAsync／WriteAsync），見 AvatarDiskCache.cs
+                // 的方法註解——避免快取命中時整段磁碟 I/O 在 UI 執行緒上同步跑完。
+                byte[]? bytes = await AvatarDiskCache.TryReadAsync(imageUrl);
                 bool isFreshlyDownloaded = bytes == null;
 
                 if (bytes == null)
@@ -76,7 +95,7 @@ public static class ListViewExtension
                 // 做無意義的重複寫入。
                 if (isFreshlyDownloaded)
                 {
-                    AvatarDiskCache.Write(imageUrl, bytes);
+                    await AvatarDiskCache.WriteAsync(imageUrl, bytes);
                 }
 
                 // 2026/8 修正：Image.FromStream 預設不會把像素資料複製進記憶體，而是延遲讀取來源

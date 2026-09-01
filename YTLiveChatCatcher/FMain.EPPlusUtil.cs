@@ -61,29 +61,78 @@ public partial class FMain
                 return;
             }
 
-            List<ListViewItem> listTempItem = [];
+            // 2026/9 修正：itemsSeenWithoutId 讓「沒有 ID 值」的舊格式列改用 O(1) 雜湊查找去重，
+            // 取代原本對整份累積清單做 .Any(...) 的 O(n) 線性掃描——舊格式匯出檔案沒有 ID 欄位是
+            // 被刻意保留支援的真實情境（見 AGENTS.md），大檔案（例如上萬列）下線性掃描會讓匯入
+            // 耗時從數秒暴增到數十秒。
+            HashSet<(string AuthorName, string TimestampUsec)> itemsSeenWithoutId = [];
 
-            int rowIdx1 = 2;
+            // 2026/9 修正：AutoFitListViewColumns 原本被整份匯入檔案（可能上千列）一次呼叫，在
+            // UI 執行緒同步跑完全部欄寬量測，會讓畫面在匯入大檔案時凍結數秒。改成每累積到一定
+            // 筆數就先把這批 flush 進畫面（呼叫模式比照 DoProcessMessages 逐批處理的做法），
+            // 讓 UI 有機會在批次之間處理繪製／輸入訊息，不會整段匯入期間完全沒有回應。
+            const int FlushBatchSize = 200;
 
-            for (int i = rowIdx1; i <= sheet1.Rows.EndRow; i++)
+            List<ListViewItem> currentBatch = [];
+
+            async Task FlushCurrentBatchAsync()
             {
-                string authorName = sheet1.Cells[rowIdx1, 2].Text;
-                string authorBages = sheet1.Cells[rowIdx1, 3].Text;
-                string authorPhotoUrl = sheet1.Cells[rowIdx1, 11].Text;
-                string messageContent = sheet1.Cells[rowIdx1, 4].Text;
-                string purchaseAmmount = sheet1.Cells[rowIdx1, 5].Text;
-                string timestampUsec = sheet1.Cells[rowIdx1, 6].Text;
-                string type = sheet1.Cells[rowIdx1, 7].Text;
-                string foregroundColor = sheet1.Cells[rowIdx1, 8].Text;
-                string backgroundColor = sheet1.Cells[rowIdx1, 9].Text;
-                string timestampText = sheet1.Cells[rowIdx1, 10].Text;
-                string authorExternalChannelID = sheet1.Cells[rowIdx1, 12].Text;
-                string id = sheet1.Cells[rowIdx1, 13].Text;
+                if (currentBatch.Count == 0)
+                {
+                    return;
+                }
+
+                List<ListViewItem> batchToFlush = currentBatch;
+
+                currentBatch = [];
+
+                await LVLiveChatList.InvokeAsyncIfRequired(() =>
+                {
+                    LVLiveChatList.BeginUpdate();
+                    AutoFitListViewColumns(LVLiveChatList, batchToFlush);
+                    SharedListViewItems.AddRange(batchToFlush);
+                    LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+
+                    if (SharedListViewItems.Count > 0)
+                    {
+                        LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
+                    }
+
+                    LVLiveChatList.EndUpdate();
+
+                    // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面
+                    // 批次因為 RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見
+                    // DoProcessMessages 頭像下載完成處的說明）。匯入大檔案時批次數量可能很多，
+                    // 改用節流版避免短時間內觸發大量重複的重繪。
+                    InvalidateLiveChatListThrottled();
+                });
+            }
+
+            // 2026/9 修正：原本用兩個計數器——for 迴圈的 i 判斷是否結束、獨立的 rowIdx1 定位儲存格，
+            // 只在「從不觸發 continue」時兩者才同步遞增。下面「type 為空就 continue」那段會跳過
+            // rowIdx1++（原本寫在迴圈最後），導致下一輪用同一個 rowIdx1 再讀一次同一列、再度是空
+            // type、再度 continue……i 持續逼近 EndRow 但 rowIdx1 永遠卡住，之後所有列都不會被讀到，
+            //且沒有任何錯誤提示，資料被靜默截斷。改成只用單一個 i 當儲存格列索引，不再需要
+            // 另一個計數器保持同步。
+            for (int i = 2; i <= sheet1.Rows.EndRow; i++)
+            {
+                string authorName = sheet1.Cells[i, 2].Text;
+                string authorBages = sheet1.Cells[i, 3].Text;
+                string authorPhotoUrl = sheet1.Cells[i, 11].Text;
+                string messageContent = sheet1.Cells[i, 4].Text;
+                string purchaseAmmount = sheet1.Cells[i, 5].Text;
+                string timestampUsec = sheet1.Cells[i, 6].Text;
+                string type = sheet1.Cells[i, 7].Text;
+                string foregroundColor = sheet1.Cells[i, 8].Text;
+                string backgroundColor = sheet1.Cells[i, 9].Text;
+                string timestampText = sheet1.Cells[i, 10].Text;
+                string authorExternalChannelID = sheet1.Cells[i, 12].Text;
+                string id = sheet1.Cells[i, 13].Text;
                 // 2026/8 新增：舊版匯出的 *.xlsx 檔案不會有這幾欄，讀取到空字串是正常情況。
-                string leaderboardRank = sheet1.Cells[rowIdx1, 14].Text;
-                string replyCount = sheet1.Cells[rowIdx1, 15].Text;
-                string headerBackgroundColor = sheet1.Cells[rowIdx1, 16].Text;
-                string replyCountEntityKey = sheet1.Cells[rowIdx1, 17].Text;
+                string leaderboardRank = sheet1.Cells[i, 14].Text;
+                string replyCount = sheet1.Cells[i, 15].Text;
+                string headerBackgroundColor = sheet1.Cells[i, 16].Text;
+                string replyCountEntityKey = sheet1.Cells[i, 17].Text;
 
                 // 當 "type" 為 null 或空值時，直接進入下一個。
                 if (string.IsNullOrEmpty(type))
@@ -206,7 +255,10 @@ public partial class FMain
 
                 if (!string.IsNullOrEmpty(authorPhotoUrl))
                 {
-                    string imgKey = authorName;
+                    // 理由同 DoProcessMessages 對應的修正：顯示名稱不保證唯一，改用頻道 ID 當 key。
+                    string imgKey = !string.IsNullOrEmpty(authorExternalChannelID) ?
+                        authorExternalChannelID :
+                        authorName;
 
                     LVLiveChatList.InvokeIfRequired(async () =>
                     {
@@ -255,13 +307,17 @@ public partial class FMain
                 // 邏輯與 DoProcessMessages 一致。
                 bool isDuplicate = !string.IsNullOrEmpty(id) ?
                     SharedItemsByMessageID.ContainsKey(id) :
-                    listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec);
+                    itemsSeenWithoutId.Contains((authorName, timestampUsec));
 
                 if (!isDuplicate)
                 {
                     if (!string.IsNullOrEmpty(id))
                     {
                         SharedItemsByMessageID[id] = lvItem;
+                    }
+                    else
+                    {
+                        itemsSeenWithoutId.Add((authorName, timestampUsec));
                     }
 
                     if (!string.IsNullOrEmpty(authorExternalChannelID))
@@ -283,32 +339,16 @@ public partial class FMain
 
                     RegisterNewListViewItemStats(type, authorBages, authorName, purchaseAmmount);
 
-                    listTempItem.Add(lvItem);
-                }
+                    currentBatch.Add(lvItem);
 
-                rowIdx1++;
+                    if (currentBatch.Count >= FlushBatchSize)
+                    {
+                        await FlushCurrentBatchAsync();
+                    }
+                }
             }
 
-            await LVLiveChatList.InvokeAsyncIfRequired(() =>
-            {
-                LVLiveChatList.BeginUpdate();
-                AutoFitListViewColumns(LVLiveChatList, listTempItem);
-                SharedListViewItems.AddRange(listTempItem);
-                LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
-
-                if (SharedListViewItems.Count > 0)
-                {
-                    LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
-                }
-
-                LVLiveChatList.EndUpdate();
-
-                // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面批次
-                // 因為 RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見 DoProcessMessages
-                // 頭像下載完成處的說明）。匯入大檔案時批次數量可能很多，改用節流版避免短時間內
-                // 觸發大量重複的重繪。
-                InvalidateLiveChatListThrottled();
-            });
+            await FlushCurrentBatchAsync();
 
             UpdateSummaryInfo();
 

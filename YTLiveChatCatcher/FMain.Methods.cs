@@ -9,6 +9,7 @@ using Rubujo.YouTube.Utility.Utils;
 using Size = System.Drawing.Size;
 using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using System.Runtime.Versioning;
+using System.Text;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
@@ -1220,11 +1221,14 @@ public partial class FMain
             // GetSelectedListViewItems()（ListViewExtension.cs）取代，兩種模式都適用。
             IEnumerable<ListViewItem> selectedItems = listView.GetSelectedListViewItems();
 
-            string copiedContent = string.Empty;
+            // 2026/9 修正：改用 StringBuilder 取代字串 += 逐次串接。VirtualMode 下
+            // GetSelectedListViewItems() 理論上可以選取到全部列（例如 Ctrl+A），長時間直播累積
+            // 數萬筆資料時，字串 += 每次都要配置一份新字串複本，對這麼多列全選後複製會有明顯延遲。
+            StringBuilder copiedContentBuilder = new();
 
             foreach (ListViewItem listViewItem in selectedItems)
             {
-                string tempContent = string.Empty;
+                StringBuilder tempContentBuilder = new();
 
                 int count = 0;
 
@@ -1232,21 +1236,23 @@ public partial class FMain
                 {
                     string currentContent = listViewSubItem.Text;
 
-                    tempContent += currentContent;
+                    tempContentBuilder.Append(currentContent);
 
                     if (count != listViewItem.SubItems.Count - 1)
                     {
                         if (!string.IsNullOrEmpty(currentContent))
                         {
-                            tempContent += StringSet.Splitter;
+                            tempContentBuilder.Append(StringSet.Splitter);
                         }
                     }
 
                     count++;
                 }
 
-                copiedContent += $"{tempContent}{Environment.NewLine}";
+                copiedContentBuilder.Append(tempContentBuilder).Append(Environment.NewLine);
             }
+
+            string copiedContent = copiedContentBuilder.ToString();
 
             // 沒有選取任何列時 copiedContent 會是空字串——Clipboard.SetText 對空字串會直接拋
             // ArgumentException（跟 null 一樣不允許），這裡先擋掉，避免雙擊 ListView 空白處炸掉。
@@ -1756,7 +1762,15 @@ public partial class FMain
 
                 if (!string.IsNullOrEmpty(authorPhotoUrl))
                 {
-                    string imgKey = authorName;
+                    // 2026/9 修正：原本用作者「顯示名稱」當頭像快取／ImageList 的 key，但顯示名稱不保證
+                    // 唯一——只要同一批次或同一次執行期間出現兩個顯示名稱相同、實際是不同頻道的使用者，
+                    // 後出現的那位會直接沿用前一位的頭像（imageUrl 參數被完全忽略），因為
+                    // ImageList.ContainsKey(key)／BetterCacheManager 的快取都會命中。改用頻道 ID
+                    // （YouTube 保證唯一，不會像顯示名稱一樣重複）當 key，找不到頻道 ID 時才退回顯示名稱
+                    // （例如某些系統類型的訊息可能沒有頻道 ID）。
+                    string imgKey = !string.IsNullOrEmpty(authorExternalChannelID) ?
+                        authorExternalChannelID :
+                        authorName;
 
                     LVLiveChatList.InvokeIfRequired(async () =>
                     {
@@ -2070,8 +2084,17 @@ public partial class FMain
 
         foreach (ListViewItem.ListViewSubItem subItem in lvItem.SubItems)
         {
-            subItem.Font = new Font(subItem.Font ?? lvItem.Font, FontStyle.Strikeout);
+            // 2026/9 修正：這個方法理論上可能對同一列被呼叫兩次（例如一則留言先被刪除，
+            // 之後其作者又被封鎖），第二次呼叫時 subItem.Font 已經是第一次呼叫建立的 Font
+            // 執行個體，直接覆蓋掉、不 Dispose 舊的會造成 GDI 資源小洩漏。這裡的 subItem.Font
+            // 只有可能是 null（尚未被設定過，繼承 lvItem.Font，不能 Dispose）或是這個方法自己
+            // 先前建立的 Font（可以安全 Dispose），先記住舊值，指派新值之後再 Dispose 舊的。
+            Font? previousFont = subItem.Font;
+
+            subItem.Font = new Font(previousFont ?? lvItem.Font, FontStyle.Strikeout);
             subItem.ForeColor = Color.Gray;
+
+            previousFont?.Dispose();
         }
     }
 

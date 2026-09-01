@@ -88,8 +88,11 @@ public partial class FSearch : Form
         }
     }
 
-    private void BtnSearch_Click(object sender, EventArgs e)
+    private async void BtnSearch_Click(object sender, EventArgs e)
     {
+        // 此事件必定於 UI 執行緒觸發，不需要透過 InvokeIfRequired 轉送
+        // （InvokeIfRequired 吃的是 void 委派，若傳入 async lambda 會變成 async void，
+        // 第一個 await 之後拋出的例外無法被這裡的 try/catch 攔截）。
         try
         {
             string keyword = string.Empty;
@@ -101,37 +104,49 @@ public partial class FSearch : Form
 
             if (!string.IsNullOrEmpty(keyword))
             {
-                LVFilteredList.InvokeIfRequired(() =>
+                // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
+                // GetSharedListViewItems()（見 FMain.Methods.cs）。
+                List<ListViewItem> dataSet = _FMain.GetSharedListViewItems()
+                    .Where(n => n.SubItems[0].Text.Contains(keyword) ||
+                        n.SubItems[2].Text.Contains(keyword) ||
+                        n.SubItems[5].Text.Contains(keyword))
+                    .Select(n => (ListViewItem)n.Clone())
+                    .Reverse()
+                    .ToList();
+
+                if (dataSet.Count <= 0)
                 {
-                    // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
-                    // GetSharedListViewItems()（見 FMain.Methods.cs）。
-                    ListViewItem?[] dataSet = _FMain.GetSharedListViewItems()
-                        .Where(n => n.SubItems[0].Text.Contains(keyword) ||
-                            n.SubItems[2].Text.Contains(keyword) ||
-                            n.SubItems[5].Text.Contains(keyword))
-                        .Select(n => n.Clone() as ListViewItem)
-                        .Reverse()
-                        .ToArray();
+                    SharedFilteredListViewItems.Clear();
+                    LVFilteredList.VirtualListSize = 0;
 
-                    if (dataSet.Length <= 0)
-                    {
-                        SharedFilteredListViewItems.Clear();
-                        LVFilteredList.VirtualListSize = 0;
+                    MessageBox.Show(
+                        $"關鍵字「{keyword}」查無資料。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    LVFilteredList.SmallImageList = _LVLiveChatList.SmallImageList;
 
-                        MessageBox.Show(
-                            $"關鍵字「{keyword}」查無資料。",
-                            Text,
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                    else
+                    SharedFilteredListViewItems.Clear();
+                    LVFilteredList.VirtualListSize = 0;
+
+                    // 2026/9 修正：AutoFitListViewColumns 原本被整份搜尋結果（未分批）一次呼叫，
+                    // 在 UI 執行緒同步跑完全部欄寬量測；長時間直播累積數萬則訊息、關鍵字命中量
+                    // 大時，搜尋視窗會整個凍結數秒。改成分批 flush（比照 DoProcessMessages／
+                    // LoadXLSX 逐批處理的做法），批次之間用 await Task.Yield() 讓出控制權，
+                    // UI 才有機會處理繪製／輸入訊息。
+                    const int FlushBatchSize = 200;
+
+                    for (int offset = 0; offset < dataSet.Count; offset += FlushBatchSize)
                     {
-                        LVFilteredList.SmallImageList = _LVLiveChatList.SmallImageList;
+                        int batchSize = Math.Min(FlushBatchSize, dataSet.Count - offset);
+                        List<ListViewItem> batch = dataSet.GetRange(offset, batchSize);
 
                         LVFilteredList.BeginUpdate();
-                        SharedFilteredListViewItems.Clear();
-                        FMain.AutoFitListViewColumns(LVFilteredList, dataSet.OfType<ListViewItem>().ToList());
-                        SharedFilteredListViewItems.AddRange(dataSet!);
+                        FMain.AutoFitListViewColumns(LVFilteredList, batch);
+                        SharedFilteredListViewItems.AddRange(batch);
                         LVFilteredList.VirtualListSize = SharedFilteredListViewItems.Count;
                         LVFilteredList.EndUpdate();
 
@@ -139,12 +154,14 @@ public partial class FSearch : Form
                         // 複製過來的 ListViewItem 引用了共用 ImageList 裡剛好還在下載中的頭像
                         // （理由同 FMain.Methods.cs 頭像下載完成處的說明）。
                         LVFilteredList.Invalidate();
-                    }
 
-                    LChatCount.InvokeIfRequired(() =>
-                    {
-                        LChatCount.Text = $"留言數量：{SharedFilteredListViewItems.Count} 個";
-                    });
+                        await Task.Yield();
+                    }
+                }
+
+                LChatCount.InvokeIfRequired(() =>
+                {
+                    LChatCount.Text = $"留言數量：{SharedFilteredListViewItems.Count} 個";
                 });
             }
             else

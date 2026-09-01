@@ -42,8 +42,17 @@ public static class AvatarDiskCache
     /// 嘗試從落地快取讀取圖片的原始位元組
     /// </summary>
     /// <param name="imageUrl">字串，圖片的網址</param>
-    /// <returns>byte[]?，快取不存在、已過期或讀取失敗時回傳 null</returns>
-    public static byte[]? TryRead(string imageUrl)
+    /// <returns>Task&lt;byte[]?&gt;，快取不存在、已過期或讀取失敗時回傳 null</returns>
+    /// <remarks>
+    /// 2026/9 修正：改成非同步方法（File.ReadAllBytesAsync 取代 File.ReadAllBytes）。這個方法的
+    /// 呼叫鏈起點（ListViewExtension.SetAuthorPhoto → BetterCacheManager.GetOrCreateAsync 的
+    /// callback）常常是從已經在 UI 執行緒上的 LVLiveChatList.InvokeIfRequired(async () => ...) 觸發，
+    /// 而 callback 執行到第一個 await 之前都是同步的——原本這裡是同步的磁碟 I/O，剛好排在
+    /// callback 的最前面（第一個 await 之前），代表快取命中時整段檢查／讀取流程完全不會真正
+    /// 讓出執行緒，會在 UI 執行緒上同步跑完，重播湧入大量不重複留言者時，這是「積少成多」式的
+    /// UI 卡頓來源。改成非同步版本後，就算是快取命中的路徑，也會在磁碟讀取時真正讓出控制權。
+    /// </remarks>
+    public static async Task<byte[]?> TryReadAsync(string imageUrl)
     {
         try
         {
@@ -59,7 +68,7 @@ public static class AvatarDiskCache
                 return null;
             }
 
-            return File.ReadAllBytes(filePath);
+            return await File.ReadAllBytesAsync(filePath);
         }
         catch
         {
@@ -74,7 +83,8 @@ public static class AvatarDiskCache
     /// </summary>
     /// <param name="imageUrl">字串，圖片的網址</param>
     /// <param name="bytes">byte[]，圖片的原始位元組</param>
-    public static void Write(string imageUrl, byte[] bytes)
+    /// <returns>Task</returns>
+    public static async Task WriteAsync(string imageUrl, byte[] bytes)
     {
         try
         {
@@ -86,7 +96,7 @@ public static class AvatarDiskCache
                 Directory.CreateDirectory(directory);
             }
 
-            File.WriteAllBytes(filePath, bytes);
+            await File.WriteAllBytesAsync(filePath, bytes);
         }
         catch
         {
