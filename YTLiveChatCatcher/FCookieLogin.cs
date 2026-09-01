@@ -15,6 +15,19 @@ public partial class FCookieLogin : Form
     private readonly FMain _FMain;
 
     /// <summary>
+    /// WebView2 專屬 user data folder 的完整路徑，在 FCookieLogin_Load 建立 WebView2 環境時設定，
+    /// 供 BtnLogout_Click／FCookieLogin_FormClosing 需要清除整個 profile 目錄時使用。
+    /// </summary>
+    private string? _webView2ProfileDirectory;
+
+    /// <summary>
+    /// 使用者是否在這次開啟視窗期間按過「登出／清除已儲存資料」，設為 true 時會在
+    /// FCookieLogin_FormClosing（WebViewLogin.Dispose() 之後，檔案控制代碼才會釋放）
+    /// 嘗試清除整個 WebView2 profile 目錄，不只清 Cookie。
+    /// </summary>
+    private bool _pendingProfileCleanup;
+
+    /// <summary>
     /// 使用者確認後取得的 Cookie 字串（未確認則為 null）
     /// </summary>
     public string? ResultCookies { get; private set; }
@@ -41,12 +54,12 @@ public partial class FCookieLogin : Form
 
             // 使用應用程式自己專屬的 user data folder，
             // 刻意不指向使用者既有的 Edge／Chrome profile 路徑，避免碰到使用者日常瀏覽器的資料。
-            string profileDirectory = Path.Combine(
+            _webView2ProfileDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "YTLiveChatCatcher",
                 "WebView2Profile");
 
-            CoreWebView2Environment environment = await CoreWebView2Environment.CreateAsync(userDataFolder: profileDirectory);
+            CoreWebView2Environment environment = await CoreWebView2Environment.CreateAsync(userDataFolder: _webView2ProfileDirectory);
 
             await WebViewLogin.EnsureCoreWebView2Async(environment);
 
@@ -82,6 +95,27 @@ public partial class FCookieLogin : Form
     {
         // 確保 WebView2 底層資源被正確釋放，不影響下次開啟。
         WebViewLogin.Dispose();
+
+        // 2026/9 修正：BtnLogout_Click 原本只呼叫 CookieManager.DeleteAllCookies()，
+        // %LocalAppData%\YTLiveChatCatcher\WebView2Profile 目錄本身（cache、localStorage、
+        // IndexedDB 等，其中可能還留有 Google 登入相關的其他狀態）從未被刪除，且每次登入都會
+        // 持續累積，跟使用者直覺認知的「登出＝清乾淨」有落差。這裡等 WebViewLogin.Dispose()
+        // 釋放檔案控制代價之後才嘗試刪除，是 best-effort：檔案系統層面的清理失敗（例如系統
+        // 尚未完全釋放某個鎖）不應該讓關閉視窗這個動作本身失敗，靜默記錄即可。
+        if (_pendingProfileCleanup && !string.IsNullOrEmpty(_webView2ProfileDirectory))
+        {
+            try
+            {
+                if (Directory.Exists(_webView2ProfileDirectory))
+                {
+                    Directory.Delete(_webView2ProfileDirectory, recursive: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _FMain.GetSharedLogger().LogError("{ErrorMessage}", ex.GetExceptionMessage());
+            }
+        }
     }
 
     private async void BtnConfirm_Click(object sender, EventArgs e)
@@ -92,7 +126,29 @@ public partial class FCookieLogin : Form
 
             if (!string.IsNullOrWhiteSpace(TBManualCookie.Text))
             {
-                cookies = TBManualCookie.Text.Trim();
+                // 2026/9 修正：手動貼上的 Cookie 字串原本完全沒有格式驗證，只要含有換行字元
+                // （從瀏覽器開發人員工具或筆記軟體複製時很常見）就會在下游組 HTTP 標頭時
+                // （YTJsonParser.YouTubeAuth.cs 的 SetHttpRequestMessageHeader）讓 .NET 的
+                // HttpHeaders.Add 直接拋出 FormatException，而該例外的 Message 會把整段 Cookie
+                // 原文回顯出來——這條例外路徑不在程式原本設計好的 [REDACTED] 標頭遮蔽機制保護
+                // 範圍內，會讓 Cookie 明碼外洩進 Logs/log.txt 跟畫面上的記錄框。與其讓這個問題在
+                // 下游才被動出現，這裡先移除貼上內容中的所有控制字元（換行、Tab、NUL 等），
+                // 一般合法的 Cookie 內容不會用到控制字元，清理後不影響正常使用情境。
+                string sanitizedCookies = new(
+                    [.. TBManualCookie.Text.Trim().Where(c => !char.IsControl(c))]);
+
+                if (string.IsNullOrEmpty(sanitizedCookies))
+                {
+                    MessageBox.Show(
+                        "貼上的 Cookie 字串格式無效，請重新從瀏覽器複製。",
+                        Text,
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+
+                    return;
+                }
+
+                cookies = sanitizedCookies;
             }
             else
             {
@@ -158,6 +214,10 @@ public partial class FCookieLogin : Form
             WebViewLogin.CoreWebView2?.CookieManager.DeleteAllCookies();
 
             SecureCookieStore.Clear();
+
+            // 標記讓 FCookieLogin_FormClosing 在 WebViewLogin.Dispose() 釋放檔案控制代碼之後，
+            // 一併清除整個 WebView2 profile 目錄，不只清 Cookie。
+            _pendingProfileCleanup = true;
 
             TBManualCookie.InvokeIfRequired(TBManualCookie.Clear);
 

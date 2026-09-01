@@ -70,6 +70,10 @@ namespace YTLiveChatCatcher
             TBManualCookie.Size = new Size(860, 23);
             TBManualCookie.TabIndex = 2;
             TBManualCookie.AccessibleName = "手動貼上 Cookie 字串";
+            // 2026/9 修正：Cookie 等同一組身分憑證，原本以明碼顯示在畫面上，有螢幕錄影／偷窺
+            // 外洩的風險。改用系統密碼字元遮罩，貼上／複製／清除等操作行為不受影響，只是畫面
+            // 顯示變成圓點。
+            TBManualCookie.UseSystemPasswordChar = true;
             //
             // CBRememberCookie
             //

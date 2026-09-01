@@ -73,6 +73,17 @@ public static class SecureCookieStore
 
             return null;
         }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // 2026/9 修正：原本只攔截 CryptographicException，但 File.ReadAllBytes 若遇到檔案被
+            // 其他程式鎖住或權限異常，會拋出 IOException／UnauthorizedAccessException，不在原本
+            // 那個 catch 的保護範圍內，會一路未攔截地往上冒到啟動流程的通用 try/catch，讓啟動流程
+            // 提早中止、後續步驟（CheckCaptureRecovery、頭像快取清理、版本檢查）都不會執行。
+            // 這類情境是暫時性的讀取失敗，跟「密文本身已經損毀」完全不同——不應該比照
+            // CryptographicException 直接刪除檔案（檔案內容可能完全正常，只是這次讀不到），
+            // 單純視為這次讀取失敗、保留檔案供下次重試即可。
+            return null;
+        }
     }
 
     /// <summary>
