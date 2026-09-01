@@ -88,7 +88,12 @@ public partial class YTJsonParser
     /// <returns>布林值</returns>
     private static bool IsSensitiveHeaderName(string headerName) =>
         headerName.Equals("Cookie", StringComparison.OrdinalIgnoreCase) ||
-        headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase);
+        headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
+        // 2026/9 修正：X-Youtube-Identity-Token（YTJsonParser.YouTubeAuth.cs 的
+        // SetHttpRequestMessageHeader，帶的是 ytConfigData.IDToken）在敏感度上跟 Cookie／
+        // Authorization 相當，都是可以拿來代表使用者身分／工作階段的憑證，原本沒有列進遮蔽清單，
+        // 會在 Debug 等級的請求摘要記錄裡明碼寫進 Logs/log.txt。
+        headerName.Equals("X-Youtube-Identity-Token", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// 遮蔽 JSON 字串內指定屬性名稱的值，供記錄使用
