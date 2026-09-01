@@ -184,7 +184,21 @@ public partial class YTJsonParser
                     return initialData;
                 }
 
-                initialData.YTConfigData = ParseYtCfg(jeYtCfg);
+                // 2026/9 修正：上面的 JsonSerializer.Deserialize<JsonElement>(jsonYtCfg) 已經包了
+                // try/catch，但 ParseYtCfg 內部再做一次強型別反序列化（Deserialize<YtCfgDto>()）
+                // 沒有比照包，YtCfgDto 有幾個欄位宣告成不可為 null 的實值型別（例如
+                // InnertubeContextClientName 是 int），只要 YouTube 把對應欄位的型別改掉，這裡就會拋
+                // JsonException，且發生在任何訊息被抓到之前，代表這場擷取從一開始就完全失敗。
+                try
+                {
+                    initialData.YTConfigData = ParseYtCfg(jeYtCfg);
+                }
+                catch (JsonException ex)
+                {
+                    LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"解析 ytcfg 內容失敗：{ex.GetExceptionMessage()}");
+
+                    return initialData;
+                }
 
                 // 套用設定的語系。
                 if (hasRegionData)

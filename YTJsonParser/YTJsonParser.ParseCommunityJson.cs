@@ -1017,7 +1017,9 @@ public partial class YTJsonParser
     private static string? GetChoicesNumVotes(JsonElement? jsonElement)
     {
         // 要登入後才看的到 numVotes。
-        return jsonElement?.Get("numVotes")?.GetString();
+        // 2026/9 修正：改用 GetStringSafely()，?.GetString() 只防禦 Nullable 本身是否有值，
+        // 不會防禦 ValueKind 是否真的是 String，型別不符一樣會拋例外。
+        return jsonElement?.Get("numVotes").GetStringSafely();
     }
 
     /// <summary>
@@ -1147,17 +1149,16 @@ public partial class YTJsonParser
         string value = string.Empty;
 
         // 當為 width 為 0 時，自動取最後一個項目，通常為最大張圖。
+        // 2026/9 修正：width 比對跟下面的 url 取值都改用 *Safely() 系列方法，型別不符時回傳 null
+        // 而不是拋例外——原本 n.Get("width")?.GetInt32() 跟 url.Value.GetString() 都是沒有防禦的
+        // 直接取值，只要該筆縮圖資料的 width／url 型別跟預期不符就會讓例外往上炸穿。
         JsonElement? thumbnail = width == 0 || width == -1 ?
             arrayEnumerator?.LastOrDefault() :
-            arrayEnumerator?.FirstOrDefault(n => n.Get("width") != null &&
-                n.Get("width")?.GetInt32() == width);
+            arrayEnumerator?.FirstOrDefault(n => n.Get("width").GetInt32Safely() == width);
 
         JsonElement? url = thumbnail?.Get("url");
 
-        if (url != null)
-        {
-            value = url.Value.GetString() ?? string.Empty;
-        }
+        value = url.GetStringSafely() ?? string.Empty;
 
         if (value.StartsWith("//"))
         {

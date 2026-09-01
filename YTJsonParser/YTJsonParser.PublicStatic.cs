@@ -63,6 +63,12 @@ public partial class YTJsonParser
             {
                 using HttpResponseMessage httpResponseMessage = await SharedHttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
 
+                // 2026/9 修正：原本沒有檢查回應的 HTTP 狀態碼，只要回應內容非空（例如 404／500 的錯誤頁
+                // HTML）就會被當成「成功」的圖片位元組寫進快取；EnsureSuccessStatusCode() 讓非 2xx 回應
+                // 直接拋例外，交給外層 catch 處理（並依上面的註解，讓 BetterCacheManager 正確移除快取，
+                // 不會把錯誤頁內容誤存成有效圖片快取 10 分鐘）。
+                httpResponseMessage.EnsureSuccessStatusCode();
+
                 return await httpResponseMessage.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
             }, 10).ConfigureAwait(false);
 

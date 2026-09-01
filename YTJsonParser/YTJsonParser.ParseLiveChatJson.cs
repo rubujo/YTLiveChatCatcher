@@ -1474,7 +1474,7 @@ public partial class YTJsonParser
 
                 if (textColor.HasValue)
                 {
-                    tempTextColor += GetColorHexCode(textColor.Value.GetInt64());
+                    tempTextColor += GetColorHexCode(textColor.GetInt64Safely());
                 }
 
                 JsonElement? fontFace = singleRun.Get("fontFace");
@@ -1779,8 +1779,11 @@ public partial class YTJsonParser
 
         JsonElement? timestampUsec = jsonElement?.Get("timestampUsec");
 
-        if (timestampUsec.HasValue &&
-            long.TryParse(timestampUsec.Value.GetString(), out long rawTimestamp))
+        // 2026/9 修正：改用 GetStringSafely()（ValueKind 不是 String 時回傳 null，不拋例外）取代直接呼叫
+        // .GetString()——這個方法在 SetRendererData 對每一種 renderer 都會呼叫到，原本只要 YouTube 把
+        // timestampUsec 的型別從字串改成數字，就會讓例外炸穿整批訊息，波及面是所有欄位型別防禦缺口中最大的。
+        if (timestampUsec.GetStringSafely() is string rawTimestampText &&
+            long.TryParse(rawTimestampText, out long rawTimestamp))
         {
             // 將 Microseconds 轉換成 Miliseconds。
             long timestamp = rawTimestamp / 1000L;
@@ -1870,14 +1873,14 @@ public partial class YTJsonParser
 
         if (backgroundColor.HasValue)
         {
-            output = GetColorHexCode(backgroundColor.Value.GetInt64());
+            output = GetColorHexCode(backgroundColor.GetInt64Safely());
         }
 
         JsonElement? bodyBackgroundColor = jsonElement?.Get("bodyBackgroundColor");
 
         if (bodyBackgroundColor.HasValue)
         {
-            output = GetColorHexCode(bodyBackgroundColor.Value.GetInt64());
+            output = GetColorHexCode(bodyBackgroundColor.GetInt64Safely());
         }
 
         if (string.IsNullOrEmpty(output))
@@ -1898,7 +1901,7 @@ public partial class YTJsonParser
         JsonElement? headerBackgroundColor = jsonElement?.Get("headerBackgroundColor");
 
         return headerBackgroundColor.HasValue ?
-            GetColorHexCode(headerBackgroundColor.Value.GetInt64()) :
+            GetColorHexCode(headerBackgroundColor.GetInt64Safely()) :
             null;
     }
 

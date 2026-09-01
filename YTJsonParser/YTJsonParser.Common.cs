@@ -116,13 +116,24 @@ public partial class YTJsonParser
     /// <summary>
     /// 取得 Hex 色碼
     /// </summary>
-    /// <param name="value">Int64</param>
-    /// <returns>字串，數值超出色彩範圍等異常情況時為空字串</returns>
-    private static string GetColorHexCode(long value)
+    /// <param name="value">Int64?，null 時視為異常情況</param>
+    /// <returns>字串，value 為 null 或數值超出色彩範圍等異常情況時為空字串</returns>
+    private static string GetColorHexCode(long? value)
     {
+        // 2026/9 修正：參數改成可為 null 的 long?，呼叫端一律先用 JsonElementExtension.GetInt64Safely()
+        // 取值（型別不符時回傳 null，不拋例外），這裡收到 null 直接走跟其他異常情況一致的空字串回傳，
+        // 不需要呼叫端自己在呼叫這個方法「之前」就先做型別判斷——原本呼叫端是直接寫
+        // textColor.Value.GetInt64()，這一步在呼叫進來之前就求值，不在這個方法自己的 try/catch
+        // 保護範圍內，只要 YouTube 把顏色欄位的型別從數字改成別的，就會讓例外一路往上炸穿整批
+        // ParseActions，而不是被這裡攔下來。
+        if (value is not long actualValue)
+        {
+            return string.Empty;
+        }
+
         try
         {
-            string hex = string.Format("{0:X}", value);
+            string hex = string.Format("{0:X}", actualValue);
 
             int integer = Convert.ToInt32(hex, 16);
 

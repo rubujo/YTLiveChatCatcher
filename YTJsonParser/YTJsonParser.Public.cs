@@ -374,15 +374,18 @@ public partial class YTJsonParser
                     ?.Get("liveBroadcastDetails")
                     ?.Get("isLiveNow");
 
-                if (isLiveNow.HasValue)
+                // 2026/9 修正：改用 GetBooleanSafely()（ValueKind 不是 True/False 時回傳 null，不拋例外）
+                // 取代直接呼叫 .GetBoolean()——這裡是這個方法唯一沒有防禦型別不符的最終取值呼叫，其餘
+                // 部分（HTML 解析、JSON 反序列化）都仔細地用 try/catch 包裹並回傳 false，這裡補齊同等級的防禦。
+                if (isLiveNow.GetBooleanSafely() is bool isLiveNowValue)
                 {
-                    return isLiveNow.Value.GetBoolean();
+                    return isLiveNowValue;
                 }
 
                 // 備援：部分影片可能沒有 microformat.liveBroadcastDetails，改用 videoDetails.isLive。
                 JsonElement? isLive = jeRoot.Get("videoDetails")?.Get("isLive");
 
-                return isLive?.GetBoolean() ?? false;
+                return isLive.GetBooleanSafely() ?? false;
             }
             else
             {
