@@ -57,16 +57,27 @@ public static class ListViewExtension
                 // 2026/8 新增：先查落地快取（跨應用程式重啟／跨不同場次直播都能沿用），
                 // 沒命中才真的發送網路請求，下載完成後順手寫回落地快取供下次使用。
                 byte[]? bytes = AvatarDiskCache.TryRead(imageUrl);
+                bool isFreshlyDownloaded = bytes == null;
 
                 if (bytes == null)
                 {
                     bytes = await httpClient.GetByteArrayAsync(imageUrl);
-
-                    AvatarDiskCache.Write(imageUrl, bytes);
                 }
 
                 using MemoryStream memoryStream = new(bytes);
                 using Image loadedImage = Image.FromStream(memoryStream);
+
+                // 2026/8 修正：先前在下載完成當下就立刻寫入落地快取，沒有先驗證 bytes 真的是可以
+                // 解碼的圖片——如果 CDN 一時回應了 200 但內容不是有效圖片（例如暫時性錯誤頁面），
+                // Image.FromStream 這裡會拋例外，但無效的內容早已寫進磁碟快取，之後每次都直接
+                // TryRead 命中同一份壞資料，要卡到 30 天過期或手動清除才會重新嘗試下載。
+                // 改成等 Image.FromStream 成功解碼、確認是有效圖片之後才寫入快取，
+                // 且只在這次是剛下載（不是從快取讀到）時才需要寫，避免對同一份已存在的快取檔案
+                // 做無意義的重複寫入。
+                if (isFreshlyDownloaded)
+                {
+                    AvatarDiskCache.Write(imageUrl, bytes);
+                }
 
                 // 2026/8 修正：Image.FromStream 預設不會把像素資料複製進記憶體，而是延遲讀取來源
                 // 串流；原本直接把 loadedImage 回傳出去，上面的 using 會在這個方法返回時把

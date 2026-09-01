@@ -1776,10 +1776,14 @@ public partial class FMain
                                 // 都不會自動觸發這一列重繪（非 VirtualMode 才會）。這裡不直接呼叫
                                 // RedrawListViewItem(lvItem)：實測過 RedrawItems 在批次密集時很容易撞上
                                 // 下一個批次自己的 BeginUpdate 視窗而被吃掉、不會補跑（微軟官方文件已記載
-                                // 這個限制）。改成呼叫端統一在每個批次自己的 EndUpdate() 之後、以及整場
+                                // 這個限制）。呼叫端已經會在每個批次自己的 EndUpdate() 之後、以及整場
                                 // 擷取結束時各補一次節流過的 Invalidate()（見 DoProcessMessages／
-                                // LoadXLSX／BtnStop_Click），確保一定會落在沒有任何 BeginUpdate 視窗的
-                                // 時間點。
+                                // LoadXLSX／BtnStop_Click），但下載本身是背景中各自獨立完成的非同步工作，
+                                // 仍可能晚於「最後一次」那些呼叫點才真正完成（例如整場擷取已經停止、
+                                // BtnStop_Click 的收尾 Invalidate() 都執行完了，這裡才姍姍來遲）——那種情況下
+                                // 沒有任何後續事件會再觸發重繪，頭像就會永久空白。這裡額外主動補一次節流過的
+                                // Invalidate()，跟呼叫端的時機互為保險，兩邊都命中節流窗口內時只會真的重繪一次。
+                                InvalidateLiveChatListThrottled();
                             }
                         }
                         catch (Exception ex)

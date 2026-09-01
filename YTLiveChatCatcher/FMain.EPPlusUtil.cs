@@ -237,6 +237,11 @@ public partial class FMain
                                 {
                                     lvItem.ImageIndex = imageIndex;
                                 }
+
+                                // 理由同 DoProcessMessages 對應的修正：下載本身是背景中各自獨立完成的
+                                // 非同步工作，可能晚於呼叫端「最後一次」的 Invalidate() 才真正完成，
+                                // 額外主動補一次節流過的 Invalidate() 當保險，避免頭像永久空白。
+                                InvalidateLiveChatListThrottled();
                             }
                         }
                         catch (Exception ex)
