@@ -77,8 +77,27 @@ public partial class FMain : Form
         {
             LogManager.Shutdown();
 
-            // 取消尚在執行中的擷取工作，並釋放 SharedYTJsonParser。
+            // 取消尚在執行中的擷取工作。
             SharedFetchCancellationTokenSource?.Cancel();
+
+            // 2026/9 修正：以前這裡取消後就立刻往下 Dispose SharedHttpClient，但背景擷取工作
+            // （StartFetchLiveChatData 內的 Task.Run）是非同步的，取消當下如果剛好正在等待一個
+            // HTTP 請求的回應，該請求要等 CancellationToken 真正被觀察到才會結束——如果搶在那之前
+            // Dispose 掉 HttpClient，該請求會拋出非 OperationCanceledException 的例外，可能被
+            // YTJsonParser 的重試機制誤判成暫時性網路錯誤，對著已經 Dispose 的 HttpClient 重試到
+            // 次數耗盡。這裡先有限度地等待背景工作先自然結束（正常情況下取消後應該在很短時間內
+            // 就會完成，逾時也不阻塞關閉流程太久），再繼續往下釋放資源。
+            try
+            {
+                SharedFetchTask?.Wait(TimeSpan.FromSeconds(5));
+            }
+            catch (AggregateException)
+            {
+                // 背景工作內部已經有自己完整的 try/catch 與記錄，這裡只是要確保等待完成，
+                // 不需要重複處理或記錄背景工作本身拋出的例外。
+            }
+
+            // 釋放 SharedYTJsonParser。
             SharedYTJsonParser?.Dispose();
 
             // 釋放以及清除 SharedHttpClient。
@@ -131,11 +150,33 @@ public partial class FMain : Form
             return;
         }
 
+        // 2026/9 修正：textBox.Text = videoID; 這行如果讓文字內容真的改變（例如貼上的是完整網址、
+        // 正規化成純 ID），會同步觸發巢狀的 TextChanged 事件重入這個方法本身。巢狀呼叫在自己的
+        // await 處讓出控制權後，外層呼叫恢復執行時 TBChannelID.Text 通常還是空的（巢狀呼叫的網路
+        // 請求還沒回來），導致外層也會再呼叫一次同一個 GetChannelIDFromVideoAsync，對同一次貼上
+        // 動作發出兩個並發的 HTTP 請求。用這個旗標讓巢狀呼叫在賦值那一刻直接跳過，不做任何處理。
+        if (SharedIsNormalizingVideoID)
+        {
+            return;
+        }
+
         try
         {
             string videoID = YouTubeUrlUtil.GetYouTubeVideoID(textBox.Text.Trim());
 
-            textBox.Text = videoID;
+            if (textBox.Text != videoID)
+            {
+                SharedIsNormalizingVideoID = true;
+
+                try
+                {
+                    textBox.Text = videoID;
+                }
+                finally
+                {
+                    SharedIsNormalizingVideoID = false;
+                }
+            }
 
             // 跟 BtnStart_Click「頻道 ID 空時才用影片 ID 反查最新直播影片」的方向相反、互補：
             // 只在頻道 ID 欄位還是空的時候才自動帶入，避免覆蓋使用者已經手動輸入的頻道 ID。
@@ -286,7 +327,7 @@ public partial class FMain : Form
             });
         });
 
-        _ = Task.Run(async () =>
+        SharedFetchTask = Task.Run(async () =>
         {
             try
             {
@@ -570,9 +611,23 @@ public partial class FMain : Form
                 SharedListViewItems.Clear();
                 LVLiveChatList.VirtualListSize = 0;
 
-                // 頭像圖片快取（依作者名稱為 key）在清除聊天室之前不會自動釋放，同一次執行期間
-                // 清除、開始擷取下一場直播時會無限累積在記憶體裡，這裡一併清空。
-                LVLiveChatList.SmallImageList?.Images.Clear();
+                // 頭像圖片快取在清除聊天室之前不會自動釋放，同一次執行期間清除、開始擷取下一場
+                // 直播時會無限累積在記憶體裡，這裡一併清空。
+                //
+                // 2026/9 修正：改成指派一份全新的 ImageList，而不是原地呼叫 Clear()。FSearch
+                // 開啟搜尋結果時會直接共用（不是複製）這個 ImageList 物件參照（見 FSearch.cs
+                // 的 BtnSearch_Click），如果原地 Clear() 再重新累加下一場直播的新頭像，搜尋視窗裡
+                // 已經複製出去的 ListViewItem 的 ImageIndex（整數索引）會全部指向新的、不相關的
+                // 圖片——因為 ImageIndex 本身沒有失效機制。改成整個換一份新的 ImageList，讓
+                // FSearch 手上還握著的舊物件參照維持原樣、不受這次清空影響，直到使用者在
+                // FSearch 重新搜尋（那時會重新指向 LVLiveChatList 目前這一份最新的 ImageList）。
+                ImageList? previousImageList = LVLiveChatList.SmallImageList;
+
+                LVLiveChatList.SmallImageList = new ImageList
+                {
+                    ImageSize = previousImageList?.ImageSize ?? new Size(32, 32),
+                    ColorDepth = previousImageList?.ColorDepth ?? ColorDepth.Depth24Bit,
+                };
             });
 
             // 清除刪除／封鎖／回覆數更新／投票結果更新事件用的關聯索引，

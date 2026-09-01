@@ -18,6 +18,13 @@ public partial class FMain
     private HttpClient? SharedHttpClient;
 
     /// <summary>
+    /// <see cref="TBVideoID_TextChanged"/> 正在把貼上的網址正規化成純影片 ID 時設為 true，
+    /// 避免 <c>textBox.Text = videoID;</c> 這行同步觸發的巢狀 TextChanged 事件重入處理，
+    /// 對同一次貼上動作重複發出頻道反查請求。
+    /// </summary>
+    private bool SharedIsNormalizingVideoID;
+
+    /// <summary>
     /// 共用的 ILogger&lt;FMain&gt;
     /// </summary>
     private readonly ILogger<FMain> SharedLogger;
@@ -42,6 +49,13 @@ public partial class FMain
     /// 共用的 CancellationTokenSource（用於取消目前的即時聊天擷取工作）
     /// </summary>
     private CancellationTokenSource? SharedFetchCancellationTokenSource;
+
+    /// <summary>
+    /// <see cref="StartFetchLiveChatData"/> 背景擷取工作本體，讓 <see cref="FMain_FormClosing"/>
+    /// 在 Dispose <see cref="SharedHttpClient"/> 之前，能有限度地等待背景工作先觀察到取消、
+    /// 結束目前這一輪的 HTTP 請求，避免對著已經被 Dispose 的 HttpClient 送出請求或觸發誤判的重試。
+    /// </summary>
+    private Task? SharedFetchTask;
 
     /// <summary>
     /// 共用的 ToolTip

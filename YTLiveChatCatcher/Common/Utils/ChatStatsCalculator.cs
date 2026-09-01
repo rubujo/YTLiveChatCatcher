@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Sets;
@@ -137,7 +138,16 @@ public static partial class ChatStatsCalculator
         // 只回傳裸 "$"，見上方文件註解的實測紀錄；正規化成 "NT$"，避免同一種貨幣被拆成兩個統計項目。
         currencySymbol = symbol == "$" ? "NT$" : symbol;
 
-        return double.TryParse(match.Groups["amount"].Value, out amount);
+        // 2026/9 修正：正規表示式擷取出的金額字串固定是英式格式（逗號千分位、句點小數點，
+        // 見上方文件註解），但 double.TryParse 沒指定 NumberStyles／CultureInfo 時會用呼叫端執行緒
+        // 的 CurrentCulture 判讀，受 Windows 地區設定影響——若使用者的地區設定把逗號當小數點、
+        // 句點當千分位（常見於多數歐洲地區設定），千元以上的金額會解析失敗，收益統計因此失準。
+        // 固定用 InvariantCulture 判讀，不受執行環境的地區設定影響。
+        return double.TryParse(
+            match.Groups["amount"].Value,
+            NumberStyles.AllowThousands | NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture,
+            out amount);
     }
 
     [GeneratedRegex(@"^(?<symbol>[^\d]*)(?<amount>[\d,]+(?:\.\d+)?)")]
