@@ -161,7 +161,7 @@ public partial class FMain
                 }
                 else
                 {
-                    thumbnailRange.Formula = $"IMAGE(\"{post.AuthorThumbnailUrl}\")";
+                    thumbnailRange.Formula = BuildImageFormula(post.AuthorThumbnailUrl);
 
                     firstThumbnailCellAddressByUrl[post.AuthorThumbnailUrl] = thumbnailRange.Address;
                 }
@@ -314,7 +314,7 @@ public partial class FMain
 
             if (!string.IsNullOrEmpty(attachment.Url))
             {
-                thumbnailRange.Formula = $"IMAGE(\"{attachment.Url}\")";
+                thumbnailRange.Formula = BuildImageFormula(attachment.Url);
             }
 
             ExcelRange urlRange = worksheet.Cells[rowIdx, 3];
@@ -401,7 +401,7 @@ public partial class FMain
 
             if (!string.IsNullOrEmpty(videoData?.ThumbnailUrl))
             {
-                thumbnailRange.Formula = $"IMAGE(\"{videoData.ThumbnailUrl}\")";
+                thumbnailRange.Formula = BuildImageFormula(videoData.ThumbnailUrl);
             }
 
             ExcelRange titleRange = worksheet.Cells[rowIdx, 3];
@@ -533,7 +533,7 @@ public partial class FMain
 
                 if (!string.IsNullOrEmpty(choice.ImageUrl))
                 {
-                    choiceImageRange.Formula = $"IMAGE(\"{choice.ImageUrl}\")";
+                    choiceImageRange.Formula = BuildImageFormula(choice.ImageUrl);
                 }
 
                 ExcelRange isQuizRange = worksheet.Cells[rowIdx, 4];

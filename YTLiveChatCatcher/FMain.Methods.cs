@@ -303,6 +303,22 @@ public partial class FMain
     }
 
     /// <summary>
+    /// 組出安全的 IMAGE() 公式字串。
+    /// <para>2026/9 修正：原本 8 個匯出用的呼叫點（聊天記錄的頭像／自定義表情符號／會員徽章／
+    /// 超級貼圖，以及社群貼文的縮圖／圖片附件／影片縮圖／投票選項圖片）都各自用
+    /// <c>$"IMAGE(\"{url}\")"</c> 這種簡單字串插值組公式，網址一旦包含雙引號就會把公式字串截斷，
+    /// 後面的內容被當成公式的一部分解析（甚至可能被拼接成非預期的公式片段）。這裡統一跳脫
+    /// 網址中的雙引號成 Excel 公式語法認得的 <c>""</c>，並讓 8 個呼叫點共用同一份邏輯，
+    /// 之後如果還要調整公式組法，只需要改這一個地方。</para>
+    /// </summary>
+    /// <param name="url">字串，圖片網址</param>
+    /// <returns>字串，例如 <c>IMAGE("https://...")</c></returns>
+    private static string BuildImageFormula(string url)
+    {
+        return $"IMAGE(\"{url.Replace("\"", "\"\"")}\")";
+    }
+
+    /// <summary>
     /// 通知 LVLiveChatList 重繪指定的既有列。
     /// <para>VirtualMode 下修改 <see cref="ListViewItem"/> 的 SubItems／顏色／字型不會自動觸發重繪
     /// （非 VirtualMode 才會），就地更新既有列的內容之後都要呼叫這個方法，否則畫面要等使用者
@@ -466,10 +482,9 @@ public partial class FMain
             IEnumerable<ListViewItem> dataSet = listAllData
                 .Where(n => n.SubItems[5].Text != StringSet.AppName &&
                     n.SubItems[5].Text != Rubujo.YouTube.Utility.Sets.StringSet.YouTube &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMessageDeleted) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate));
+                    !ChatStatsCalculator.NonMessageEventExclusionKeys
+                        .Select(SharedYTJsonParser.GetLocalizeString)
+                        .Contains(n.SubItems[5].Text));
 
             // 同一位使用者在同一場直播常常留言好幾十則，頭像網址完全相同；每一列都各自寫一次
             // IMAGE() 公式，Excel 開啟時就會對同一張圖片重複發送好幾十次請求。這裡記錄「這個網址
@@ -497,7 +512,7 @@ public partial class FMain
                         }
                         else
                         {
-                            firstRange.Formula = $"IMAGE(\"{authorPhotoUrl}\")";
+                            firstRange.Formula = BuildImageFormula(authorPhotoUrl);
 
                             firstImageCellAddressByUrl[authorPhotoUrl] = firstRange.Address;
                         }
@@ -529,7 +544,13 @@ public partial class FMain
 
                     if (j == 9)
                     {
-                        if (!string.IsNullOrEmpty(listViewSubItem.Text))
+                        // 2026/9 修正：比照 FMain.CommunityPostsExport.cs 既有的做法，先用
+                        // Uri.IsWellFormedUriString 檢查過才建構 Uri——new Uri(text, UriKind.Absolute)
+                        // 的建構子對非「well-formed」的字串（例如網址中含未編碼的空白）會丟
+                        // UriFormatException，成千上萬列資料中只要有一筆網址格式異常，就會讓迴圈
+                        // 中斷、整份匯出直接失敗，而不是那一格沒有超連結、其餘正常匯出。
+                        if (!string.IsNullOrEmpty(listViewSubItem.Text) &&
+                            Uri.IsWellFormedUriString(listViewSubItem.Text, UriKind.Absolute))
                         {
                             excelRange.Hyperlink = new Uri(listViewSubItem.Text, UriKind.Absolute);
                         }
@@ -714,11 +735,12 @@ public partial class FMain
                     // 以免在時間熱點活頁簿內出現奇怪的時間點。
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMemberGift) &&
                     n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReceivedMemberGift) &&
-                    // 2026/8 補上刪除／封鎖／回覆數更新／投票結果更新的排除，理由同上方的內容分頁排除。
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatMessageDeleted) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatReplyCountUpdate) &&
-                    n.SubItems[5].Text != SharedYTJsonParser.GetLocalizeString(KeySet.ChatPollUpdate) &&
+                    // 2026/9 修正：刪除／封鎖／回覆數更新／投票結果更新的排除改用共用清單
+                    // ChatStatsCalculator.NonMessageEventExclusionKeys（理由同上方的內容分頁排除），
+                    // 避免這裡跟內容分頁的排除清單各自維護、日後新增同類型事件時漏改其中一處。
+                    !ChatStatsCalculator.NonMessageEventExclusionKeys
+                        .Select(SharedYTJsonParser.GetLocalizeString)
+                        .Contains(n.SubItems[5].Text) &&
                     !string.IsNullOrEmpty(n.SubItems[8].Text) &&
                     !n.SubItems[8].Text.Contains('-'))
                 .Select(n => n.SubItems[8].Text.Length > 3 ?
@@ -771,14 +793,15 @@ public partial class FMain
                     startIdx2++;
                 }
 
-                for (int i = 1; i <= worksheet2.Cells.Count(); i++)
+                // 2026/9 修正：終止條件原本用 worksheet2.Cells.Count()（反映整張工作表已使用的
+                // 儲存格數），但迴圈實際只處理 widthSet.Length 以內的欄位（內層 if 已經證明這點），
+                // 資料量大時這個終止條件會讓迴圈跑動次數遠超過「只是要跑十幾欄」所需的規模。
+                // 直接把迴圈上限換成 widthSet.Length，語意不變，不再需要內層判斷。
+                for (int i = 1; i < widthSet.Length; i++)
                 {
-                    if (i < widthSet.Length)
-                    {
-                        ExcelColumn column = worksheet2.Column(i);
+                    ExcelColumn column = worksheet2.Column(i);
 
-                        column.AutoFit();
-                    }
+                    column.AutoFit();
                 }
 
                 ExcelLineChart excelLineChart = worksheet2
@@ -897,7 +920,7 @@ public partial class FMain
 
                     if (!string.IsNullOrEmpty(emojiData.Url))
                     {
-                        range2.Formula = $"IMAGE(\"{emojiData.Url}\")";
+                        range2.Formula = BuildImageFormula(emojiData.Url);
                     }
 
                     ExcelRange range3 = worksheet3.Cells[startIdx2, 2];
@@ -920,7 +943,8 @@ public partial class FMain
                     range6.StyleName = "ContentStyle";
                     range6.Value = emojiData.Url;
 
-                    if (!string.IsNullOrEmpty(emojiData.Url))
+                    if (!string.IsNullOrEmpty(emojiData.Url) &&
+                        Uri.IsWellFormedUriString(emojiData.Url, UriKind.Absolute))
                     {
                         range6.Hyperlink = new Uri(emojiData.Url, UriKind.Absolute);
                     }
@@ -938,14 +962,13 @@ public partial class FMain
                     startIdx2++;
                 }
 
-                for (int i = 2; i <= worksheet3.Cells.Count(); i++)
+                // 理由同 worksheet2 上方的說明：終止條件改用 widthSet.Length，不再用
+                // worksheet3.Cells.Count()，語意不變。
+                for (int i = 2; i < widthSet.Length; i++)
                 {
-                    if (i < widthSet.Length)
-                    {
-                        ExcelColumn column = worksheet3.Column(i);
+                    ExcelColumn column = worksheet3.Column(i);
 
-                        column.AutoFit();
-                    }
+                    column.AutoFit();
                 }
 
                 // 2026/8 修正：刻意不呼叫 worksheet3.Calculate(...)，理由同 worksheet1 上方的詳細說明——
@@ -1015,7 +1038,7 @@ public partial class FMain
                     
                     if (!string.IsNullOrEmpty(badgeData.Url))
                     {
-                        range9.Formula = $"IMAGE(\"{badgeData.Url}\")";
+                        range9.Formula = BuildImageFormula(badgeData.Url);
                     }
 
                     ExcelRange range10 = worksheet4.Cells[startIdx3, 2];
@@ -1038,7 +1061,8 @@ public partial class FMain
                     range13.StyleName = "ContentStyle";
                     range13.Value = badgeData.Url;
 
-                    if (!string.IsNullOrEmpty(badgeData.Url))
+                    if (!string.IsNullOrEmpty(badgeData.Url) &&
+                        Uri.IsWellFormedUriString(badgeData.Url, UriKind.Absolute))
                     {
                         range13.Hyperlink = new Uri(badgeData.Url, UriKind.Absolute);
                     }
@@ -1051,14 +1075,13 @@ public partial class FMain
                     startIdx3++;
                 }
 
-                for (int i = 2; i <= worksheet4.Cells.Count(); i++)
+                // 理由同 worksheet2 上方的說明：終止條件改用 widthSet.Length，不再用
+                // worksheet4.Cells.Count()，語意不變。
+                for (int i = 2; i < widthSet.Length; i++)
                 {
-                    if (i < widthSet.Length)
-                    {
-                        ExcelColumn column = worksheet4.Column(i);
+                    ExcelColumn column = worksheet4.Column(i);
 
-                        column.AutoFit();
-                    }
+                    column.AutoFit();
                 }
 
                 // 2026/8 修正：刻意不呼叫 worksheet4.Calculate(...)，理由同 worksheet1 上方的詳細說明——
@@ -1117,7 +1140,7 @@ public partial class FMain
                     
                     if (!string.IsNullOrEmpty(stickerData.Url))
                     {
-                        range15.Formula = $"IMAGE(\"{stickerData.Url}\")";
+                        range15.Formula = BuildImageFormula(stickerData.Url);
                     }
 
                     ExcelRange range10 = worksheet5.Cells[startIdx4, 2];
@@ -1135,7 +1158,8 @@ public partial class FMain
                     range12.StyleName = "ContentStyle";
                     range12.Value = stickerData.Url;
 
-                    if (!string.IsNullOrEmpty(stickerData.Url))
+                    if (!string.IsNullOrEmpty(stickerData.Url) &&
+                        Uri.IsWellFormedUriString(stickerData.Url, UriKind.Absolute))
                     {
                         range12.Hyperlink = new Uri(stickerData.Url, UriKind.Absolute);
                     }
@@ -1143,14 +1167,13 @@ public partial class FMain
                     startIdx4++;
                 }
 
-                for (int i = 2; i <= worksheet5.Cells.Count(); i++)
+                // 理由同 worksheet2 上方的說明：終止條件改用 widthSet.Length，不再用
+                // worksheet5.Cells.Count()，語意不變。
+                for (int i = 2; i < widthSet.Length; i++)
                 {
-                    if (i < widthSet.Length)
-                    {
-                        ExcelColumn column = worksheet5.Column(i);
+                    ExcelColumn column = worksheet5.Column(i);
 
-                        column.AutoFit();
-                    }
+                    column.AutoFit();
                 }
 
                 // 2026/8 修正：刻意不呼叫 worksheet5.Calculate(...)，理由同 worksheet1 上方的詳細說明——

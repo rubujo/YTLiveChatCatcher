@@ -57,6 +57,23 @@ public static partial class ChatStatsCalculator
     ];
 
     /// <summary>
+    /// 「這是關聯回既有列的事件，不是獨立訊息」要排除的訊息類型（留言已被刪除／使用者已被封鎖／
+    /// 回覆數更新／投票結果更新）。
+    /// <para>2026/9 集中成一份清單：聊天記錄匯出的內容分頁、時間熱點分頁原本各自手刻一份幾乎相同
+    /// 的排除清單（<c>FMain.Methods.cs</c> 的 <c>DoExportTask</c>），時間熱點分頁另外還會排除
+    /// 會員贈送／收到贈送會員這兩種類型（理由是不容易轉換成影片對應時間點，是刻意的差異，
+    /// 不在這份共用清單裡），但兩處共同的這 4 種類型如果之後要新增同類型事件，很容易忘記
+    /// 同步更新其中一處。</para>
+    /// </summary>
+    public static readonly string[] NonMessageEventExclusionKeys =
+    [
+        KeySet.ChatMessageDeleted,
+        KeySet.ChatUserBanned,
+        KeySet.ChatReplyCountUpdate,
+        KeySet.ChatPollUpdate
+    ];
+
+    /// <summary>
     /// 依訊息類型與作者徽章文字，判斷這則訊息該如何影響統計數字。
     /// </summary>
     /// <param name="ytJsonParser">YTJsonParser，用於解析目前顯示語言下的本地化類型字串</param>
