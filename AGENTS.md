@@ -168,6 +168,7 @@ HTTP 429（限速）與暫時性網路例外（`SendAsync` 拋出的非取消性
 - **捲動可見範圍**改用 `ListView` 層級、以索引為準的 `EnsureVisible(int)`，不是 `ListViewItem.EnsureVisible()` 這個實例版；且務必先更新完 `VirtualListSize` 才呼叫，順序寫反的話索引可能還沒被 ListView 視為有效範圍。
 - **就地更新既有列**（`ApplyMessageDeletedMarker`／`ApplyUserBannedMarker`／`ApplyReplyCountUpdate`／`ApplyPollResultUpdate`／`ApplyExistingListViewItemUpdate`）修改 `ListViewItem` 的 `SubItems`／顏色／字型後，**不會自動觸發重繪**（非 VirtualMode 才會）——一定要呼叫 `RedrawListViewItem(lvItem)`（內部用 `SharedListViewItems.IndexOf(lvItem)` 找索引，再呼叫 `LVLiveChatList.RedrawItems(index, index, false)`），否則畫面要等使用者捲動或縮放視窗才會反映最新內容。這是實機驗證才抓得到的問題，光看程式碼編譯通過不代表畫面真的會更新，新增類似的就地更新邏輯時務必記得補這一步、並且實際跑一次確認。
 - `FSearch` 讀取完整聊天記錄（例如搜尋的來源資料）不能再用 `_LVLiveChatList.GetListViewItems()`，改用 `FMain.GetSharedListViewItems()`（`FMain.Methods.cs` 公開方法）。
+- **頭像圖示一定要用 `ListViewItem.ImageIndex`（整數索引），不要用 `ImageKey`（字串鍵值）**：VirtualMode 下透過 `RetrieveVirtualItem` 供應的項目，`ImageKey` 是已知不可靠的做法——即使 `SmallImageList.Images` 裡確實有該 key，圖示還是不會顯示，且不會有任何例外或錯誤訊息，只有實機肉眼確認才抓得到。頭像下載是非同步的，建立 `ListViewItem` 當下還不知道圖片最後會落在 `ImageList` 的哪個索引，要等下載完成（或確認先前已快取過）後，用 `SmallImageList.Images.IndexOfKey(key)` 查出實際索引再指定給 `ImageIndex`（兩者互斥，指定其中一個會自動清掉另一個，不用另外清除）。這是 2026/8 排查「重播頭像不顯示」花了四輪錯誤假設（漏呼叫重繪／`RedrawItems` 撞上 `BeginUpdate` 視窗／GDI+ 串流延遲讀取陷阱）才找到的真正根本原因，前三個假設個別看都成立、也都有修正的必要，但都不是這個 bug 的主因。
 
 `BtnClear_Click` 清空聊天室時，除了清空上述背景清單跟三個索引字典，也一併呼叫 `LVLiveChatList.SmallImageList?.Images.Clear();`——頭像圖片快取先前沒有隨清除聊天室釋放，長時間執行、多場直播的情境下會無限累積在記憶體裡。
 
