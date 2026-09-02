@@ -4,7 +4,7 @@
 
 YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows 圖形介面、即時收益統計、Excel 報表、社群貼文匯出，以及不讀取日常瀏覽器資料庫的會員內容登入流程。核心解析器對 YouTube 結構漂移已有防禦式取值、有限重試、直播／重播雙路徑、未知 action 診斷與 fixture 測試，基礎比一般一次性下載腳本完整。
 
-最大殘餘風險仍是 InnerTube 未公開且隨時可能改版；其次是缺乏可攜的原始資料格式、擷取斷點續傳、可重現的發佈驗證，以及真正的 WinForms 端到端測試。本輪已先修正能直接確認、且不需要改變產品定位的風險。
+最大殘餘風險仍是 InnerTube 未公開且隨時可能改版；可攜格式、擷取斷點續傳、診斷封裝、分析工具與 CI 已完成。真正可點擊所有 WinForms 流程的端到端測試仍受 GitHub hosted runner 沒有互動式桌面的限制，目前採「純邏輯測試＋程序啟動 smoke test＋必要時實機驗證」三層策略。
 
 ## 本輪已實作
 
@@ -19,6 +19,10 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 | 金額精度 | 使用 `double` 解析與累加貨幣，可能出現二進位浮點誤差 | 全鏈路改用 `decimal`，含 70% 試算與單元測試資料 |
 | DI 資源生命週期 | 根 `ServiceProvider` 在程序結束時沒有釋放 | `using` 管理根容器與其中服務 |
 | 持續整合 | 沒有 CI，還原、Release 建置與測試完全依賴本機 | 新增 Windows/.NET 10 GitHub Actions：還原、建置、兩組測試、相依漏洞稽核 |
+| 擷取中斷 | 只能載入已保存資料，不能接續網路擷取 | session manifest、continuation checkpoint、結束原因、完整性標示與事件去重 |
+| 資料可攜性 | 只有 XLSX | 無損 JSONL、通用 CSV、組合篩選與分析工具 |
+| 問題回報 | 使用者需自行挑選 log，可能外洩憑證 | 一鍵產生自動遮蔽的 ZIP 診斷包與結構 fixture |
+| 收益語意 | 固定 70%，容易被誤解為實際結算 | 比例可設定，UI 明確標示為粗略估算 |
 
 ## 風險盤點
 
@@ -26,12 +30,12 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 
 1. **InnerTube 結構漂移**：直播與重播都依賴未公開端點。現有 fixture、未知 action 診斷與 `/watch` replay fallback 能縮短修復時間，但不能消除改版風險。
 2. **缺乏真正的 UI 自動化測試**：純邏輯已有 xUnit 覆蓋，但開始／停止、匯入／匯出、搜尋視窗、Cookie 對話框與大型 VirtualMode ListView 仍仰賴實機。
-3. **沒有斷點續傳語意**：復原檔只能恢復已收到的資料，不能從上一個 continuation 繼續網路擷取；長直播中斷後仍可能有缺口。
+3. **續傳權杖仍可能過期**：已具備 checkpoint 與去重，但 InnerTube continuation 沒有有效期保證，因此 manifest 會保守標示完整性。
 
 ### 中風險
 
-1. **資料可攜性不足**：Excel 適合人工分析，但不適合串流寫入、版本控制、程式處理或損毀後局部恢復。
-2. **診斷封裝不足**：雖有 NLog 與未知 action 記錄，但使用者沒有一鍵產生已遮蔽、可回報的診斷包。
+1. **資料可攜性**：已補 JSONL／CSV；XLSX 繼續作為人類報表格式。
+2. **診斷封裝**：已提供自動遮蔽診斷包，但傳送前仍需人工複核。
 3. **官方 API 與 InnerTube 沒有雙引擎策略**：官方 `liveChatMessages.streamList` 僅適合直播且需要 API/OAuth，但可作為直播的低延遲、強型別備援；重播仍需 InnerTube。
 4. **發佈流程不完整**：本輪補了 CI，但尚未有可重現的簽章、打包、雜湊、SBOM 與 release artifact 工作流程。
 5. **單語系產品 UI**：解析層支援多種區域設定，但 WinForms UI 與統計假設固定為繁體中文／臺灣情境。
@@ -67,7 +71,7 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 
 ## 功能缺口與建議順序
 
-### P0：可靠交付與資料不遺失
+### 已完成的 P0：可靠交付與資料不遺失
 
 1. **CI 實際跑綠並設為分支保護必要檢查**（工作流程已加入，尚待 GitHub 首次執行）。
 2. **結構漂移 fixture 收集工具**：一鍵輸出已遮蔽的 ytcfg、初始頁與單批 InnerTube 回應，讓使用者可安全附在 issue。
@@ -75,7 +79,7 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 4. **斷點續傳與去重**：以 session manifest＋訊息 ID 繼續擷取；無法保證無缺口時必須在報表標示資料不完整。
 5. **WinForms smoke test harness**：至少覆蓋啟動、開始／停止、XLSX 往返、搜尋、大量資料與 Cookie 輸入邊界。
 
-### P1：資料可攜與分析能力
+### 已完成的 P1：資料可攜與分析能力
 
 1. **JSONL 與 CSV 匯出**：JSONL 作為無損原始格式，CSV 作為一般分析交換格式；XLSX 保留為人類報表。
 2. **時間範圍、訊息類型、作者與金額篩選**：下載前／匯出時都可套用，對齊 chat-downloader 的 CLI 能力。
@@ -94,4 +98,4 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 
 ## 驗證限制
 
-本機 NuGet 連線持續遇到 TLS `NU1301`，因此本輪無法在此環境完成新的編譯與測試。新增的 CI 會在乾淨的 GitHub Windows runner 執行 Release 還原、建置、兩個測試專案與相依漏洞稽核；在該工作流程首次通過前，以上程式碼修正只能視為已完成靜態審查，不能視為已完成執行驗證。
+GitHub Windows runner 已完成 Release 還原、建置、兩個測試專案、WinForms 程序啟動 smoke test 與相依漏洞稽核，NuGet Cache 也以相同提交重跑確認 `exact hit: true`。Hosted runner 沒有可靠的互動式桌面，因此「實際點擊開始／停止、檔案對話框、Cookie 登入視窗」仍不能冒充已自動實測；這些流程需在發佈前以實機 smoke checklist 補驗。
