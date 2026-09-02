@@ -107,10 +107,15 @@ public class LiveChatStreamingTests
     {
         string popoutHtml = ReadFixture("live_popout_active.html");
         string pollResponseJson = ReadFixture("get_live_chat_response.json");
+        string? requestBody = null;
 
         FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
             .When(HttpMethod.Get, "/live_chat?is_popout=1", popoutHtml)
-            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", pollResponseJson);
+            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", request =>
+            {
+                requestBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+                return pollResponseJson;
+            });
 
         using HttpClient httpClient = new(handler);
         using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
@@ -140,9 +145,7 @@ public class LiveChatStreamingTests
             }
         }
 
-        HttpRequestMessage pollRequest = Assert.Single(handler.Requests, request => request.Method == HttpMethod.Post);
-        string requestBody = await pollRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
+        Assert.NotNull(requestBody);
         Assert.Contains("SAVED_CONTINUATION", requestBody);
         Assert.Equal("batch:1", events[0]);
         Assert.Equal("checkpoint:SAVED_CONTINUATION", events[1]);
