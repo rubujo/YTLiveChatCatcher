@@ -1205,6 +1205,9 @@ public partial class FMain
             if (listView.Name == LVLiveChatList.Name)
             {
                 CaptureRecoveryStore.Clear();
+                CaptureSessionStore.Clear();
+                SharedCaptureSessionManifest = null;
+                SharedResumeContinuation = null;
             }
         });
     }
@@ -2472,20 +2475,50 @@ public partial class FMain
         if (result != DialogResult.Yes)
         {
             CaptureRecoveryStore.Clear();
+            CaptureSessionStore.Clear();
 
             return;
         }
 
         List<List<RendererData>> recoveredBatches = CaptureRecoveryStore.LoadBatches();
+        CaptureSessionManifest? manifest = CaptureSessionStore.Load();
 
         foreach (List<RendererData> batch in recoveredBatches)
         {
-            DoProcessMessages(batch);
+            IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(batch);
+
+            if (newMessages.Count > 0)
+            {
+                DoProcessMessages(newMessages);
+            }
         }
 
         // 刻意不在載入後清除記錄檔——這樣即使載入回來後還沒來得及匯出就又當機一次，
         // 這批資料依然留在復原記錄裡，下次啟動還是問得到。記錄檔只在成功匯出或手動清空聊天室時才清除。
         WriteLog($"已從當機復原記錄載入 {recoveredBatches.Sum(n => n.Count)} 筆資料（共 {recoveredBatches.Count} 個批次）。");
+
+        if (manifest is { IsDataComplete: false } && !string.IsNullOrEmpty(manifest.LastContinuation))
+        {
+            SharedCaptureSessionManifest = manifest;
+            SharedResumeContinuation = manifest.LastContinuation;
+            TBVideoID.Text = manifest.VideoId;
+            WriteLog("已載入上次的續傳狀態；按下「開始」後會嘗試從中斷點繼續。continuation 可能已過期，完成後請確認資料完整性標示。");
+        }
+    }
+
+    /// <summary>
+    /// 保存擷取 session；manifest 寫入失敗不應中止聊天室擷取。
+    /// </summary>
+    private void TrySaveCaptureSession(CaptureSessionManifest manifest)
+    {
+        try
+        {
+            CaptureSessionStore.Save(manifest);
+        }
+        catch (Exception ex)
+        {
+            SharedLogger.LogWarning(ex, "無法保存擷取 session manifest。");
+        }
     }
 
     /// <summary>

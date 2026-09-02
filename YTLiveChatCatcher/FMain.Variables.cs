@@ -57,6 +57,18 @@ public partial class FMain
     /// </summary>
     private Task? SharedFetchTask;
 
+    /// <summary>目前擷取工作的持久化 session 狀態</summary>
+    private CaptureSessionManifest? SharedCaptureSessionManifest;
+
+    /// <summary>從上次未完成 session 載入、下一次開始時要嘗試使用的 continuation</summary>
+    private string? SharedResumeContinuation;
+
+    /// <summary>取消是否由使用者按下停止按鈕觸發</summary>
+    private bool SharedUserRequestedStop;
+
+    /// <summary>避免斷點續傳重疊批次造成事件重複</summary>
+    private readonly CaptureMessageDeduplicator SharedCaptureMessageDeduplicator = new();
+
     /// <summary>
     /// 共用的 ToolTip
     /// </summary>

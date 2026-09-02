@@ -103,6 +103,54 @@ public class LiveChatStreamingTests
     }
 
     [Fact]
+    public async Task StreamLiveChatDataAsync_斷點續傳時_使用保存權杖且在批次消費後才回報checkpoint()
+    {
+        string popoutHtml = ReadFixture("live_popout_active.html");
+        string pollResponseJson = ReadFixture("get_live_chat_response.json");
+
+        FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
+            .When(HttpMethod.Get, "/live_chat?is_popout=1", popoutHtml)
+            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", pollResponseJson);
+
+        using HttpClient httpClient = new(handler);
+        using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
+        using CancellationTokenSource cts = new();
+
+        List<string> events = [];
+        InlineProgressForTest<LiveChatStreamStatus> progress = new(status =>
+            events.Add($"checkpoint:{status.Continuation}"));
+
+        int batchCount = 0;
+
+        await foreach (IReadOnlyList<RendererData> _ in ytJsonParser.StreamLiveChatDataAsync(
+            "TEST_VIDEO_ID",
+            options: new LiveChatStreamOptions
+            {
+                ForceIntervalMs = 0,
+                ResumeContinuation = "SAVED_CONTINUATION"
+            },
+            streamStatusProgress: progress,
+            cancellationToken: cts.Token))
+        {
+            events.Add($"batch:{++batchCount}");
+
+            if (batchCount == 2)
+            {
+                cts.Cancel();
+            }
+        }
+
+        HttpRequestMessage pollRequest = Assert.Single(handler.Requests, request => request.Method == HttpMethod.Post);
+        string requestBody = await pollRequest.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        Assert.Contains("SAVED_CONTINUATION", requestBody);
+        Assert.Equal("batch:1", events[0]);
+        Assert.Equal("checkpoint:SAVED_CONTINUATION", events[1]);
+        Assert.Equal("batch:2", events[2]);
+        Assert.StartsWith("checkpoint:", events[3]);
+    }
+
+    [Fact]
     public async Task StreamLiveChatDataAsync_popout回傳已停用假象但watch頁面有重新載入權杖時_改用get_live_chat_replay取得訊息()
     {
         // 對應真實案例：popout 聊天室頁面（/live_chat?is_popout=1）對部分重播影片（例如聊天室
@@ -174,4 +222,9 @@ public class LiveChatStreamingTests
             handler.Requests,
             r => r.RequestUri!.ToString() == "https://www.youtube.com/live_chat?is_popout=1&v=TEST_VIDEO_ID");
     }
+}
+
+file sealed class InlineProgressForTest<T>(Action<T> handler) : IProgress<T>
+{
+    public void Report(T value) => handler(value);
 }

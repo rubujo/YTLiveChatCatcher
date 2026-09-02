@@ -54,7 +54,22 @@ public sealed record LiveChatStreamOptions
     /// <para>不指定時，改用 YouTube 回應內容解析出的間隔值（並套用安全下限）。</para>
     /// </summary>
     public int? ForceIntervalMs { get; init; }
+
+    /// <summary>
+    /// 從先前 session manifest 保存的 continuation 嘗試續傳。
+    /// <para>continuation 是 YouTube 的暫時性權杖，可能過期；呼叫端必須把續傳失敗視為資料可能不完整，
+    /// 不能把「沒有拋例外」等同於完整取得所有訊息。</para>
+    /// </summary>
+    public string? ResumeContinuation { get; init; }
 }
+
+/// <summary>
+/// 即時聊天串流目前的可持久化狀態
+/// </summary>
+/// <param name="Continuation">下一次請求使用的 continuation</param>
+/// <param name="IsReplay">是否使用重播聊天室端點</param>
+/// <param name="IntervalMs">YouTube 建議或呼叫端強制的輪詢間隔</param>
+public sealed record LiveChatStreamStatus(string? Continuation, bool IsReplay, int IntervalMs);
 
 /// <summary>
 /// 單次社群貼文串流的設定

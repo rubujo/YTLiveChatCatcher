@@ -302,6 +302,7 @@ public partial class FMain : Form
     private void StartFetchLiveChatData(string videoID)
     {
         SharedFetchCancellationTokenSource?.Cancel();
+        SharedUserRequestedStop = false;
 
         // 局部保留這次專屬的 CancellationTokenSource 參照，
         // 讓下方背景工作結束時只 Dispose 自己這一份，
@@ -326,23 +327,79 @@ public partial class FMain : Form
         });
 
         bool canWriteRecovery = true;
+        CaptureSessionManifest? existingManifest = SharedCaptureSessionManifest;
+        bool isResuming = existingManifest != null &&
+            string.Equals(existingManifest.VideoId, videoID, StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(SharedResumeContinuation);
+
+        if (!isResuming)
+        {
+            SharedCaptureMessageDeduplicator.Clear();
+        }
+
+        CaptureSessionManifest manifest = isResuming ?
+            existingManifest! with
+            {
+                EndedAtUtc = null,
+                EndReason = CaptureSessionEndReason.Running,
+                IsDataComplete = false,
+                FailureMessage = null
+            } :
+            new CaptureSessionManifest
+            {
+                SessionId = Guid.NewGuid().ToString("N"),
+                VideoId = videoID,
+                AppVersion = CustomFunction.GetAppVersion(),
+                StartedAtUtc = DateTimeOffset.UtcNow
+            };
+
+        SharedCaptureSessionManifest = manifest;
+        TrySaveCaptureSession(manifest);
+
+        LiveChatStreamOptions streamOptions = new()
+        {
+            ResumeContinuation = SharedResumeContinuation
+        };
+        SharedResumeContinuation = null;
+
+        InlineProgress<LiveChatStreamStatus> streamStatusProgress = new(status =>
+        {
+            manifest.LastContinuation = status.Continuation;
+            manifest.IsReplay = status.IsReplay;
+            TrySaveCaptureSession(manifest);
+        });
 
         SharedFetchTask = Task.Run(async () =>
         {
+            bool completedNaturally = false;
+            Exception? fetchFailure = null;
+
             try
             {
                 await foreach (IReadOnlyList<RendererData> batch in SharedYTJsonParser.StreamLiveChatDataAsync(
                     videoID,
+                    options: streamOptions,
                     intervalProgress: intervalProgress,
+                    streamStatusProgress: streamStatusProgress,
                     cancellationToken: cancellationToken))
                 {
+                    IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(batch);
+
+                    if (newMessages.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    manifest.MessageCount += newMessages.Count;
+                    TrySaveCaptureSession(manifest);
+
                     // 優先寫進當機復原記錄再處理成 ListView 項目；若落地成功，即使
                     // DoProcessMessages 或後續流程出問題，這批原始資料仍可在下次啟動時復原。
                     if (canWriteRecovery)
                     {
                         try
                         {
-                            CaptureRecoveryStore.AppendBatch(batch);
+                            CaptureRecoveryStore.AppendBatch(newMessages);
                         }
                         catch (Exception ex)
                         {
@@ -356,8 +413,10 @@ public partial class FMain : Form
                         }
                     }
 
-                    await TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), cancellationToken);
+                    await TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(newMessages), cancellationToken);
                 }
+
+                completedNaturally = true;
             }
             catch (OperationCanceledException)
             {
@@ -365,6 +424,7 @@ public partial class FMain : Form
             }
             catch (Exception ex)
             {
+                fetchFailure = ex;
                 SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
 
                 // 這裡刻意不帶入 cancellationToken——不論是使用者主動停止還是發生例外，
@@ -373,6 +433,16 @@ public partial class FMain : Form
             }
             finally
             {
+                manifest.EndedAtUtc = DateTimeOffset.UtcNow;
+                manifest.EndReason = fetchFailure != null ?
+                    CaptureSessionEndReason.Failed :
+                    cancellationToken.IsCancellationRequested ?
+                        SharedUserRequestedStop ? CaptureSessionEndReason.UserStopped : CaptureSessionEndReason.Cancelled :
+                        CaptureSessionEndReason.Completed;
+                manifest.IsDataComplete = completedNaturally && string.IsNullOrEmpty(manifest.LastContinuation);
+                manifest.FailureMessage = fetchFailure?.GetExceptionMessage();
+                TrySaveCaptureSession(manifest);
+
                 // 只有在 SharedFetchCancellationTokenSource 仍然是「這一份」時才還原 UI／清空共用欄位：
                 // 如果使用者在這個背景工作跑到這裡之前，已經按過一次「停止」再按「開始」，
                 // SharedFetchCancellationTokenSource 這時已經指向新一輪擷取的新實例，
@@ -380,7 +450,7 @@ public partial class FMain : Form
                 if (ReferenceEquals(SharedFetchCancellationTokenSource, fetchCancellationTokenSource))
                 {
                     // 同上，清理／還原 UI 狀態這件事，不應該因為 cancellationToken 已取消而被跳過。
-                    await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(this, new EventArgs()));
+                    await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(null, EventArgs.Empty));
 
                     // 2026/8 修正：這裡以前沒有把 SharedFetchCancellationTokenSource 清為 null，
                     // 讓它繼續指向即將在下一行被 Dispose 的這個實例。使用者實測「開始 -> 停止 -> 開始」
@@ -401,6 +471,11 @@ public partial class FMain : Form
     {
         try
         {
+            if (sender is Button)
+            {
+                SharedUserRequestedStop = true;
+            }
+
             SharedFetchCancellationTokenSource?.Cancel();
 
             // 設定控制項的狀態。
@@ -666,9 +741,13 @@ public partial class FMain : Form
             SharedIncomeByCurrency.Clear();
             SharedMemberInRoomAuthors.Clear();
             SharedDistinctAuthors.Clear();
+            SharedCaptureSessionManifest = null;
+            SharedResumeContinuation = null;
+            SharedCaptureMessageDeduplicator.Clear();
 
             // 使用者主動清空聊天室，代表明確不需要保留這批資料，一併清除當機復原記錄。
             CaptureRecoveryStore.Clear();
+            CaptureSessionStore.Clear();
 
             UpdateSummaryInfo();
 

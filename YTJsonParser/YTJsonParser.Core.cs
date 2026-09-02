@@ -431,22 +431,27 @@ public partial class YTJsonParser
     {
         JsonElement jsonElement = new();
 
+        if (ytConfigData == null)
+        {
+            return jsonElement;
+        }
+
         // 2026/8 修正：get_live_chat_replay 並非「一律回傳 400」——先前的結論是拿一般輪詢用的
         // invalidationContinuationData 權杖去打這個端點才會 400，該端點真正吃的是
         // GetReplayReloadContinuationAsync 取得的 reloadContinuationData／回應內建的
         // liveChatReplayContinuationData 權杖。ytConfigData.IsReplayReload 只有在那條 fallback
         // 路徑被觸發時才會是 true，一般情況（popout 頁面就能取得 continuation）仍然使用
         // get_live_chat，行為不變。
-        string methodName = ytConfigData?.IsReplayReload == true ? "get_live_chat_replay" : "get_live_chat";
+        string methodName = ytConfigData.IsReplayReload ? "get_live_chat_replay" : "get_live_chat";
 
         string url = dataType switch
         {
-            EnumSet.DataType.Community => $"{StringSet.Origin}/youtubei/v1/browse?key={ytConfigData?.APIKey}",
+            EnumSet.DataType.Community => $"{StringSet.Origin}/youtubei/v1/browse?key={ytConfigData.APIKey}",
             _ => $"{StringSet.Origin}/youtubei/v1/live_chat/{methodName}?key={ytConfigData.APIKey}",
         };
 
         // 當 ytConfigData.Continuation 為 null 或空值時，則表示已經抓取完成。
-        if (!string.IsNullOrEmpty(ytConfigData?.Continuation))
+        if (!string.IsNullOrEmpty(ytConfigData.Continuation))
         {
             // 當沒有時才指定，後續不更新。
             if (string.IsNullOrEmpty(ytConfigData.InitPage))

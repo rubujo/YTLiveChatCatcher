@@ -71,12 +71,14 @@ public partial class YTJsonParser : IDisposable
     /// <param name="videoUrlOrID">字串，YouTube 影片網址或是 ID 值</param>
     /// <param name="options">LiveChatStreamOptions，預設值為 null（使用預設設定）</param>
     /// <param name="intervalProgress">IProgress&lt;int&gt;，每次輪詢間隔更新時回報目前的間隔毫秒值，預設值為 null</param>
+    /// <param name="streamStatusProgress">IProgress&lt;LiveChatStreamStatus&gt;，回報可供 session manifest 保存的續傳狀態</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>IAsyncEnumerable&lt;IReadOnlyList&lt;RendererData&gt;&gt;，每次列舉為一次輪詢取得的批次訊息</returns>
     public async IAsyncEnumerable<IReadOnlyList<RendererData>> StreamLiveChatDataAsync(
         string videoUrlOrID,
         LiveChatStreamOptions? options = null,
         IProgress<int>? intervalProgress = null,
+        IProgress<LiveChatStreamStatus>? streamStatusProgress = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         options ??= new LiveChatStreamOptions();
@@ -94,11 +96,23 @@ public partial class YTJsonParser : IDisposable
             yield break;
         }
 
+        if (!string.IsNullOrWhiteSpace(options.ResumeContinuation))
+        {
+            ytConfigData.Continuation = options.ResumeContinuation;
+        }
+
         // 處理初始頁面內的聊天室內容。
         if (initialData.Messages != null && initialData.Messages.Count > 0)
         {
             yield return initialData.Messages;
         }
+
+        // 必須等呼叫端消費並持久化初始批次後才保存 continuation；若先保存、再於 yield 前當機，
+        // 下一次續傳會直接跳過尚未落地的初始資料。
+        streamStatusProgress?.Report(new LiveChatStreamStatus(
+            ytConfigData.Continuation,
+            ytConfigData.IsReplayReload,
+            MinimumIntervalMs));
 
         int intervalMs = MinimumIntervalMs;
 
@@ -129,6 +143,12 @@ public partial class YTJsonParser : IDisposable
             {
                 yield return messages;
             }
+
+            // 同上，continuation 代表「前一批已由呼叫端處理完成」的 checkpoint，不能在 yield 前推進。
+            streamStatusProgress?.Report(new LiveChatStreamStatus(
+                ytConfigData.Continuation,
+                ytConfigData.IsReplayReload,
+                intervalMs));
 
             if (!await DelayOrBreakAsync(intervalMs, cancellationToken).ConfigureAwait(false))
             {
