@@ -16,15 +16,32 @@ jobs:
   build-and-test:
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Cache NuGet packages
+        id: nuget-cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUGET_PACKAGES }}
+          key: nuget-${{ runner.os }}-dotnet10-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json', '**/Directory.Packages.props', '**/NuGet.Config') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-dotnet10-
+
+      - name: Report cache reuse
+        shell: pwsh
+        run: |
+          "NuGet cache exact hit: ${{ steps.nuget-cache.outputs.cache-hit }}" |
+            Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
 
       - name: Restore
         run: dotnet restore YTLiveChatCatcher.slnx
@@ -33,10 +50,10 @@ jobs:
         run: dotnet build YTLiveChatCatcher.slnx --configuration Release --no-restore
 
       - name: Test parser
-        run: dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj --configuration Release --no-build
+        run: dotnet run --project YTJsonParser.Tests/YTJsonParser.Tests.csproj --configuration Release --no-build
 
       - name: Test application logic
-        run: dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj --configuration Release --no-build
+        run: dotnet run --project YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj --configuration Release --no-build
 
       - name: Audit dependencies
         run: dotnet list YTLiveChatCatcher.slnx package --vulnerable --include-transitive
