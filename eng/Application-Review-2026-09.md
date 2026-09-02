@@ -73,7 +73,7 @@ YTLiveChatCatcher 的差異化不是「單純下載聊天室」，而是 Windows
 
 ### 已完成的 P0：可靠交付與資料不遺失
 
-1. **CI 實際跑綠並設為分支保護必要檢查**（工作流程已加入，尚待 GitHub 首次執行）。
+1. **CI 實際跑綠**：工作流程、NuGet Cache 重用與 WinForms 啟動 smoke test 均已驗證；依維護者決策，`dev` 分支不設定分支保護或必要檢查。
 2. **結構漂移 fixture 收集工具**：一鍵輸出已遮蔽的 ytcfg、初始頁與單批 InnerTube 回應，讓使用者可安全附在 issue。
 3. **擷取 session manifest**：保存影片 ID、標題、開始／停止時間、程式版本、語系、最後 continuation 與訊息數；明確區分「完整結束」「使用者停止」「網路失敗」「結構不支援」。
 4. **斷點續傳與去重**：以 session manifest＋訊息 ID 繼續擷取；無法保證無缺口時必須在報表標示資料不完整。
