@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Models.LiveChat;
+using YTLiveChatCatcher.Common.Utils;
 
 namespace YTLiveChatCatcher;
 
