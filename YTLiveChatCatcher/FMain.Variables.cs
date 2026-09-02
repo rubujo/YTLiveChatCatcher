@@ -99,6 +99,12 @@ public partial class FMain
     /// </summary>
     private readonly List<ListViewItem> SharedListViewItems = [];
 
+    /// <summary>保留解析後的完整強型別資料，供無損 JSONL／CSV、進階篩選與診斷包使用。</summary>
+    private readonly List<RendererData> SharedRawRendererData = [];
+
+    /// <summary>YouTube 實收比例的可設定粗略估算值。</summary>
+    private decimal SharedRevenueEstimateRate = RevenueEstimateSettings.LoadRate();
+
     /// <summary>
     /// 上一次對 <c>LVLiveChatList</c> 呼叫 <see cref="Control.Invalidate()"/> 的時間戳記，供
     /// <see cref="InvalidateLiveChatListThrottled"/> 節流用。重播影片一次可能連續處理數十個批次

@@ -554,6 +554,12 @@ public partial class FMain : Form
             // 取得影片的標題。
             string videoTitle = await SharedYTJsonParser.GetVideoTitleAsync(videoID);
 
+            if (SharedCaptureSessionManifest != null && !string.IsNullOrWhiteSpace(videoTitle))
+            {
+                SharedCaptureSessionManifest.VideoTitle = videoTitle;
+                TrySaveCaptureSession(SharedCaptureSessionManifest);
+            }
+
             if (!string.IsNullOrEmpty(videoTitle))
             {
                 string optFileName = $"{videoTitle}_{saveFileDialog.FileName}";
@@ -611,6 +617,18 @@ public partial class FMain : Form
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
+    }
+
+    private void BtnDataTools_Click(object sender, EventArgs e)
+    {
+        if (SharedRawRendererData.Count == 0)
+        {
+            MessageBox.Show("目前沒有可供篩選或分析的原始聊天室資料。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using FDataTools form = new(this);
+        form.ShowDialog(this);
     }
 
     private async void BtnExportCommunityPosts_Click(object sender, EventArgs e)
@@ -744,6 +762,7 @@ public partial class FMain : Form
             SharedCaptureSessionManifest = null;
             SharedResumeContinuation = null;
             SharedCaptureMessageDeduplicator.Clear();
+            SharedRawRendererData.Clear();
 
             // 使用者主動清空聊天室，代表明確不需要保留這批資料，一併清除當機復原記錄。
             CaptureRecoveryStore.Clear();

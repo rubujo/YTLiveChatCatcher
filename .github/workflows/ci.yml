@@ -55,5 +55,24 @@ jobs:
       - name: Test application logic
         run: dotnet run --project YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj --configuration Release --no-build
 
+      - name: WinForms startup smoke test
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:GITHUB_WORKSPACE "YTLiveChatCatcher/bin/Release/net10.0-windows7.0/YTLiveChatCatcher.exe"
+          $process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+          try {
+            Start-Sleep -Seconds 5
+            if ($process.HasExited) {
+              throw "YTLiveChatCatcher exited during startup with code $($process.ExitCode)."
+            }
+            "WinForms startup smoke test passed." |
+              Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+          }
+          finally {
+            if (!$process.HasExited) {
+              Stop-Process -Id $process.Id -Force
+            }
+          }
+
       - name: Audit dependencies
         run: dotnet list YTLiveChatCatcher.slnx package --vulnerable --include-transitive

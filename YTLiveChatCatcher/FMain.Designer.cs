@@ -42,6 +42,7 @@ namespace YTLiveChatCatcher
             LVLiveChatList = new ListView();
             LLog = new Label();
             BtnExport = new Button();
+            BtnDataTools = new Button();
             PBProgress = new ProgressBar();
             BtnClear = new Button();
             CBExportAuthorPhoto = new CheckBox();
@@ -210,6 +211,17 @@ namespace YTLiveChatCatcher
             BtnExport.Text = "匯出 *.xlsx";
             BtnExport.UseVisualStyleBackColor = true;
             BtnExport.Click += BtnExport_Click;
+            //
+            // BtnDataTools
+            //
+            BtnDataTools.Location = new Point(708, 140);
+            BtnDataTools.Name = "BtnDataTools";
+            BtnDataTools.Size = new Size(77, 23);
+            BtnDataTools.TabIndex = 21;
+            BtnDataTools.AccessibleName = "資料工具";
+            BtnDataTools.Text = "資料工具";
+            BtnDataTools.UseVisualStyleBackColor = true;
+            BtnDataTools.Click += BtnDataTools_Click;
             // 
             // PBProgress
             // 
@@ -500,6 +512,7 @@ namespace YTLiveChatCatcher
             Controls.Add(BtnClear);
             Controls.Add(PBProgress);
             Controls.Add(BtnExport);
+            Controls.Add(BtnDataTools);
             Controls.Add(LLog);
             Controls.Add(LVLiveChatList);
             Controls.Add(LInterval);
@@ -537,6 +550,7 @@ namespace YTLiveChatCatcher
         private ListView LVLiveChatList;
         private Label LLog;
         private Button BtnExport;
+        private Button BtnDataTools;
         private ProgressBar PBProgress;
         private Button BtnClear;
         private CheckBox CBExportAuthorPhoto;

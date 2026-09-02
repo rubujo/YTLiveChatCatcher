@@ -1351,6 +1351,19 @@ public partial class FMain
         return SharedListViewItems;
     }
 
+    public IReadOnlyList<RendererData> GetRawMessagesSnapshot() => [.. SharedRawRendererData];
+
+    public CaptureSessionManifest? GetCaptureSessionSnapshot() => SharedCaptureSessionManifest;
+
+    public decimal GetRevenueEstimateRate() => SharedRevenueEstimateRate;
+
+    public void SetRevenueEstimateRate(decimal rate)
+    {
+        SharedRevenueEstimateRate = Math.Clamp(rate, 0m, 1m);
+        RevenueEstimateSettings.SaveRate(SharedRevenueEstimateRate);
+        UpdateSummaryInfo();
+    }
+
     /// <summary>
     /// 取得 TBVideoID
     /// </summary>
@@ -1454,6 +1467,7 @@ public partial class FMain
     {
         try
         {
+            SharedRawRendererData.AddRange(messages);
             List<ListViewItem> listTempItem = [];
 
             foreach (RendererData rendererData in messages)
@@ -2268,25 +2282,25 @@ public partial class FMain
         TBLog.InvokeIfRequired(() =>
         {
             // 依貨幣符號分別加總、分別顯示，不做匯率換算——不同貨幣的原始金額不能直接相加或比較。
-            // YouTube 會從每筆金額抽取 30% 收益，因此「實收」是逐幣別各自乘 0.70 後的清單，不是單一數字。
+            // 此比例只是可設定的粗略估算；實際結算仍會受稅務、退款、平台與地區規則影響。
             string rawBreakdown = SharedIncomeByCurrency.Count > 0 ?
                 string.Join("、", SharedIncomeByCurrency.Select(n => $"{n.Key}{n.Value}")) :
                 "0";
 
             string actualBreakdown = SharedIncomeByCurrency.Count > 0 ?
                 string.Join("、", SharedIncomeByCurrency.Select(n =>
-                    $"{n.Key}{Math.Round(n.Value * 0.70m, 0, MidpointRounding.AwayFromZero)}")) :
+                    $"{n.Key}{Math.Round(n.Value * SharedRevenueEstimateRate, 0, MidpointRounding.AwayFromZero)}")) :
                 "0";
 
             LTempIncome.InvokeIfRequired(() =>
             {
-                LTempIncome.Text = $"預計收益：{actualBreakdown}";
+                LTempIncome.Text = $"粗估收益（{SharedRevenueEstimateRate:P0}）：{actualBreakdown}";
 
-                SharedTooltip.SetToolTip(LTempIncome, $"累積收益：{rawBreakdown}");
+                SharedTooltip.SetToolTip(LTempIncome, $"原始累積金額：{rawBreakdown}；此比例僅為粗略估算，可於資料工具調整。");
             });
 
-            string message = $"目前累積收益：{rawBreakdown}（實收：{actualBreakdown}）{Environment.NewLine}" +
-                "※依貨幣符號分別加總，不做匯率換算，不同幣別的金額不能直接相加比較。";
+            string message = $"目前累積金額：{rawBreakdown}（粗估收益 {SharedRevenueEstimateRate:P0}：{actualBreakdown}）{Environment.NewLine}" +
+                "※此比例僅為粗略估算；依貨幣符號分別加總，不做匯率換算。";
 
             WriteLog(message);
         });

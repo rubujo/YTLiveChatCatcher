@@ -9,7 +9,7 @@ public sealed record CaptureSessionManifest
 {
     public required string SessionId { get; init; }
     public required string VideoId { get; init; }
-    public string? VideoTitle { get; init; }
+    public string? VideoTitle { get; set; }
     public required string AppVersion { get; init; }
     public required DateTimeOffset StartedAtUtc { get; init; }
     public DateTimeOffset? EndedAtUtc { get; set; }
