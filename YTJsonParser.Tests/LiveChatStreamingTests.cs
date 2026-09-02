@@ -21,7 +21,11 @@ public class LiveChatStreamingTests
             .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", pollResponseJson);
 
         using HttpClient httpClient = new(handler);
-        using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
+        using YTJsonParser ytJsonParser = new(new YTJsonParserOptions
+        {
+            HttpClient = httpClient,
+            DisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional,
+        });
 
         List<RendererData> allMessages = [];
         int batchCount = 0;
