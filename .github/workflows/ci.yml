@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore YTLiveChatCatcher.slnx
+
+      - name: Build
+        run: dotnet build YTLiveChatCatcher.slnx --configuration Release --no-restore
+
+      - name: Test parser
+        run: dotnet test YTJsonParser.Tests/YTJsonParser.Tests.csproj --configuration Release --no-build
+
+      - name: Test application logic
+        run: dotnet test YTLiveChatCatcher.Tests/YTLiveChatCatcher.Tests.csproj --configuration Release --no-build
+
+      - name: Audit dependencies
+        run: dotnet list YTLiveChatCatcher.slnx package --vulnerable --include-transitive

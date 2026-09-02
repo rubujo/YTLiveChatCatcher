@@ -154,7 +154,7 @@ public partial class FMain
     /// 且沒有不會過期的匯率來源可用，見 <see cref="RegisterNewListViewItemStats"/> 內的
     /// <see cref="TryParsePurchaseAmount"/>。</para>
     /// </summary>
-    private readonly Dictionary<string, double> SharedIncomeByCurrency = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, decimal> SharedIncomeByCurrency = new(StringComparer.Ordinal);
 
     /// <summary>
     /// 目前聊天室內、具有會員徽章且訊息類型不是加入／升級／里程碑事件本身的不重複作者名稱集合

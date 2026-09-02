@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 
 namespace YTLiveChatCatcher.Common.Utils;
@@ -16,6 +17,8 @@ namespace YTLiveChatCatcher.Common.Utils;
 /// </summary>
 public static class CaptureRecoveryStore
 {
+    private const string EncryptedLinePrefix = "dpapi:";
+
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "YTLiveChatCatcher",
@@ -43,7 +46,10 @@ public static class CaptureRecoveryStore
             Directory.CreateDirectory(directory);
         }
 
-        File.AppendAllText(FilePath, SerializeBatchLine(batch) + Environment.NewLine, Encoding.UTF8);
+        string serializedBatch = SerializeBatchLine(batch);
+        string protectedLine = ProtectLine(serializedBatch);
+
+        File.AppendAllText(FilePath, protectedLine + Environment.NewLine, Encoding.UTF8);
     }
 
     /// <summary>
@@ -57,7 +63,9 @@ public static class CaptureRecoveryStore
             return [];
         }
 
-        return ParseBatchLines(File.ReadAllLines(FilePath, Encoding.UTF8));
+        // 逐行讀取，避免長時間直播累積的大型復原檔在載入時，同時保留完整 string[] 與
+        // 反序列化後的所有 RendererData，造成不必要的記憶體尖峰。
+        return ParseStoredBatchLines(File.ReadLines(FilePath, Encoding.UTF8));
     }
 
     /// <summary>
@@ -101,6 +109,72 @@ public static class CaptureRecoveryStore
         }
 
         return batches;
+    }
+
+    /// <summary>
+    /// 解析磁碟上的復原記錄。新版內容以 DPAPI 加密；沒有前綴的舊版純文字 JSONL 仍可載入，
+    /// 避免升級後讓使用者原本尚未匯出的復原資料失效。
+    /// </summary>
+    /// <param name="lines">IEnumerable&lt;string&gt;</param>
+    /// <returns>List&lt;List&lt;RendererData&gt;&gt;</returns>
+    private static List<List<RendererData>> ParseStoredBatchLines(IEnumerable<string> lines)
+    {
+        IEnumerable<string> unprotectedLines = lines.Select(TryUnprotectLine);
+
+        return ParseBatchLines(unprotectedLines);
+    }
+
+    /// <summary>
+    /// 使用 Windows DPAPI（CurrentUser）保護一行復原資料
+    /// </summary>
+    /// <param name="line">字串，JSON 資料</param>
+    /// <returns>字串，含格式前綴的 Base64 密文</returns>
+    private static string ProtectLine(string line)
+    {
+        byte[] plainBytes = Encoding.UTF8.GetBytes(line);
+
+        try
+        {
+            byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+
+            return EncryptedLinePrefix + Convert.ToBase64String(encryptedBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plainBytes);
+        }
+    }
+
+    /// <summary>
+    /// 解密一行新版復原資料；舊版沒有加密前綴時原樣回傳，毀損或無法解密時回傳空字串並略過。
+    /// </summary>
+    /// <param name="line">字串，磁碟上的一行資料</param>
+    /// <returns>字串，JSON 資料</returns>
+    private static string TryUnprotectLine(string line)
+    {
+        if (!line.StartsWith(EncryptedLinePrefix, StringComparison.Ordinal))
+        {
+            return line;
+        }
+
+        try
+        {
+            byte[] encryptedBytes = Convert.FromBase64String(line[EncryptedLinePrefix.Length..]);
+            byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
+
+            try
+            {
+                return Encoding.UTF8.GetString(plainBytes);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plainBytes);
+            }
+        }
+        catch (Exception ex) when (ex is FormatException or CryptographicException)
+        {
+            return string.Empty;
+        }
     }
 
     /// <summary>

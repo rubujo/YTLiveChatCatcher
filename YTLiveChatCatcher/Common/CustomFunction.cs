@@ -111,8 +111,8 @@ public class CustomFunction
         {
             // 2026/9 修正：原本透過 cmd /c start {url} 開瀏覽器，只跳脫了 &，其餘 cmd.exe 特殊字元
             // （例如 |、"）沒有處理，且 url 沒有加上引號——只要 url 內容帶有這類字元就可能被解讀成
-            // 額外的指令。這裡的 url 不保證一定是使用者自己輸入的（也可能來自檢查更新抓回來的遠端
-            // JSON 內的下載網址，或聊天訊息解析出的頻道 ID），不能假設一定安全。改用
+            // 額外的指令。這裡的 url 不保證一定是使用者自己輸入的（也可能來自聊天訊息解析出的
+            // 頻道 ID），不能假設一定安全。改用
             // ProcessStartInfo(url) { UseShellExecute = true } 直接呼叫 Windows Shell 開啟預設瀏覽器，
             // 完全不經過 cmd.exe，從根本上排除這個注入面。
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });

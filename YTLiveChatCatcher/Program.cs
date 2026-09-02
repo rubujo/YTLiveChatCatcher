@@ -10,16 +10,27 @@ namespace YTLiveChatCatcher;
 internal static class Program
 {
     /// <summary>
-    /// ServiceProvider
-    /// </summary>
-    private static ServiceProvider? ServiceProvider { get; set; }
-
-    /// <summary>
     /// The main entry point for the application.
     /// </summary>
     [STAThread]
     internal static void Main()
     {
+        using Mutex singleInstanceMutex = new(
+            initiallyOwned: true,
+            name: @"Local\YTLiveChatCatcher.SingleInstance",
+            createdNew: out bool createdNew);
+
+        if (!createdNew)
+        {
+            MessageBox.Show(
+                "YouTube 聊天室捕手已經在執行中。請先關閉現有視窗後再重新啟動。",
+                "YTLiveChatCatcher",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+
+            return;
+        }
+
         Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
         // 跟隨 Windows 系統設定自動切換深／淺色模式（.NET 10 起穩定 API，不再是實驗性功能）。
@@ -37,9 +48,9 @@ internal static class Program
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
         UpdateConfig();
-        ConfigureServices();
+        using ServiceProvider serviceProvider = ConfigureServices();
 
-        Application.Run((FMain)ServiceProvider?.GetService(typeof(FMain))!);
+        Application.Run(serviceProvider.GetRequiredService<FMain>());
     }
 
     /// <summary>
@@ -71,7 +82,7 @@ internal static class Program
     /// 設定服務
     /// <para>來源：https://docs.microsoft.com/zh-tw/archive/msdn-magazine/2019/may/net-core-3-0-create-a-centralized-pull-request-hub-with-winforms-in-net-core-3-0 </para>
     /// </summary>
-    private static void ConfigureServices()
+    private static ServiceProvider ConfigureServices()
     {
         ServiceCollection services = new();
 
@@ -110,7 +121,7 @@ internal static class Program
             })
             .AddSingleton<FMain>();
 
-        ServiceProvider = services.BuildServiceProvider();
+        return services.BuildServiceProvider();
     }
 
     /// <summary>

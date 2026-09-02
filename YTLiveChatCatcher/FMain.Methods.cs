@@ -1975,7 +1975,7 @@ public partial class FMain
 
         if (classification.IsSuperChat || classification.IsSuperSticker)
         {
-            if (ChatStatsCalculator.TryParsePurchaseAmount(purchaseAmountText, out string currencySymbol, out double amount))
+            if (ChatStatsCalculator.TryParsePurchaseAmount(purchaseAmountText, out string currencySymbol, out decimal amount))
             {
                 SharedIncomeByCurrency[currencySymbol] = SharedIncomeByCurrency.GetValueOrDefault(currencySymbol) + amount;
             }
@@ -2272,7 +2272,7 @@ public partial class FMain
 
             string actualBreakdown = SharedIncomeByCurrency.Count > 0 ?
                 string.Join("、", SharedIncomeByCurrency.Select(n =>
-                    $"{n.Key}{Math.Round(n.Value * 0.70, 0, MidpointRounding.AwayFromZero)}")) :
+                    $"{n.Key}{Math.Round(n.Value * 0.70m, 0, MidpointRounding.AwayFromZero)}")) :
                 "0";
 
             LTempIncome.InvokeIfRequired(() =>

@@ -43,9 +43,19 @@ public static class SecureCookieStore
         }
 
         byte[] plainBytes = Encoding.UTF8.GetBytes(cookies);
-        byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
 
-        File.WriteAllBytes(FilePath, encryptedBytes);
+        try
+        {
+            byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+
+            File.WriteAllBytes(FilePath, encryptedBytes);
+        }
+        finally
+        {
+            // 降低 Cookie 明文位元組在受控堆積裡停留的時間；原始 string 仍由 .NET 管理，
+            // 但這份為了 DPAPI 額外建立的可變緩衝區可以在使用後立即清除。
+            CryptographicOperations.ZeroMemory(plainBytes);
+        }
     }
 
     /// <summary>

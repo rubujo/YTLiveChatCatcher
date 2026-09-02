@@ -325,6 +325,8 @@ public partial class FMain : Form
             });
         });
 
+        bool canWriteRecovery = true;
+
         SharedFetchTask = Task.Run(async () =>
         {
             try
@@ -334,9 +336,25 @@ public partial class FMain : Form
                     intervalProgress: intervalProgress,
                     cancellationToken: cancellationToken))
                 {
-                    // 先寫進當機復原記錄再處理成 ListView 項目：即使 DoProcessMessages 或後續流程
-                    // 出了問題，這批已經收到的原始資料也已經安全落地在本機檔案裡。
-                    CaptureRecoveryStore.AppendBatch(batch);
+                    // 優先寫進當機復原記錄再處理成 ListView 項目；若落地成功，即使
+                    // DoProcessMessages 或後續流程出問題，這批原始資料仍可在下次啟動時復原。
+                    if (canWriteRecovery)
+                    {
+                        try
+                        {
+                            CaptureRecoveryStore.AppendBatch(batch);
+                        }
+                        catch (Exception ex)
+                        {
+                            // 復原記錄是資料保護層，不應該因磁碟已滿、檔案被鎖定或 DPAPI 暫時失敗，
+                            // 反過來中止仍可正常進行的聊天室擷取。這次擷取後續不再重複嘗試，避免每一批
+                            // 都拋出相同例外；畫面與記錄檔各提示一次，讓使用者知道要儘快手動匯出。
+                            canWriteRecovery = false;
+                            SharedLogger.LogWarning(ex, "無法寫入擷取復原記錄，本次擷取將繼續但不再更新復原檔。");
+                            await TBUserAgent.InvokeAsyncIfRequired(() =>
+                                WriteLog("警告：無法寫入擷取復原記錄，本次擷取仍會繼續；請儘快手動匯出資料。"));
+                        }
+                    }
 
                     await TBUserAgent.InvokeAsyncIfRequired(() => DoProcessMessages(batch), cancellationToken);
                 }

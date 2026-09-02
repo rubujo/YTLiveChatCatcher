@@ -12,18 +12,19 @@ public class ChatStatsCalculatorTests
     private static readonly YTJsonParser YtJsonParser = new(
         new YTJsonParserOptions { DisplayLanguage = EnumSet.DisplayLanguage.Chinese_Traditional });
 
-    public static TheoryData<string, string, double> ValidPurchaseAmounts => new()
+    public static TheoryData<string, string, decimal> ValidPurchaseAmounts => new()
     {
         // 對應這次真正修正的 bug：主要受眾使用的新臺幣格式，之前完全沒被辨識出來。
-        { "NT$100", "NT$", 100 },
-        { "NT$1,234.50", "NT$", 1234.5 },
+        { "NT$100", "NT$", 100m },
+        { "NT$1,234.50", "NT$", 1234.5m },
         // 裸 "$" 在本應用程式固定使用的 zh-TW 請求語系下實測是新臺幣（見下面
         // TryParsePurchaseAmount_裸錢字符正規化為新臺幣 的說明），正規化成 "NT$"。
-        { "$10.00", "NT$", 10 },
-        { "US$5", "US$", 5 },
-        { "HK$50", "HK$", 50 },
-        { "A$20", "A$", 20 },
-        { "¥1,000", "¥", 1000 },
+        { "$10.00", "NT$", 10m },
+        { "US$5", "US$", 5m },
+        { "US$0.10", "US$", 0.10m },
+        { "HK$50", "HK$", 50m },
+        { "A$20", "A$", 20m },
+        { "¥1,000", "¥", 1000m },
     };
 
     [Fact]
@@ -34,20 +35,20 @@ public class ChatStatsCalculatorTests
         // 後者回傳 "NT$15.00"。本應用程式固定用 hl=zh-TW（DisplayLanguage.Chinese_Traditional），
         // 所以裸 "$" 在這裡幾乎必然是新臺幣，不是美金——不正規化的話，同一種貨幣會因為
         // YouTube 偶爾省略字首而被拆成 "NT$" 與 "$" 兩個獨立的統計項目。
-        bool success = ChatStatsCalculator.TryParsePurchaseAmount("$15.00", out string currencySymbol, out double amount);
+        bool success = ChatStatsCalculator.TryParsePurchaseAmount("$15.00", out string currencySymbol, out decimal amount);
 
         Assert.True(success);
         Assert.Equal("NT$", currencySymbol);
-        Assert.Equal(15.0, amount);
+        Assert.Equal(15m, amount);
     }
 
     [Theory]
     [MemberData(nameof(ValidPurchaseAmounts))]
     public void TryParsePurchaseAmount_各種真實格式_正確拆出貨幣符號與金額(
-        string purchaseAmountText, string expectedCurrencySymbol, double expectedAmount)
+        string purchaseAmountText, string expectedCurrencySymbol, decimal expectedAmount)
     {
         bool success = ChatStatsCalculator.TryParsePurchaseAmount(
-            purchaseAmountText, out string currencySymbol, out double amount);
+            purchaseAmountText, out string currencySymbol, out decimal amount);
 
         Assert.True(success);
         Assert.Equal(expectedCurrencySymbol, currencySymbol);

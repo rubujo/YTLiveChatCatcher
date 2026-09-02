@@ -94,11 +94,23 @@ public class HttpClientUtil
 
         foreach (KeyValuePair<string, IEnumerable<string>> defaultRequestHeader in httpClient.DefaultRequestHeaders)
         {
-            string value = string.Join(",", defaultRequestHeader.Value);
+            string value = IsSensitiveHeaderName(defaultRequestHeader.Key) ?
+                "[REDACTED]" :
+                string.Join(",", defaultRequestHeader.Value);
 
             stringBuilder.AppendLine($"{defaultRequestHeader.Key}：{value}");
         }
 
         _logger.Debug("本次連線使用的請求標頭：{Message}", $"{Environment.NewLine}{stringBuilder}");
     }
+
+    /// <summary>
+    /// 判斷記錄時必須遮蔽內容的敏感標頭
+    /// </summary>
+    /// <param name="headerName">字串，標頭名稱</param>
+    /// <returns>布林值</returns>
+    private static bool IsSensitiveHeaderName(string headerName) =>
+        headerName.Equals("Cookie", StringComparison.OrdinalIgnoreCase) ||
+        headerName.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
+        headerName.Equals("X-Youtube-Identity-Token", StringComparison.OrdinalIgnoreCase);
 }
