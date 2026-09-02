@@ -56,8 +56,6 @@ public partial class FMain : Form
             // 清理過期的頭像落地快取，丟到背景執行緒跑，不要讓目錄掃描／刪檔的 I/O 拖慢啟動流程；
             // AvatarDiskCache.PruneExpiredEntries() 內部已經自行處理例外，這裡不需要再包 try/catch。
             _ = Task.Run(AvatarDiskCache.PruneExpiredEntries);
-
-            CheckAppVersion(SharedHttpClient);
         }
         catch (Exception ex)
         {
