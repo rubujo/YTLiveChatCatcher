@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace YTLiveChatCatcher.Common.Utils;
@@ -38,6 +40,8 @@ public enum CaptureSessionEndReason
 /// </summary>
 public static class CaptureSessionStore
 {
+    private const string EncryptedContentPrefix = "dpapi:";
+
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private static readonly string FilePath = Path.Combine(
@@ -55,8 +59,21 @@ public static class CaptureSessionStore
         }
 
         string temporaryPath = FilePath + ".tmp";
-        File.WriteAllText(temporaryPath, JsonSerializer.Serialize(manifest, JsonOptions));
-        File.Move(temporaryPath, FilePath, overwrite: true);
+        byte[] plainBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(manifest, JsonOptions));
+
+        try
+        {
+            byte[] encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+            File.WriteAllText(
+                temporaryPath,
+                EncryptedContentPrefix + Convert.ToBase64String(encryptedBytes),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.Move(temporaryPath, FilePath, overwrite: true);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plainBytes);
+        }
     }
 
     public static CaptureSessionManifest? Load()
@@ -68,11 +85,38 @@ public static class CaptureSessionStore
 
         try
         {
-            return JsonSerializer.Deserialize<CaptureSessionManifest>(File.ReadAllText(FilePath), JsonOptions);
+            string storedContent = File.ReadAllText(FilePath, Encoding.UTF8);
+            bool isLegacyPlainText = !storedContent.StartsWith(EncryptedContentPrefix, StringComparison.Ordinal);
+            string json = isLegacyPlainText ? storedContent : Unprotect(storedContent);
+            CaptureSessionManifest? manifest = JsonSerializer.Deserialize<CaptureSessionManifest>(json, JsonOptions);
+
+            // 舊版 manifest 是純文字 JSON；成功讀取後立即改存成 DPAPI 格式，避免敏感的
+            // continuation 在升級後仍長期以明文留在磁碟上。
+            if (isLegacyPlainText && manifest != null)
+            {
+                Save(manifest);
+            }
+
+            return manifest;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or CryptographicException)
         {
             return null;
+        }
+    }
+
+    private static string Unprotect(string storedContent)
+    {
+        byte[] encryptedBytes = Convert.FromBase64String(storedContent[EncryptedContentPrefix.Length..]);
+        byte[] plainBytes = ProtectedData.Unprotect(encryptedBytes, null, DataProtectionScope.CurrentUser);
+
+        try
+        {
+            return Encoding.UTF8.GetString(plainBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(plainBytes);
         }
     }
 

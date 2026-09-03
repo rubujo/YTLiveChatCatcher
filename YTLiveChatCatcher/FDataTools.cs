@@ -234,7 +234,11 @@ public sealed class FDataTools : Form
             {
                 File.WriteAllText(dialog.FileName, string.Empty, new UTF8Encoding(false));
                 _main.ConfigureStreamingJsonLines(dialog.FileName);
-                MessageBox.Show("已啟用持續 JSONL；之後擷取到的新批次會同步附加寫入，寫入失敗不會中止擷取。", Text);
+                MessageBox.Show(
+                    "已啟用持續 JSONL；之後擷取到的新批次會同步附加寫入，寫入失敗不會中止擷取。" +
+                    Environment.NewLine + Environment.NewLine +
+                    "注意：這是供您攜出使用的明文資料檔，可能包含作者與會員訊息，請妥善保管。",
+                    Text);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {

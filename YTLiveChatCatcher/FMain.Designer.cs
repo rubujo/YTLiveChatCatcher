@@ -214,7 +214,7 @@ namespace YTLiveChatCatcher
             //
             // BtnDataTools
             //
-            BtnDataTools.Location = new Point(708, 140);
+            BtnDataTools.Location = new Point(897, 112);
             BtnDataTools.Name = "BtnDataTools";
             BtnDataTools.Size = new Size(77, 23);
             BtnDataTools.TabIndex = 21;

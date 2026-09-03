@@ -25,13 +25,13 @@
    - 勾選「記住我」才會將 Cookie 以 Windows DPAPI 加密儲存在本機，否則僅存在記憶體、關閉程式即遺失。
    - `※需要自行購買該頻道的會員。`
 9. 擷取期間會把已收到的批次以 Windows DPAPI（CurrentUser）加密後，附加寫入 `%LocalAppData%\YTLiveChatCatcher\recovery.jsonl`；若程式意外結束或尚未匯出，下次啟動時可選擇載入。成功匯出或手動清除聊天室後會刪除這份復原記錄。
-10. 擷取 session 會保存影片、版本、開始／結束時間、最後 continuation、訊息數、結束原因與完整性狀態；意外中斷後可嘗試續傳，並對重疊批次去重。continuation 可能過期，因此應用程式不會把「沒有拋例外」誤標成資料完整。
+10. 擷取 session 會以 Windows DPAPI（CurrentUser）加密保存影片、版本、開始／結束時間、最後 continuation、訊息數、結束原因與完整性狀態；意外中斷後可嘗試續傳，並對重疊批次去重。舊版明文 manifest 成功載入後會立即轉換成加密格式；continuation 可能過期，因此應用程式不會把「沒有拋例外」誤標成資料完整。
 11. 主畫面的「資料工具」提供：
-    - 完整 `RendererData` JSON Lines 與通用 CSV 匯出。
+    - 完整 `RendererData` JSON Lines 與通用 CSV 匯入／匯出；也可在擷取時持續附加寫入 JSON Lines，降低長時間工作遺失風險。
     - 開始／結束時間、訊息類型、作者、最低／最高金額的組合篩選。
-    - 每分鐘訊息密度、付費事件時間軸、活躍作者與幣別分布分析。
+    - 每分鐘訊息密度、付費事件時間軸、活躍作者與幣別分布分析，並提供訊息密度與幣別分布圖。
     - 可調整的粗估收益比例；預設 70%，不代表 YouTube 實際結算。
-    - 一鍵產生已遮蔽 Cookie、Authorization、Token 與 continuation 的 ZIP 診斷包及結構 fixture。
+    - 一鍵產生已遮蔽 Cookie、Authorization、Token 與 continuation 的 ZIP 診斷包，並附上最近五批原始回應的已遮蔽結構 fixture。
 
 ## 三、注意事項
 
