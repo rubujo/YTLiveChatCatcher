@@ -72,6 +72,7 @@ public partial class YTJsonParser : IDisposable
     /// <param name="options">LiveChatStreamOptions，預設值為 null（使用預設設定）</param>
     /// <param name="intervalProgress">IProgress&lt;int&gt;，每次輪詢間隔更新時回報目前的間隔毫秒值，預設值為 null</param>
     /// <param name="streamStatusProgress">IProgress&lt;LiveChatStreamStatus&gt;，回報可供 session manifest 保存的續傳狀態</param>
+    /// <param name="rawResponseProgress">IProgress&lt;string&gt;，回報單批 InnerTube 原始 JSON，僅供診斷工具使用</param>
     /// <param name="cancellationToken">CancellationToken</param>
     /// <returns>IAsyncEnumerable&lt;IReadOnlyList&lt;RendererData&gt;&gt;，每次列舉為一次輪詢取得的批次訊息</returns>
     public async IAsyncEnumerable<IReadOnlyList<RendererData>> StreamLiveChatDataAsync(
@@ -79,6 +80,7 @@ public partial class YTJsonParser : IDisposable
         LiveChatStreamOptions? options = null,
         IProgress<int>? intervalProgress = null,
         IProgress<LiveChatStreamStatus>? streamStatusProgress = null,
+        IProgress<string>? rawResponseProgress = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         options ??= new LiveChatStreamOptions();
@@ -125,6 +127,8 @@ public partial class YTJsonParser : IDisposable
             {
                 break;
             }
+
+            rawResponseProgress?.Report(jsonElement.GetRawText());
 
             // 0：continuation、1：timeoutMs 或 timeUntilLastMessageMsec。
             string[] continuationData = ParseContinuation(jsonElement);

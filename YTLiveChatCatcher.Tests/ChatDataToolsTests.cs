@@ -60,6 +60,11 @@ public class ChatDataToolsTests
             Assert.Contains("\"messageContent\":\"a,b\\n\\u0022c\\u0022\"", File.ReadAllText(jsonl));
             Assert.Contains("\"a,b", File.ReadAllText(csv));
             Assert.Contains("\"\"c\"\"", File.ReadAllText(csv));
+            IReadOnlyList<RendererData> importedJsonl = ChatDataTools.ImportJsonLines(jsonl);
+            IReadOnlyList<RendererData> importedCsv = ChatDataTools.ImportCsv(csv);
+            Assert.Equal(Messages[0].MessageContent, importedJsonl[0].MessageContent);
+            Assert.Equal(Messages[0].MessageContent, importedCsv[0].MessageContent);
+            Assert.Equal(Messages[1].PurchaseAmountText, importedCsv[1].PurchaseAmountText);
         }
         finally
         {
@@ -78,11 +83,13 @@ public class ChatDataToolsTests
             string log = Path.Combine(directory, "log.txt");
             string zip = Path.Combine(directory, "bundle.zip");
             File.WriteAllText(log, "Authorization: secret\nCookie: SID=secret\n{\"continuation\":\"token-value\"}");
-            DiagnosticBundleBuilder.Create(zip, null, Messages, log);
+            DiagnosticBundleBuilder.Create(zip, null, Messages, log,
+                ["{\"continuation\":\"raw-secret\",\"contents\":{}}"]);
 
             using ZipArchive archive = ZipFile.OpenRead(zip);
             Assert.NotNull(archive.GetEntry("environment.json"));
             Assert.NotNull(archive.GetEntry("sanitized-structure-fixture.jsonl"));
+            Assert.NotNull(archive.GetEntry("raw-responses/response-001.json"));
             ZipArchiveEntry logEntry = Assert.IsType<ZipArchiveEntry>(archive.GetEntry("log-sanitized.txt"));
             using StreamReader reader = new(logEntry.Open());
             string content = reader.ReadToEnd();

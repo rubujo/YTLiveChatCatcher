@@ -122,8 +122,10 @@ public class LiveChatStreamingTests
         using CancellationTokenSource cts = new();
 
         List<string> events = [];
+        List<string> rawResponses = [];
         InlineProgressForTest<LiveChatStreamStatus> progress = new(status =>
             events.Add($"checkpoint:{status.Continuation}"));
+        InlineProgressForTest<string> rawProgress = new(rawResponses.Add);
 
         int batchCount = 0;
 
@@ -135,6 +137,7 @@ public class LiveChatStreamingTests
                 ResumeContinuation = "SAVED_CONTINUATION"
             },
             streamStatusProgress: progress,
+            rawResponseProgress: rawProgress,
             cancellationToken: cts.Token))
         {
             events.Add($"batch:{++batchCount}");
@@ -151,6 +154,8 @@ public class LiveChatStreamingTests
         Assert.Equal("checkpoint:SAVED_CONTINUATION", events[1]);
         Assert.Equal("batch:2", events[2]);
         Assert.StartsWith("checkpoint:", events[3]);
+        Assert.Single(rawResponses);
+        Assert.Contains("continuationContents", rawResponses[0]);
     }
 
     [Fact]

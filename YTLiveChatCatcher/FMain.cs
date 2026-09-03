@@ -368,6 +368,16 @@ public partial class FMain : Form
             manifest.IsReplay = status.IsReplay;
             TrySaveCaptureSession(manifest);
         });
+        InlineProgress<string> rawResponseProgress = new(rawResponse =>
+        {
+            const int MaximumDiagnosticResponses = 5;
+            SharedSanitizedRawResponses.Enqueue(DiagnosticBundleBuilder.Redact(rawResponse));
+
+            while (SharedSanitizedRawResponses.Count > MaximumDiagnosticResponses)
+            {
+                SharedSanitizedRawResponses.Dequeue();
+            }
+        });
 
         SharedFetchTask = Task.Run(async () =>
         {
@@ -381,6 +391,7 @@ public partial class FMain : Form
                     options: streamOptions,
                     intervalProgress: intervalProgress,
                     streamStatusProgress: streamStatusProgress,
+                    rawResponseProgress: rawResponseProgress,
                     cancellationToken: cancellationToken))
                 {
                     IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(batch);
@@ -392,6 +403,7 @@ public partial class FMain : Form
 
                     manifest.MessageCount += newMessages.Count;
                     TrySaveCaptureSession(manifest);
+                    TryAppendStreamingJsonLines(newMessages);
 
                     // 優先寫進當機復原記錄再處理成 ListView 項目；若落地成功，即使
                     // DoProcessMessages 或後續流程出問題，這批原始資料仍可在下次啟動時復原。
@@ -621,12 +633,6 @@ public partial class FMain : Form
 
     private void BtnDataTools_Click(object sender, EventArgs e)
     {
-        if (SharedRawRendererData.Count == 0)
-        {
-            MessageBox.Show("目前沒有可供篩選或分析的原始聊天室資料。", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-
         using FDataTools form = new(this);
         form.ShowDialog(this);
     }
@@ -763,6 +769,7 @@ public partial class FMain : Form
             SharedResumeContinuation = null;
             SharedCaptureMessageDeduplicator.Clear();
             SharedRawRendererData.Clear();
+            SharedSanitizedRawResponses.Clear();
 
             // 使用者主動清空聊天室，代表明確不需要保留這批資料，一併清除當機復原記錄。
             CaptureRecoveryStore.Clear();

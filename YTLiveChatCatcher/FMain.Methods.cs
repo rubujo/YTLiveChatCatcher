@@ -1355,6 +1355,8 @@ public partial class FMain
 
     public CaptureSessionManifest? GetCaptureSessionSnapshot() => SharedCaptureSessionManifest;
 
+    public IReadOnlyList<string> GetSanitizedRawResponsesSnapshot() => [.. SharedSanitizedRawResponses];
+
     public decimal GetRevenueEstimateRate() => SharedRevenueEstimateRate;
 
     public void SetRevenueEstimateRate(decimal rate)
@@ -1362,6 +1364,42 @@ public partial class FMain
         SharedRevenueEstimateRate = Math.Clamp(rate, 0m, 1m);
         RevenueEstimateSettings.SaveRate(SharedRevenueEstimateRate);
         UpdateSummaryInfo();
+    }
+
+    public int ImportRawMessages(IReadOnlyList<RendererData> messages)
+    {
+        IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(messages);
+
+        if (newMessages.Count > 0)
+        {
+            DoProcessMessages(newMessages);
+        }
+
+        return newMessages.Count;
+    }
+
+    public void ConfigureStreamingJsonLines(string? path)
+    {
+        SharedStreamingJsonlPath = path;
+    }
+
+    private void TryAppendStreamingJsonLines(IReadOnlyList<RendererData> messages)
+    {
+        if (string.IsNullOrWhiteSpace(SharedStreamingJsonlPath))
+        {
+            return;
+        }
+
+        try
+        {
+            ChatDataTools.AppendJsonLines(SharedStreamingJsonlPath, messages);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            SharedLogger.LogWarning(ex, "持續寫入 JSONL 失敗，已停止同步寫入。Path={Path}", SharedStreamingJsonlPath);
+            SharedStreamingJsonlPath = null;
+            WriteLog("持續寫入 JSONL 失敗，已停止同步寫入；聊天室擷取仍會繼續。");
+        }
     }
 
     /// <summary>

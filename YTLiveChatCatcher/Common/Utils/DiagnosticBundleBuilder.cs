@@ -13,7 +13,8 @@ public static partial class DiagnosticBundleBuilder
         string destinationPath,
         CaptureSessionManifest? manifest,
         IEnumerable<RendererData> messages,
-        string? logPath)
+        string? logPath,
+        IEnumerable<string>? sanitizedRawResponses = null)
     {
         using FileStream stream = File.Create(destinationPath);
         using ZipArchive archive = new(stream, ZipArchiveMode.Create);
@@ -37,6 +38,16 @@ public static partial class DiagnosticBundleBuilder
 
         string fixture = string.Join('\n', messages.Select(message => Redact(JsonSerializer.Serialize(message))));
         WriteEntry(archive, "sanitized-structure-fixture.jsonl", fixture);
+
+        if (sanitizedRawResponses != null)
+        {
+            int index = 1;
+
+            foreach (string response in sanitizedRawResponses)
+            {
+                WriteEntry(archive, $"raw-responses/response-{index++:000}.json", Redact(response));
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(logPath) && File.Exists(logPath))
         {

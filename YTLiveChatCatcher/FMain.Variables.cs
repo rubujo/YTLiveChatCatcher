@@ -105,6 +105,12 @@ public partial class FMain
     /// <summary>YouTube 實收比例的可設定粗略估算值。</summary>
     private decimal SharedRevenueEstimateRate = RevenueEstimateSettings.LoadRate();
 
+    /// <summary>最近幾批已即時遮蔽的 InnerTube 原始回應，供結構漂移診斷包使用。</summary>
+    private readonly Queue<string> SharedSanitizedRawResponses = new();
+
+    /// <summary>若有設定，每批新資料會同步附加到此無損 JSONL。</summary>
+    private string? SharedStreamingJsonlPath;
+
     /// <summary>
     /// 上一次對 <c>LVLiveChatList</c> 呼叫 <see cref="Control.Invalidate()"/> 的時間戳記，供
     /// <see cref="InvalidateLiveChatListThrottled"/> 節流用。重播影片一次可能連續處理數十個批次

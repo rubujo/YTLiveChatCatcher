@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using YTLiveChatCatcher.Common.Utils;
+using YTLiveChatCatcher.Common.Controls;
 
 namespace YTLiveChatCatcher;
 
@@ -20,6 +21,7 @@ public sealed class FDataTools : Form
     private readonly CheckBox _useMaximum = new() { Text = "最高金額" };
     private readonly NumericUpDown _revenuePercent = new() { DecimalPlaces = 1, Minimum = 0, Maximum = 100, Increment = 1 };
     private readonly TextBox _analysis = new() { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both };
+    private readonly AnalyticsChartPanel _chart = new() { Dock = DockStyle.Fill };
 
     public FDataTools(FMain main)
     {
@@ -74,6 +76,8 @@ public sealed class FDataTools : Form
         actions.Controls.Add(CreateButton("套用並分析", (_, _) => RefreshAnalysis()));
         actions.Controls.Add(CreateButton("匯出 JSONL", (_, _) => Export("JSON Lines|*.jsonl", ChatDataTools.ExportJsonLines)));
         actions.Controls.Add(CreateButton("匯出 CSV", (_, _) => Export("CSV|*.csv", ChatDataTools.ExportCsv)));
+        actions.Controls.Add(CreateButton("匯入 JSONL/CSV", (_, _) => Import()));
+        actions.Controls.Add(CreateButton("設定持續 JSONL", (_, _) => ConfigureStreamingJsonLines()));
         actions.Controls.Add(CreateButton("產生診斷包", (_, _) => CreateDiagnosticBundle()));
         layout.Controls.Add(actions, 0, 5);
         layout.SetColumnSpan(actions, 4);
@@ -89,9 +93,12 @@ public sealed class FDataTools : Form
         layout.Controls.Add(ratePanel, 0, 6);
         layout.SetColumnSpan(ratePanel, 4);
 
+        SplitContainer analysisArea = new() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 210 };
+        analysisArea.Panel1.Controls.Add(_chart);
         _analysis.Dock = DockStyle.Fill;
-        layout.Controls.Add(_analysis, 0, 7);
-        layout.SetColumnSpan(_analysis, 4);
+        analysisArea.Panel2.Controls.Add(_analysis);
+        layout.Controls.Add(analysisArea, 0, 7);
+        layout.SetColumnSpan(analysisArea, 4);
         Controls.Add(layout);
 
         RefreshAnalysis();
@@ -131,6 +138,7 @@ public sealed class FDataTools : Form
         try
         {
             ChatAnalytics analytics = ChatDataTools.Analyze(GetFiltered());
+            _chart.SetAnalytics(analytics);
             StringBuilder output = new();
             output.AppendLine($"符合條件：{analytics.MessageCount} 筆");
             output.AppendLine();
@@ -177,8 +185,61 @@ public sealed class FDataTools : Form
                 dialog.FileName,
                 _main.GetCaptureSessionSnapshot(),
                 GetFiltered(),
-                Path.Combine(AppContext.BaseDirectory, "Logs", "log.txt"));
+                Path.Combine(AppContext.BaseDirectory, "Logs", "log.txt"),
+                _main.GetSanitizedRawResponsesSnapshot());
             MessageBox.Show("診斷包已產生；傳送前仍請自行檢查內容。", Text);
+        }
+    }
+
+    private void Import()
+    {
+        using OpenFileDialog dialog = new()
+        {
+            Filter = "JSON Lines 或 CSV|*.jsonl;*.csv|JSON Lines|*.jsonl|CSV|*.csv",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) != DialogResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            IReadOnlyList<RendererData> messages = string.Equals(Path.GetExtension(dialog.FileName), ".csv", StringComparison.OrdinalIgnoreCase) ?
+                ChatDataTools.ImportCsv(dialog.FileName) :
+                ChatDataTools.ImportJsonLines(dialog.FileName);
+            int imported = _main.ImportRawMessages(messages);
+            MessageBox.Show($"已匯入 {imported} 筆新資料；重複事件已略過。請重新開啟資料工具以分析完整資料。", Text);
+            Close();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
+        {
+            MessageBox.Show($"匯入失敗：{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ConfigureStreamingJsonLines()
+    {
+        using SaveFileDialog dialog = new()
+        {
+            Filter = "JSON Lines|*.jsonl",
+            FileName = $"聊天室串流_{DateTime.Now:yyyyMMdd_HHmmss}.jsonl",
+            OverwritePrompt = true
+        };
+
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+        {
+            try
+            {
+                File.WriteAllText(dialog.FileName, string.Empty, new UTF8Encoding(false));
+                _main.ConfigureStreamingJsonLines(dialog.FileName);
+                MessageBox.Show("已啟用持續 JSONL；之後擷取到的新批次會同步附加寫入，寫入失敗不會中止擷取。", Text);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                MessageBox.Show($"無法建立 JSONL：{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 
