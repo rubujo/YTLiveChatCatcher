@@ -4,6 +4,7 @@ using Rubujo.YouTube.Utility.Extensions;
 using System.Data;
 using YTLiveChatCatcher.Common;
 using YTLiveChatCatcher.Common.Sets;
+using YTLiveChatCatcher.Common.Utils;
 using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
@@ -24,6 +25,8 @@ public partial class FSearch : Form
         Text = $"搜尋 - {fmain.Text}";
         AccessibleName = "聊天室搜尋視窗";
         AccessibleDescription = "依作者、訊息內容或訊息類型搜尋目前聊天室記錄";
+        AccessibleRole = AccessibleRole.Window;
+        LVFilteredList.AccessibleRole = AccessibleRole.Table;
 
         _FMain = fmain;
         _LVLiveChatList = fmain.Controls
@@ -109,13 +112,7 @@ public partial class FSearch : Form
                 // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
                 // GetSharedListViewItems()（見 FMain.Methods.cs）。
                 IReadOnlyList<ListViewItem> source = _FMain.GetSharedListViewItems();
-                List<ListViewItem> dataSet = await Task.Run(() => source
-                    .Where(n => n.SubItems[0].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
-                        n.SubItems[2].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
-                        n.SubItems[5].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase))
-                    .Select(n => (ListViewItem)n.Clone())
-                    .Reverse()
-                    .ToList());
+                List<ListViewItem> dataSet = await Task.Run(() => ChatSearchUtil.Filter(source, keyword));
 
                 if (dataSet.Count <= 0)
                 {
@@ -135,31 +132,14 @@ public partial class FSearch : Form
                     SharedFilteredListViewItems.Clear();
                     LVFilteredList.VirtualListSize = 0;
 
-                    // 2026/9 修正：AutoFitListViewColumns 原本被整份搜尋結果（未分批）一次呼叫，
-                    // 在 UI 執行緒同步跑完全部欄寬量測；長時間直播累積數萬則訊息、關鍵字命中量
-                    // 大時，搜尋視窗會整個凍結數秒。改成分批 flush（比照 DoProcessMessages／
-                    // LoadXLSX 逐批處理的做法），批次之間用 await Task.Yield() 讓出控制權，
-                    // UI 才有機會處理繪製／輸入訊息。
-                    const int FlushBatchSize = 200;
-
-                    for (int offset = 0; offset < dataSet.Count; offset += FlushBatchSize)
-                    {
-                        int batchSize = Math.Min(FlushBatchSize, dataSet.Count - offset);
-                        List<ListViewItem> batch = dataSet.GetRange(offset, batchSize);
-
-                        LVFilteredList.BeginUpdate();
-                        FMain.AutoFitListViewColumns(LVFilteredList, batch);
-                        SharedFilteredListViewItems.AddRange(batch);
-                        LVFilteredList.VirtualListSize = SharedFilteredListViewItems.Count;
-                        LVFilteredList.EndUpdate();
-
-                        // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，避免
-                        // 複製過來的 ListViewItem 引用了共用 ImageList 裡剛好還在下載中的頭像
-                        // （理由同 FMain.Methods.cs 頭像下載完成處的說明）。
-                        LVFilteredList.Invalidate();
-
-                        await Task.Yield();
-                    }
+                    LVFilteredList.BeginUpdate();
+                    FMain.AutoFitListViewColumns(
+                        LVFilteredList,
+                        ListSamplingUtil.CreateEvenlySpaced(dataSet, 512));
+                    SharedFilteredListViewItems.AddRange(dataSet);
+                    LVFilteredList.VirtualListSize = SharedFilteredListViewItems.Count;
+                    LVFilteredList.EndUpdate();
+                    LVFilteredList.Invalidate();
                 }
 
                 LChatCount.InvokeIfRequired(() =>

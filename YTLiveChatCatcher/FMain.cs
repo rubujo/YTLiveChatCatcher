@@ -25,6 +25,8 @@ public partial class FMain : Form
 
         AccessibleName = "YouTube 聊天室捕手主視窗";
         AccessibleDescription = "擷取、檢視、搜尋及匯出 YouTube 直播聊天室內容";
+        AccessibleRole = AccessibleRole.Window;
+        LVLiveChatList.AccessibleRole = AccessibleRole.Table;
 
         SharedHttpClientFactory = httpClientFactory;
         SharedLogger = logger;
@@ -784,9 +786,14 @@ public partial class FMain : Form
 
             // 清除 SharedCustomEmojis。
             SharedCustomEmojis.Clear();
+            SharedCustomEmojiIds.Clear();
 
             // 清除 SharedBadges。
             SharedBadges.Clear();
+            SharedBadgeLabels.Clear();
+
+            SharedStickers.Clear();
+            SharedStickerKeys.Clear();
         }
         catch (Exception ex)
         {

@@ -1401,7 +1401,7 @@ public partial class FMain
             // 否則每一批都 EnsureVisible/Invalidate，會留下大量原生 ListView 繪製工作，讓匯入
             // 對話框已完成後主視窗仍長時間沒有回應。
             LVLiveChatList.BeginUpdate();
-            AutoFitListViewColumns(LVLiveChatList, CreateEvenlySpacedItemSample(SharedListViewItems, 512));
+            AutoFitListViewColumns(LVLiveChatList, ListSamplingUtil.CreateEvenlySpaced(SharedListViewItems, 512));
             LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
             LVLiveChatList.EndUpdate();
             LVLiveChatList.Invalidate();
@@ -1547,7 +1547,9 @@ public partial class FMain
                 {
                     foreach (StickerData stickerData in rendererData.Stickers)
                     {
-                        if (!SharedStickers.Any(n => n.ID == stickerData.ID))
+                        string stickerKey = stickerData.ID ?? stickerData.Url ?? string.Empty;
+
+                        if (string.IsNullOrEmpty(stickerKey) || SharedStickerKeys.Add(stickerKey))
                         {
                             // 2025/4/15 改用新的方式下載圖片。
                             //string errorMessage = await stickerData.SetImage(
@@ -1569,22 +1571,21 @@ public partial class FMain
                     foreach (EmojiData emojiData in rendererData.Emojis)
                     {
                         // 只處理自定義表情符號的資料。
-                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
+                        if (emojiData.IsCustomEmoji &&
+                            !string.IsNullOrEmpty(emojiData.ID) &&
+                            SharedCustomEmojiIds.Add(emojiData.ID))
                         {
-                            if (emojiData.IsCustomEmoji)
-                            {
-                                // 2025/4/15 改用新的方式下載圖片。
-                                //string errorMessage = await emojiData.SetImage(
-                                //    SharedHttpClient,
-                                //    SharedYTJsonParser.FetchLargePicture());
+                            // 2025/4/15 改用新的方式下載圖片。
+                            //string errorMessage = await emojiData.SetImage(
+                            //    SharedHttpClient,
+                            //    SharedYTJsonParser.FetchLargePicture());
 
-                                //if (!string.IsNullOrEmpty(errorMessage))
-                                //{
-                                //    WriteLog(errorMessage);
-                                //}
+                            //if (!string.IsNullOrEmpty(errorMessage))
+                            //{
+                            //    WriteLog(errorMessage);
+                            //}
 
-                                SharedCustomEmojis.Add(emojiData);
-                            }
+                            SharedCustomEmojis.Add(emojiData);
                         }
                     }
                 }
@@ -1595,8 +1596,8 @@ public partial class FMain
                     {
                         // 只處理會員徽章的資料。
                         if (badgeData.Label != null &&
-                            !SharedBadges.Any(n => n.Label == badgeData.Label) &&
-                            badgeData.Label.Contains(StringSet.Member))
+                            badgeData.Label.Contains(StringSet.Member) &&
+                            SharedBadgeLabels.Add(badgeData.Label))
                         {
                             // 2025/4/15 改用新的方式下載圖片。
                             //string errorMessage = await badgeData.SetImage(
@@ -2591,26 +2592,6 @@ public partial class FMain
             TBVideoID.Text = manifest.VideoId;
             WriteLog("已載入上次的續傳狀態；按下「開始」後會嘗試從中斷點繼續。continuation 可能已過期，完成後請確認資料完整性標示。");
         }
-    }
-
-    private static List<ListViewItem> CreateEvenlySpacedItemSample(
-        IReadOnlyList<ListViewItem> items,
-        int maximumCount)
-    {
-        if (items.Count <= maximumCount)
-        {
-            return [.. items];
-        }
-
-        List<ListViewItem> sample = new(maximumCount);
-        double step = (double)(items.Count - 1) / (maximumCount - 1);
-
-        for (int index = 0; index < maximumCount; index++)
-        {
-            sample.Add(items[(int)Math.Round(index * step)]);
-        }
-
-        return sample;
     }
 
     /// <summary>

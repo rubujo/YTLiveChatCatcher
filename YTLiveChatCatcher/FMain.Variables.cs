@@ -80,15 +80,24 @@ public partial class FMain
     /// </summary>
     private readonly List<StickerData> SharedStickers = [];
 
+    /// <summary>超級貼圖 ID／網址去重索引。</summary>
+    private readonly HashSet<string> SharedStickerKeys = new(StringComparer.Ordinal);
+
     /// <summary>
     /// 共用的 List&lt;EmojiData&gt;
     /// </summary>
     private readonly List<EmojiData> SharedCustomEmojis = [];
 
+    /// <summary>表情符號 ID 去重索引。</summary>
+    private readonly HashSet<string> SharedCustomEmojiIds = new(StringComparer.Ordinal);
+
     /// <summary>
     /// 共用的 List&lt;BadgeData&gt;
     /// </summary>
     private readonly List<BadgeData> SharedBadges = [];
+
+    /// <summary>會員徽章標籤去重索引。</summary>
+    private readonly HashSet<string> SharedBadgeLabels = new(StringComparer.Ordinal);
 
     /// <summary>
     /// <see cref="FMain.FMain_Load"/> 內把 <c>LVLiveChatList</c> 設成 <c>VirtualMode = true</c> 之後，

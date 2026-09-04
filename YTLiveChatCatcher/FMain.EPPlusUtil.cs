@@ -68,46 +68,7 @@ public partial class FMain
             // 耗時從數秒暴增到數十秒。
             HashSet<(string AuthorName, string TimestampUsec)> itemsSeenWithoutId = [];
 
-            // 2026/9 修正：AutoFitListViewColumns 原本被整份匯入檔案（可能上千列）一次呼叫，在
-            // UI 執行緒同步跑完全部欄寬量測，會讓畫面在匯入大檔案時凍結數秒。改成每累積到一定
-            // 筆數就先把這批 flush 進畫面（呼叫模式比照 DoProcessMessages 逐批處理的做法），
-            // 讓 UI 有機會在批次之間處理繪製／輸入訊息，不會整段匯入期間完全沒有回應。
-            const int FlushBatchSize = 200;
-
-            List<ListViewItem> currentBatch = [];
-
-            async Task FlushCurrentBatchAsync()
-            {
-                if (currentBatch.Count == 0)
-                {
-                    return;
-                }
-
-                List<ListViewItem> batchToFlush = currentBatch;
-
-                currentBatch = [];
-
-                await LVLiveChatList.InvokeAsyncIfRequired(() =>
-                {
-                    LVLiveChatList.BeginUpdate();
-                    AutoFitListViewColumns(LVLiveChatList, batchToFlush);
-                    SharedListViewItems.AddRange(batchToFlush);
-                    LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
-
-                    if (SharedListViewItems.Count > 0)
-                    {
-                        LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
-                    }
-
-                    LVLiveChatList.EndUpdate();
-
-                    // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面
-                    // 批次因為 RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見
-                    // DoProcessMessages 頭像下載完成處的說明）。匯入大檔案時批次數量可能很多，
-                    // 改用節流版避免短時間內觸發大量重複的重繪。
-                    InvalidateLiveChatListThrottled();
-                });
-            }
+            List<ListViewItem> importedItems = [];
 
             // 2026/9 修正：原本用兩個計數器——for 迴圈的 i 判斷是否結束、獨立的 rowIdx1 定位儲存格，
             // 只在「從不觸發 continue」時兩者才同步遞增。下面「type 為空就 continue」那段會跳過
@@ -339,18 +300,25 @@ public partial class FMain
 
                     RegisterNewListViewItemStats(type, authorBages, authorName, purchaseAmmount);
 
-                    currentBatch.Add(lvItem);
-
-                    if (currentBatch.Count >= FlushBatchSize)
-                    {
-                        await FlushCurrentBatchAsync();
-                    }
+                    importedItems.Add(lvItem);
                 }
             }
 
-            await FlushCurrentBatchAsync();
-
-            UpdateSummaryInfo();
+            if (importedItems.Count > 0)
+            {
+                await LVLiveChatList.InvokeAsyncIfRequired(() =>
+                {
+                    LVLiveChatList.BeginUpdate();
+                    AutoFitListViewColumns(
+                        LVLiveChatList,
+                        ListSamplingUtil.CreateEvenlySpaced(importedItems, 512));
+                    SharedListViewItems.AddRange(importedItems);
+                    LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+                    LVLiveChatList.EndUpdate();
+                    LVLiveChatList.Invalidate();
+                    UpdateSummaryInfo();
+                });
+            }
 
             #endregion
 
@@ -384,7 +352,7 @@ public partial class FMain
                             Format = format
                         };
 
-                        if (!SharedCustomEmojis.Any(n => n.ID == emojiData.ID))
+                        if (SharedCustomEmojiIds.Add(emojiData.ID))
                         {
                             if (emojiData.IsCustomEmoji)
                             {
@@ -443,8 +411,8 @@ public partial class FMain
                             Format = format
                         };
 
-                        if (!SharedBadges.Any(n => n.Label == badgeData.Label) &&
-                            badgeData.Label.Contains(StringSet.Member))
+                        if (badgeData.Label.Contains(StringSet.Member) &&
+                            SharedBadgeLabels.Add(badgeData.Label))
                         {
                             // 2025/4/17 取消在匯入時下載圖片。
                             //if (!string.IsNullOrEmpty(badgeData.Url))
@@ -495,7 +463,7 @@ public partial class FMain
                             Format = format
                         };
 
-                        if (!SharedStickers.Any(n => n.Url == stickerData.Url))
+                        if (string.IsNullOrEmpty(stickerData.Url) || SharedStickerKeys.Add(stickerData.Url))
                         {
                             // 2025/4/17 取消在匯入時下載圖片。
                             //if (!string.IsNullOrEmpty(stickerData.Url))
