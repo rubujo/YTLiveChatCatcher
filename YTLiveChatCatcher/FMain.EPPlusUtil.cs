@@ -62,12 +62,10 @@ public partial class FMain
                 return;
             }
 
-            // 2026/9 修正：itemsSeenWithoutId 讓「沒有 ID 值」的舊格式列改用 O(1) 雜湊查找去重，
+            // 2026/9 修正：SharedItemsWithoutMessageId 讓「沒有 ID 值」的舊格式列改用 O(1) 雜湊查找去重，
             // 取代原本對整份累積清單做 .Any(...) 的 O(n) 線性掃描——舊格式匯出檔案沒有 ID 欄位是
             // 被刻意保留支援的真實情境（見 AGENTS.md），大檔案（例如上萬列）下線性掃描會讓匯入
             // 耗時從數秒暴增到數十秒。
-            HashSet<(string AuthorName, string TimestampUsec)> itemsSeenWithoutId = [];
-
             List<ListViewItem> importedItems = [];
 
             // 2026/9 修正：原本用兩個計數器——for 迴圈的 i 判斷是否結束、獨立的 rowIdx1 定位儲存格，
@@ -214,61 +212,15 @@ public partial class FMain
                     }
                 }
 
-                if (!string.IsNullOrEmpty(authorPhotoUrl))
-                {
-                    // 理由同 DoProcessMessages 對應的修正：顯示名稱不保證唯一，改用頻道 ID 當 key。
-                    string imgKey = !string.IsNullOrEmpty(authorExternalChannelID) ?
-                        authorExternalChannelID :
-                        authorName;
-
-                    LVLiveChatList.InvokeIfRequired(async () =>
-                    {
-                        // 這裡是 fire-and-forget 的 async void 委派，
-                        // 一定要在內部自己攔截例外，否則會直接讓整個應用程式當掉。
-                        try
-                        {
-                            if (LVLiveChatList.SmallImageList != null)
-                            {
-                                string errorMessage = await LVLiveChatList.SmallImageList
-                                    .Images
-                                    .SetAuthorPhoto(
-                                        SharedHttpClient,
-                                        imgKey,
-                                        authorPhotoUrl);
-
-                                if (!string.IsNullOrEmpty(errorMessage))
-                                {
-                                    WriteLog(errorMessage);
-                                }
-
-                                // 2026/8 修正（真正的根本原因，理由同 DoProcessMessages 對應的修正）：
-                                // VirtualMode 下用字串鍵值的 ImageKey 是已知不可靠的做法，必須改用整數索引
-                                // 的 ImageIndex；下載完成後才知道實際索引，用 IndexOfKey 查出來再指定。
-                                int imageIndex = LVLiveChatList.SmallImageList.Images.IndexOfKey(imgKey);
-
-                                if (imageIndex >= 0)
-                                {
-                                    lvItem.ImageIndex = imageIndex;
-                                }
-
-                                // 理由同 DoProcessMessages 對應的修正：下載本身是背景中各自獨立完成的
-                                // 非同步工作，可能晚於呼叫端「最後一次」的 Invalidate() 才真正完成，
-                                // 額外主動補一次節流過的 Invalidate() 當保險，避免頭像永久空白。
-                                InvalidateLiveChatListThrottled();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
-                        }
-                    });
-                }
-
                 // 先過濾以避免加入到重複的資料：優先以訊息 ID 判斷，沒有 ID 值時才退回舊版判斷方式，
                 // 邏輯與 DoProcessMessages 一致。
                 bool isDuplicate = !string.IsNullOrEmpty(id) ?
                     SharedItemsByMessageID.ContainsKey(id) :
-                    itemsSeenWithoutId.Contains((authorName, timestampUsec));
+                    !SharedItemsWithoutMessageId.Add(ChatFallbackIdentity.Create(
+                        authorExternalChannelID,
+                        authorName,
+                        timestampUsec,
+                        type));
 
                 if (!isDuplicate)
                 {
@@ -276,11 +228,6 @@ public partial class FMain
                     {
                         SharedItemsByMessageID[id] = lvItem;
                     }
-                    else
-                    {
-                        itemsSeenWithoutId.Add((authorName, timestampUsec));
-                    }
-
                     if (!string.IsNullOrEmpty(authorExternalChannelID))
                     {
                         if (!SharedItemsByAuthorChannelID.TryGetValue(authorExternalChannelID, out List<ListViewItem>? authorItems))
@@ -314,6 +261,21 @@ public partial class FMain
                         ListSamplingUtil.CreateEvenlySpaced(importedItems, 512));
                     SharedListViewItems.AddRange(importedItems);
                     LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+
+                    foreach (ListViewItem importedItem in importedItems)
+                    {
+                        string imageUrl = importedItem.SubItems[9].Text;
+
+                        if (string.IsNullOrEmpty(imageUrl))
+                        {
+                            continue;
+                        }
+
+                        string channelId = importedItem.SubItems[10].Text;
+                        string imageKey = !string.IsNullOrEmpty(channelId) ? channelId : importedItem.Text;
+                        QueueAuthorPhotoLoad(imageKey, imageUrl, importedItem);
+                    }
+
                     LVLiveChatList.EndUpdate();
                     LVLiveChatList.Invalidate();
                     UpdateSummaryInfo();

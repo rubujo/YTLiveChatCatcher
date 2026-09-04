@@ -1375,6 +1375,114 @@ public partial class FMain
         UpdateSummaryInfo();
     }
 
+    private const int LiveChatAutoFitThrottleMs = 500;
+
+    /// <summary>累積代表項目並節流即時欄寬量測，避免高流量重播持續呼叫 GDI。</summary>
+    private void AutoFitLiveChatColumnsThrottled(IReadOnlyList<ListViewItem> newItems, bool force = false)
+    {
+        SharedPendingAutoFitItems.AddRange(ListSamplingUtil.CreateEvenlySpaced(newItems, 128));
+        DateTime now = DateTime.UtcNow;
+
+        if (!force &&
+            (now - SharedLastAutoFitUtc).TotalMilliseconds < LiveChatAutoFitThrottleMs)
+        {
+            return;
+        }
+
+        AutoFitListViewColumns(
+            LVLiveChatList,
+            ListSamplingUtil.CreateEvenlySpaced(SharedPendingAutoFitItems, 512));
+        SharedPendingAutoFitItems.Clear();
+        SharedLastAutoFitUtc = now;
+    }
+
+    private sealed class PendingAuthorPhotoRequest(ImageList imageList, string imageUrl)
+    {
+        public ImageList ImageList { get; } = imageList;
+
+        public string ImageUrl { get; } = imageUrl;
+
+        public List<ListViewItem> Items { get; } = [];
+    }
+
+    /// <summary>合併同一作者的頭像要求，並限制同時執行的載入數量。</summary>
+    private void QueueAuthorPhotoLoad(string key, string imageUrl, ListViewItem item)
+    {
+        ImageList? imageList = LVLiveChatList.SmallImageList;
+
+        if (imageList == null)
+        {
+            return;
+        }
+
+        int existingIndex = imageList.Images.IndexOfKey(key);
+
+        if (existingIndex >= 0)
+        {
+            item.ImageIndex = existingIndex;
+            return;
+        }
+
+        if (SharedPendingAuthorPhotos.TryGetValue(key, out PendingAuthorPhotoRequest? existingRequest) &&
+            ReferenceEquals(existingRequest.ImageList, imageList))
+        {
+            existingRequest.Items.Add(item);
+            return;
+        }
+
+        PendingAuthorPhotoRequest request = new(imageList, imageUrl);
+        request.Items.Add(item);
+        SharedPendingAuthorPhotos[key] = request;
+        _ = LoadAuthorPhotoAsync(key, request);
+    }
+
+    private async Task LoadAuthorPhotoAsync(string key, PendingAuthorPhotoRequest request)
+    {
+        await SharedAuthorPhotoSemaphore.WaitAsync();
+
+        try
+        {
+            string errorMessage = await request.ImageList.Images.SetAuthorPhoto(
+                SharedHttpClient,
+                key,
+                request.ImageUrl);
+
+            if (!string.IsNullOrEmpty(errorMessage))
+            {
+                WriteLog(errorMessage);
+            }
+
+            int imageIndex = request.ImageList.Images.IndexOfKey(key);
+
+            if (imageIndex >= 0)
+            {
+                foreach (ListViewItem pendingItem in request.Items)
+                {
+                    pendingItem.ImageIndex = imageIndex;
+                }
+            }
+
+            if (ReferenceEquals(LVLiveChatList.SmallImageList, request.ImageList))
+            {
+                InvalidateLiveChatListThrottled();
+            }
+        }
+        catch (Exception ex)
+        {
+            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
+        }
+        finally
+        {
+            SharedAuthorPhotoSemaphore.Release();
+
+            if (SharedPendingAuthorPhotos.TryGetValue(key, out PendingAuthorPhotoRequest? currentRequest) &&
+                ReferenceEquals(currentRequest, request))
+            {
+                SharedPendingAuthorPhotos.Remove(key);
+            }
+        }
+    }
+
     public async Task<int> ImportRawMessagesAsync(IReadOnlyList<RendererData> messages)
     {
         IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(messages);
@@ -1729,7 +1837,11 @@ public partial class FMain
                 }
 
                 if (string.IsNullOrEmpty(id) &&
-                    listTempItem.Any(n => n.Text == authorName && n.SubItems[4].Text == timestampUsec))
+                    !SharedItemsWithoutMessageId.Add(ChatFallbackIdentity.Create(
+                        authorExternalChannelID,
+                        authorName,
+                        timestampUsec,
+                        type)))
                 {
                     continue;
                 }
@@ -1860,62 +1972,7 @@ public partial class FMain
                         authorExternalChannelID :
                         authorName;
 
-                    LVLiveChatList.InvokeIfRequired(async () =>
-                    {
-                        // 這裡是 fire-and-forget 的 async void 委派，
-                        // 一定要在內部自己攔截例外，否則會直接讓整個應用程式當掉。
-                        try
-                        {
-                            if (LVLiveChatList.SmallImageList != null)
-                            {
-                                string errorMessage = await LVLiveChatList.SmallImageList
-                                    .Images
-                                    .SetAuthorPhoto(
-                                        SharedHttpClient,
-                                        imgKey,
-                                        authorPhotoUrl);
-
-                                if (!string.IsNullOrEmpty(errorMessage))
-                                {
-                                    WriteLog(errorMessage);
-                                }
-
-                                // 2026/8 修正（真正的根本原因）：VirtualMode 下透過 RetrieveVirtualItem 供應的
-                                // 項目，用字串鍵值的 ImageKey 是已知不可靠的做法——即使 ImageList.Images 裡
-                                // 確實有這個 key（用暫時性的診斷紀錄逐步確認過下載／加入 ImageList／
-                                // SharedListViewItems 索引查找全部正確執行），圖示還是不會顯示，這是
-                                // WinForms VirtualMode 的既有限制，跟資料是否正確、重繪時機是否正確都無關。
-                                // 必須改用整數索引的 ImageIndex 才能正常運作。下載是非同步的，建立
-                                // ListViewItem 當下還不知道這張圖片最後會落在 ImageList 的哪個索引，
-                                // 要等這裡下載完成（或確認先前已經快取過）之後，用 IndexOfKey 查出實際
-                                // 索引再指定；ImageIndex／ImageKey 兩者互斥，指定 ImageIndex 會自動清掉
-                                // 先前可能設過的 ImageKey，不需要另外清除。
-                                int imageIndex = LVLiveChatList.SmallImageList.Images.IndexOfKey(imgKey);
-
-                                if (imageIndex >= 0)
-                                {
-                                    lvItem.ImageIndex = imageIndex;
-                                }
-
-                                // VirtualMode 下 SmallImageList.Images 多出一張圖片、或 ImageIndex 被改變，
-                                // 都不會自動觸發這一列重繪（非 VirtualMode 才會）。這裡不直接呼叫
-                                // RedrawListViewItem(lvItem)：實測過 RedrawItems 在批次密集時很容易撞上
-                                // 下一個批次自己的 BeginUpdate 視窗而被吃掉、不會補跑（微軟官方文件已記載
-                                // 這個限制）。呼叫端已經會在每個批次自己的 EndUpdate() 之後、以及整場
-                                // 擷取結束時各補一次節流過的 Invalidate()（見 DoProcessMessages／
-                                // LoadXLSX／BtnStop_Click），但下載本身是背景中各自獨立完成的非同步工作，
-                                // 仍可能晚於「最後一次」那些呼叫點才真正完成（例如整場擷取已經停止、
-                                // BtnStop_Click 的收尾 Invalidate() 都執行完了，這裡才姍姍來遲）——那種情況下
-                                // 沒有任何後續事件會再觸發重繪，頭像就會永久空白。這裡額外主動補一次節流過的
-                                // Invalidate()，跟呼叫端的時機互為保險，兩邊都命中節流窗口內時只會真的重繪一次。
-                                InvalidateLiveChatListThrottled();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
-                        }
-                    });
+                    QueueAuthorPhotoLoad(imgKey, authorPhotoUrl, lvItem);
                 }
 
                 // 登記進關聯用的索引，讓之後同一批次或後續批次的刪除／封鎖／回覆數更新／
@@ -1960,7 +2017,7 @@ public partial class FMain
             if (updateListView)
             {
                 LVLiveChatList.BeginUpdate();
-                AutoFitListViewColumns(LVLiveChatList, listTempItem);
+                AutoFitLiveChatColumnsThrottled(listTempItem);
                 LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
 
                 if (SharedListViewItems.Count > 0)

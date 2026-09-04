@@ -508,6 +508,7 @@ public partial class FMain : Form
             // 最後幾筆還在下載中的頭像（理由同 FMain.Methods.cs 頭像下載完成處的說明）。
             LVLiveChatList.InvokeIfRequired(() =>
             {
+                AutoFitLiveChatColumnsThrottled([], force: true);
                 LVLiveChatList.Invalidate();
             });
 
@@ -756,6 +757,10 @@ public partial class FMain : Form
             SharedItemsByMessageID.Clear();
             SharedItemsByReplyCountEntityKey.Clear();
             SharedItemsByAuthorChannelID.Clear();
+            SharedItemsWithoutMessageId.Clear();
+            SharedPendingAuthorPhotos.Clear();
+            SharedPendingAutoFitItems.Clear();
+            SharedLastAutoFitUtc = DateTime.MinValue;
 
             // 重設累加式統計計數器（務必在呼叫 UpdateSummaryInfo() 之前重設，
             // 否則畫面上的統計文字會先短暫顯示清空前的舊數字）。

@@ -152,6 +152,22 @@ public partial class FMain
     /// </summary>
     private readonly Dictionary<string, List<ListViewItem>> SharedItemsByAuthorChannelID = [];
 
+    /// <summary>沒有訊息 ID 時使用的跨批次去重索引。</summary>
+    private readonly HashSet<ChatFallbackIdentity> SharedItemsWithoutMessageId = [];
+
+    /// <summary>等待同一張頭像完成後一併更新的畫面項目。</summary>
+    private readonly Dictionary<string, PendingAuthorPhotoRequest> SharedPendingAuthorPhotos =
+        new(StringComparer.Ordinal);
+
+    /// <summary>限制同時進行的頭像磁碟讀取／網路下載數量。</summary>
+    private readonly SemaphoreSlim SharedAuthorPhotoSemaphore = new(4, 4);
+
+    /// <summary>上次實際執行即時欄寬量測的時間。</summary>
+    private DateTime SharedLastAutoFitUtc = DateTime.MinValue;
+
+    /// <summary>欄寬節流期間尚未量測的代表項目。</summary>
+    private readonly List<ListViewItem> SharedPendingAutoFitItems = [];
+
     #region 累加式統計計數器（2026/8 新增，取代 UpdateSummaryInfo 內原本每批次都要重新掃描整個 ListView 的做法）
 
     // 以下欄位只應該由 RegisterNewListViewItemStats 更新（每新增一列呼叫一次），

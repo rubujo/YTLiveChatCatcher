@@ -46,7 +46,7 @@ public static class AvatarDiskCache
     /// <remarks>
     /// 2026/9 修正：改成非同步方法（File.ReadAllBytesAsync 取代 File.ReadAllBytes）。這個方法的
     /// 呼叫鏈起點（ListViewExtension.SetAuthorPhoto → BetterCacheManager.GetOrCreateAsync 的
-    /// callback）常常是從已經在 UI 執行緒上的 LVLiveChatList.InvokeIfRequired(async () => ...) 觸發，
+    /// callback）會由主視窗的頭像載入佇列在 UI 執行緒上觸發，
     /// 而 callback 執行到第一個 await 之前都是同步的——原本這裡是同步的磁碟 I/O，剛好排在
     /// callback 的最前面（第一個 await 之前），代表快取命中時整段檢查／讀取流程完全不會真正
     /// 讓出執行緒，會在 UI 執行緒上同步跑完，重播湧入大量不重複留言者時，這是「積少成多」式的
