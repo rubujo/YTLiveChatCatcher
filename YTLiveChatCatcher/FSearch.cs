@@ -22,6 +22,8 @@ public partial class FSearch : Form
 
         Icon = Properties.Resources.app_icon;
         Text = $"搜尋 - {fmain.Text}";
+        AccessibleName = "聊天室搜尋視窗";
+        AccessibleDescription = "依作者、訊息內容或訊息類型搜尋目前聊天室記錄";
 
         _FMain = fmain;
         _LVLiveChatList = fmain.Controls
@@ -106,13 +108,14 @@ public partial class FSearch : Form
             {
                 // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
                 // GetSharedListViewItems()（見 FMain.Methods.cs）。
-                List<ListViewItem> dataSet = _FMain.GetSharedListViewItems()
-                    .Where(n => n.SubItems[0].Text.Contains(keyword) ||
-                        n.SubItems[2].Text.Contains(keyword) ||
-                        n.SubItems[5].Text.Contains(keyword))
+                IReadOnlyList<ListViewItem> source = _FMain.GetSharedListViewItems();
+                List<ListViewItem> dataSet = await Task.Run(() => source
+                    .Where(n => n.SubItems[0].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
+                        n.SubItems[2].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase) ||
+                        n.SubItems[5].Text.Contains(keyword, StringComparison.CurrentCultureIgnoreCase))
                     .Select(n => (ListViewItem)n.Clone())
                     .Reverse()
-                    .ToList();
+                    .ToList());
 
                 if (dataSet.Count <= 0)
                 {

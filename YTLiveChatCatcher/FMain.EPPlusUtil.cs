@@ -8,6 +8,7 @@ using StringSet = YTLiveChatCatcher.Common.Sets.StringSet;
 using YTLiveChatCatcher.Extensions;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using System.Collections.Generic;
+using YTLiveChatCatcher.Common.Utils;
 
 namespace YTLiveChatCatcher;
 
@@ -197,7 +198,7 @@ public partial class FMain
                     }
                 }
 
-                if (!string.IsNullOrEmpty(foregroundColor))
+                if (ChatColorUtil.TryParse(foregroundColor, out Color parsedForegroundColor))
                 {
                     for (int j = 0; j < lvItem.SubItems.Count; j++)
                     {
@@ -206,22 +207,21 @@ public partial class FMain
                         {
                             ListViewItem.ListViewSubItem item = lvItem.SubItems[j];
 
-                            item.ForeColor = ColorTranslator.FromHtml(foregroundColor);
+                            item.ForeColor = parsedForegroundColor;
                         }
                     }
                 }
 
-                if (!string.IsNullOrEmpty(backgroundColor))
+                if (ChatColorUtil.TryParse(backgroundColor, out Color parsedBackgroundColor))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
-                        item.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                        item.BackColor = parsedBackgroundColor;
                     }
                 }
 
-                if (!string.IsNullOrEmpty(headerBackgroundColor))
+                if (ChatColorUtil.TryParse(headerBackgroundColor, out Color headerColor))
                 {
-                    Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
                     int[] headerSubItemIndexes = [0, 1, 3, 4];
 
                     foreach (int headerSubItemIndex in headerSubItemIndexes)

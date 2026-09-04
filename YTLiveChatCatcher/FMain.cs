@@ -23,6 +23,9 @@ public partial class FMain : Form
     {
         InitializeComponent();
 
+        AccessibleName = "YouTube 聊天室捕手主視窗";
+        AccessibleDescription = "擷取、檢視、搜尋及匯出 YouTube 直播聊天室內容";
+
         SharedHttpClientFactory = httpClientFactory;
         SharedLogger = logger;
         SharedYTJsonParserLogger = ytJsonParserLogger;

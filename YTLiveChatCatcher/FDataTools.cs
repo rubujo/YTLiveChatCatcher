@@ -191,7 +191,7 @@ public sealed class FDataTools : Form
         }
     }
 
-    private void Import()
+    private async void Import()
     {
         using OpenFileDialog dialog = new()
         {
@@ -206,10 +206,12 @@ public sealed class FDataTools : Form
 
         try
         {
-            IReadOnlyList<RendererData> messages = string.Equals(Path.GetExtension(dialog.FileName), ".csv", StringComparison.OrdinalIgnoreCase) ?
-                ChatDataTools.ImportCsv(dialog.FileName) :
-                ChatDataTools.ImportJsonLines(dialog.FileName);
-            int imported = _main.ImportRawMessages(messages);
+            string fileName = dialog.FileName;
+            IReadOnlyList<RendererData> messages = await Task.Run(() =>
+                string.Equals(Path.GetExtension(fileName), ".csv", StringComparison.OrdinalIgnoreCase) ?
+                    ChatDataTools.ImportCsv(fileName) :
+                    ChatDataTools.ImportJsonLines(fileName));
+            int imported = await _main.ImportRawMessagesAsync(messages);
             MessageBox.Show($"已匯入 {imported} 筆新資料；重複事件已略過。請重新開啟資料工具以分析完整資料。", Text);
             Close();
         }

@@ -256,6 +256,13 @@ public partial class FMain
         {
             int requiredWidth = listView.Columns[columnIndex].Width;
 
+            // 已到上限的欄位不需要在之後每一批資料重新量測。大量匯入時，這可避免對數萬列
+            // 重複呼叫昂貴的 GDI 文字量測，且不改變任何可見結果。
+            if (requiredWidth >= maxWidth)
+            {
+                continue;
+            }
+
             foreach (ListViewItem item in newItems)
             {
                 // 第 0 欄（作者名稱）用的是 ListViewItem.Text 本身，其餘欄位才是對應索引的 SubItems。
@@ -268,6 +275,11 @@ public partial class FMain
                 }
 
                 requiredWidth = Math.Max(requiredWidth, measuredWidth);
+
+                if (requiredWidth >= maxWidth)
+                {
+                    break;
+                }
             }
 
             listView.Columns[columnIndex].Width = Math.Min(requiredWidth, maxWidth);
@@ -1346,10 +1358,7 @@ public partial class FMain
     /// 只能透過這個方法，不能再用 <c>LVLiveChatList.GetListViewItems()</c>。</para>
     /// </summary>
     /// <returns>IReadOnlyList&lt;ListViewItem&gt;</returns>
-    public IReadOnlyList<ListViewItem> GetSharedListViewItems()
-    {
-        return SharedListViewItems;
-    }
+    public IReadOnlyList<ListViewItem> GetSharedListViewItems() => [.. SharedListViewItems];
 
     public IReadOnlyList<RendererData> GetRawMessagesSnapshot() => [.. SharedRawRendererData];
 
@@ -1366,13 +1375,37 @@ public partial class FMain
         UpdateSummaryInfo();
     }
 
-    public int ImportRawMessages(IReadOnlyList<RendererData> messages)
+    public async Task<int> ImportRawMessagesAsync(IReadOnlyList<RendererData> messages)
     {
         IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(messages);
 
+        const int batchSize = 1_000;
+
+        for (int offset = 0; offset < newMessages.Count; offset += batchSize)
+        {
+            int count = Math.Min(batchSize, newMessages.Count - offset);
+            RendererData[] batch = new RendererData[count];
+
+            for (int index = 0; index < count; index++)
+            {
+                batch[index] = newMessages[offset + index];
+            }
+
+            DoProcessMessages(batch, updateListView: false);
+            await Task.Yield();
+        }
+
         if (newMessages.Count > 0)
         {
-            DoProcessMessages(newMessages);
+            // 大量匯入期間只建立資料與索引，最後才一次更新 VirtualListSize、捲動與重繪。
+            // 否則每一批都 EnsureVisible/Invalidate，會留下大量原生 ListView 繪製工作，讓匯入
+            // 對話框已完成後主視窗仍長時間沒有回應。
+            LVLiveChatList.BeginUpdate();
+            AutoFitListViewColumns(LVLiveChatList, CreateEvenlySpacedItemSample(SharedListViewItems, 512));
+            LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+            LVLiveChatList.EndUpdate();
+            LVLiveChatList.Invalidate();
+            UpdateSummaryInfo();
         }
 
         return newMessages.Count;
@@ -1501,7 +1534,7 @@ public partial class FMain
     /// 執行處裡訊息
     /// </summary>
     /// <param name="messages">IReadOnlyList&lt;RendererData&gt;</param>
-    private void DoProcessMessages(IReadOnlyList<RendererData> messages)
+    private void DoProcessMessages(IReadOnlyList<RendererData> messages, bool updateListView = true)
     {
         try
         {
@@ -1757,7 +1790,7 @@ public partial class FMain
                     }
                 }
 
-                if (!string.IsNullOrEmpty(foregroundColor))
+                if (ChatColorUtil.TryParse(foregroundColor, out Color parsedForegroundColor))
                 {
                     for (int j = 0; j < lvItem.SubItems.Count; j++)
                     {
@@ -1766,24 +1799,23 @@ public partial class FMain
                         {
                             ListViewItem.ListViewSubItem item = lvItem.SubItems[j];
 
-                            item.ForeColor = ColorTranslator.FromHtml(foregroundColor);
+                            item.ForeColor = parsedForegroundColor;
                         }
                     }
                 }
 
-                if (!string.IsNullOrEmpty(backgroundColor))
+                if (ChatColorUtil.TryParse(backgroundColor, out Color parsedBackgroundColor))
                 {
                     foreach (ListViewItem.ListViewSubItem item in lvItem.SubItems)
                     {
-                        item.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                        item.BackColor = parsedBackgroundColor;
                     }
                 }
 
-                if (!string.IsNullOrEmpty(headerBackgroundColor))
+                if (ChatColorUtil.TryParse(headerBackgroundColor, out Color headerColor))
                 {
                     // 只變更「標頭」相關欄位的背景色（作者名稱／徽章／金額／時間），呈現跟真實 YouTube
                     // 超級留言一樣的雙色設計（標頭一色、內文另一色），訊息本文維持 backgroundColor。
-                    Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
                     int[] headerSubItemIndexes = [0, 1, 3, 4];
 
                     foreach (int headerSubItemIndex in headerSubItemIndexes)
@@ -1922,27 +1954,31 @@ public partial class FMain
             // 如果下一批的 Task.Run 剛好比這一批先執行，聊天室畫面上（以及匯出檔案裡）的訊息順序就會
             // 跟實際收到的順序不一致。改成直接呼叫，讓 InvokeAsyncIfRequired 的 await 真正等到這批資料
             // 完整插入畫面後才算完成，才能保證批次之間嚴格照收到的順序處理。
-            LVLiveChatList.BeginUpdate();
-            AutoFitListViewColumns(LVLiveChatList, listTempItem);
             SharedListViewItems.AddRange(listTempItem);
-            LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
 
-            if (SharedListViewItems.Count > 0)
+            if (updateListView)
             {
-                // VirtualMode 下捲動可見範圍要用 ListView 層級、以索引為準的多載，
-                // 不是 ListViewItem.EnsureVisible() 這個實例版；且一定要先更新完 VirtualListSize
-                // 才能呼叫，否則索引可能還沒被 ListView 視為有效範圍。
-                LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
+                LVLiveChatList.BeginUpdate();
+                AutoFitListViewColumns(LVLiveChatList, listTempItem);
+                LVLiveChatList.VirtualListSize = SharedListViewItems.Count;
+
+                if (SharedListViewItems.Count > 0)
+                {
+                    // VirtualMode 下捲動可見範圍要用 ListView 層級、以索引為準的多載，
+                    // 不是 ListViewItem.EnsureVisible() 這個實例版；且一定要先更新完 VirtualListSize
+                    // 才能呼叫，否則索引可能還沒被 ListView 視為有效範圍。
+                    LVLiveChatList.EnsureVisible(SharedListViewItems.Count - 1);
+                }
+
+                LVLiveChatList.EndUpdate();
+
+                // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面批次因為
+                // RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見上方頭像下載完成處的說明）。
+                // 重播密集批次可能短時間內連續呼叫這裡，改用節流版避免短時間內觸發大量重複的重繪。
+                InvalidateLiveChatListThrottled();
+
+                UpdateSummaryInfo();
             }
-
-            LVLiveChatList.EndUpdate();
-
-            // 保證落在沒有任何 BeginUpdate 視窗的時間點，強制重繪目前可視範圍，撿回前面批次因為
-            // RedrawItems 撞上 BeginUpdate 視窗而被吃掉的頭像重繪（見上方頭像下載完成處的說明）。
-            // 重播密集批次可能短時間內連續呼叫這裡，改用節流版避免短時間內觸發大量重複的重繪。
-            InvalidateLiveChatListThrottled();
-
-            UpdateSummaryInfo();
         }
         catch (Exception ex)
         {
@@ -1973,22 +2009,21 @@ public partial class FMain
         lvItem.SubItems[12].Text = leaderboardRank;
         lvItem.SubItems[13].Text = replyCount;
 
-        if (!string.IsNullOrEmpty(foregroundColor))
+        if (ChatColorUtil.TryParse(foregroundColor, out Color parsedForegroundColor))
         {
-            lvItem.SubItems[2].ForeColor = ColorTranslator.FromHtml(foregroundColor);
+            lvItem.SubItems[2].ForeColor = parsedForegroundColor;
         }
 
-        if (!string.IsNullOrEmpty(backgroundColor))
+        if (ChatColorUtil.TryParse(backgroundColor, out Color parsedBackgroundColor))
         {
             foreach (ListViewItem.ListViewSubItem subItem in lvItem.SubItems)
             {
-                subItem.BackColor = ColorTranslator.FromHtml(backgroundColor);
+                subItem.BackColor = parsedBackgroundColor;
             }
         }
 
-        if (!string.IsNullOrEmpty(headerBackgroundColor))
+        if (ChatColorUtil.TryParse(headerBackgroundColor, out Color headerColor))
         {
-            Color headerColor = ColorTranslator.FromHtml(headerBackgroundColor);
             int[] headerSubItemIndexes = [0, 1, 3, 4];
 
             foreach (int headerSubItemIndex in headerSubItemIndexes)
@@ -2556,6 +2591,26 @@ public partial class FMain
             TBVideoID.Text = manifest.VideoId;
             WriteLog("已載入上次的續傳狀態；按下「開始」後會嘗試從中斷點繼續。continuation 可能已過期，完成後請確認資料完整性標示。");
         }
+    }
+
+    private static List<ListViewItem> CreateEvenlySpacedItemSample(
+        IReadOnlyList<ListViewItem> items,
+        int maximumCount)
+    {
+        if (items.Count <= maximumCount)
+        {
+            return [.. items];
+        }
+
+        List<ListViewItem> sample = new(maximumCount);
+        double step = (double)(items.Count - 1) / (maximumCount - 1);
+
+        for (int index = 0; index < maximumCount; index++)
+        {
+            sample.Add(items[(int)Math.Round(index * step)]);
+        }
+
+        return sample;
     }
 
     /// <summary>
