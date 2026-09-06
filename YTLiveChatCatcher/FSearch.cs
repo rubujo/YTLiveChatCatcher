@@ -17,6 +17,14 @@ public partial class FSearch : Form
     /// </summary>
     private readonly List<ListViewItem> SharedFilteredListViewItems = [];
 
+    private CancellationTokenSource? _searchCancellation;
+
+    private void CancelSearch()
+    {
+        _searchCancellation?.Cancel();
+        _searchCancellation = null;
+    }
+
     public FSearch(FMain fmain)
     {
         InitializeComponent();
@@ -74,6 +82,7 @@ public partial class FSearch : Form
 
     private void FSearch_FormClosing(object sender, FormClosingEventArgs e)
     {
+        CancelSearch();
         try
         {
             _BtnSearch.InvokeIfRequired(() =>
@@ -100,6 +109,7 @@ public partial class FSearch : Form
         // 第一個 await 之後拋出的例外無法被這裡的 try/catch 攔截）。
         try
         {
+            CancelSearch();
             string keyword = string.Empty;
 
             TBKeyword.InvokeIfRequired(() =>
@@ -112,7 +122,23 @@ public partial class FSearch : Form
                 // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
                 // GetSharedListViewItems()（見 FMain.Methods.cs）。
                 IReadOnlyList<ListViewItem> source = _FMain.GetSharedListViewItems();
-                List<ListViewItem> dataSet = await Task.Run(() => ChatSearchUtil.Filter(source, keyword));
+                ImageList? sourceImages = _LVLiveChatList.SmallImageList;
+                ChatSearchUtil.SearchText[] snapshot = ChatSearchUtil.Snapshot(source);
+                using CancellationTokenSource cancellation = new();
+                _searchCancellation = cancellation;
+                List<int> indices;
+                try
+                {
+                    indices = await Task.Run(() => ChatSearchUtil.FilterIndices(snapshot, keyword, cancellation.Token));
+                    if (cancellation.IsCancellationRequested || IsDisposed || Disposing ||
+                        !ReferenceEquals(_searchCancellation, cancellation)) return;
+                }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { return; }
+                finally
+                {
+                    if (ReferenceEquals(_searchCancellation, cancellation)) _searchCancellation = null;
+                }
+                List<ListViewItem> dataSet = indices.Select(index => source[index]).ToList();
 
                 if (dataSet.Count <= 0)
                 {
@@ -127,7 +153,7 @@ public partial class FSearch : Form
                 }
                 else
                 {
-                    LVFilteredList.SmallImageList = _LVLiveChatList.SmallImageList;
+                    LVFilteredList.SmallImageList = sourceImages;
 
                     SharedFilteredListViewItems.Clear();
                     LVFilteredList.VirtualListSize = 0;
@@ -170,6 +196,7 @@ public partial class FSearch : Form
 
     private void BtnClear_Click(object sender, EventArgs e)
     {
+        CancelSearch();
         try
         {
             LVFilteredList.InvokeIfRequired(() =>

@@ -1381,14 +1381,22 @@ public partial class FMain
     private void AutoFitLiveChatColumnsThrottled(IReadOnlyList<ListViewItem> newItems, bool force = false)
     {
         SharedPendingAutoFitItems.AddRange(ListSamplingUtil.CreateEvenlySpaced(newItems, 128));
+        if (SharedPendingAutoFitItems.Count > 512)
+        {
+            List<ListViewItem> sample = ListSamplingUtil.CreateEvenlySpaced(SharedPendingAutoFitItems, 512);
+            SharedPendingAutoFitItems.Clear();
+            SharedPendingAutoFitItems.AddRange(sample);
+        }
         DateTime now = DateTime.UtcNow;
 
         if (!force &&
             (now - SharedLastAutoFitUtc).TotalMilliseconds < LiveChatAutoFitThrottleMs)
         {
+            if (!SharedAutoFitTimer.Enabled) SharedAutoFitTimer.Start();
             return;
         }
 
+        SharedAutoFitTimer.Stop();
         AutoFitListViewColumns(
             LVLiveChatList,
             ListSamplingUtil.CreateEvenlySpaced(SharedPendingAutoFitItems, 512));
@@ -1410,7 +1418,7 @@ public partial class FMain
     {
         ImageList? imageList = LVLiveChatList.SmallImageList;
 
-        if (imageList == null)
+        if (SharedIsClosing || imageList == null || imageList.Images.Count >= 5000)
         {
             return;
         }
@@ -1433,19 +1441,24 @@ public partial class FMain
         PendingAuthorPhotoRequest request = new(imageList, imageUrl);
         request.Items.Add(item);
         SharedPendingAuthorPhotos[key] = request;
-        _ = LoadAuthorPhotoAsync(key, request);
+        SharedAuthorPhotoQueue ??= new BoundedWorkQueue(4, 128);
+        if (!SharedAuthorPhotoQueue.TryEnqueue(token => LoadAuthorPhotoAsync(key, request, token)))
+        {
+            SharedPendingAuthorPhotos.Remove(key);
+        }
     }
 
-    private async Task LoadAuthorPhotoAsync(string key, PendingAuthorPhotoRequest request)
+    private async Task LoadAuthorPhotoAsync(string key, PendingAuthorPhotoRequest request, CancellationToken cancellationToken)
     {
-        await SharedAuthorPhotoSemaphore.WaitAsync();
 
         try
         {
             string errorMessage = await request.ImageList.Images.SetAuthorPhoto(
                 SharedHttpClient,
                 key,
-                request.ImageUrl);
+                request.ImageUrl,
+                cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!string.IsNullOrEmpty(errorMessage))
             {
@@ -1467,13 +1480,13 @@ public partial class FMain
                 InvalidateLiveChatListThrottled();
             }
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (Exception ex)
         {
             SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
         }
         finally
         {
-            SharedAuthorPhotoSemaphore.Release();
 
             if (SharedPendingAuthorPhotos.TryGetValue(key, out PendingAuthorPhotoRequest? currentRequest) &&
                 ReferenceEquals(currentRequest, request))
@@ -1836,12 +1849,10 @@ public partial class FMain
                     continue;
                 }
 
-                if (string.IsNullOrEmpty(id) &&
-                    !SharedItemsWithoutMessageId.Add(ChatFallbackIdentity.Create(
-                        authorExternalChannelID,
-                        authorName,
-                        timestampUsec,
-                        type)))
+                ChatFallbackIdentity fallbackIdentity = ChatFallbackIdentity.Create(
+                    authorExternalChannelID, authorName, timestampUsec, type, messageContent, purchaseAmountText);
+                if (string.IsNullOrEmpty(id) && fallbackIdentity.CanDeduplicate &&
+                    !SharedItemsWithoutMessageId.Add(fallbackIdentity))
                 {
                     continue;
                 }

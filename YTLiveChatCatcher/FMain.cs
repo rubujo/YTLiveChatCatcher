@@ -27,6 +27,8 @@ public partial class FMain : Form
         AccessibleDescription = "擷取、檢視、搜尋及匯出 YouTube 直播聊天室內容";
         AccessibleRole = AccessibleRole.Window;
         LVLiveChatList.AccessibleRole = AccessibleRole.Table;
+        SharedAutoFitTimer.Tick += (_, _) => AutoFitLiveChatColumnsThrottled([], force: true);
+        Disposed += (_, _) => SharedAutoFitTimer.Dispose();
 
         SharedHttpClientFactory = httpClientFactory;
         SharedLogger = logger;
@@ -74,48 +76,36 @@ public partial class FMain : Form
         }
     }
 
-    private void FMain_FormClosing(object sender, FormClosingEventArgs e)
+    private async void FMain_FormClosing(object sender, FormClosingEventArgs e)
     {
+        if (SharedCloseReady) return;
+        e.Cancel = true;
+        if (SharedIsClosing) return;
+        SharedIsClosing = true;
+        Enabled = false;
+        SharedAutoFitTimer.Stop();
         try
         {
-            LogManager.Shutdown();
-
-            // 取消尚在執行中的擷取工作。
             SharedFetchCancellationTokenSource?.Cancel();
-
-            // 2026/9 修正：以前這裡取消後就立刻往下 Dispose SharedHttpClient，但背景擷取工作
-            // （StartFetchLiveChatData 內的 Task.Run）是非同步的，取消當下如果剛好正在等待一個
-            // HTTP 請求的回應，該請求要等 CancellationToken 真正被觀察到才會結束——如果搶在那之前
-            // Dispose 掉 HttpClient，該請求會拋出非 OperationCanceledException 的例外，可能被
-            // YTJsonParser 的重試機制誤判成暫時性網路錯誤，對著已經 Dispose 的 HttpClient 重試到
-            // 次數耗盡。這裡先有限度地等待背景工作先自然結束（正常情況下取消後應該在很短時間內
-            // 就會完成，逾時也不阻塞關閉流程太久），再繼續往下釋放資源。
-            try
-            {
-                SharedFetchTask?.Wait(TimeSpan.FromSeconds(5));
-            }
-            catch (AggregateException)
-            {
-                // 背景工作內部已經有自己完整的 try/catch 與記錄，這裡只是要確保等待完成，
-                // 不需要重複處理或記錄背景工作本身拋出的例外。
-            }
-
-            // 釋放 SharedYTJsonParser。
-            SharedYTJsonParser?.Dispose();
-
-            // 釋放以及清除 SharedHttpClient。
-            SharedHttpClient?.Dispose();
-            SharedHttpClient = null;
+            if (SharedAuthorPhotoQueue != null)
+                SharedRetiredPhotoQueues.Add(SharedAuthorPhotoQueue.StopAsync());
+            // await 保留訊息迴圈，背景 finally 才能完成 UI 收尾。
+            await Task.WhenAll(SharedRetiredPhotoQueues.Append(SharedFetchTask ?? Task.CompletedTask));
         }
         catch (Exception ex)
         {
-            SharedLogger.LogError("{ErrorMessage}", ex.GetExceptionMessage());
-
-            MessageBox.Show(
-                $"發生錯誤：{ex.GetExceptionMessage()}",
-                Text,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
+            SharedLogger.LogError(ex, "關閉時背景工作收尾失敗。");
+        }
+        finally
+        {
+            SharedPendingAuthorPhotos.Clear();
+            SharedAutoFitTimer.Dispose();
+            SharedYTJsonParser?.Dispose();
+            SharedHttpClient?.Dispose();
+            SharedHttpClient = null;
+            LogManager.Shutdown();
+            SharedCloseReady = true;
+            Close();
         }
     }
 
@@ -758,7 +748,14 @@ public partial class FMain : Form
             SharedItemsByReplyCountEntityKey.Clear();
             SharedItemsByAuthorChannelID.Clear();
             SharedItemsWithoutMessageId.Clear();
+            if (SharedAuthorPhotoQueue != null)
+            {
+                SharedRetiredPhotoQueues.RemoveAll(task => task.IsCompletedSuccessfully);
+                SharedRetiredPhotoQueues.Add(SharedAuthorPhotoQueue.StopAsync());
+                SharedAuthorPhotoQueue = null;
+            }
             SharedPendingAuthorPhotos.Clear();
+            SharedAutoFitTimer.Stop();
             SharedPendingAutoFitItems.Clear();
             SharedLastAutoFitUtc = DateTime.MinValue;
 

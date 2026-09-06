@@ -8,6 +8,19 @@ namespace YTLiveChatCatcher.Tests;
 public class ChatSearchUtilTests
 {
     [Fact]
+    public void Snapshot_後續UI內容異動不影響背景搜尋()
+    {
+        ListViewItem item = CreateItem("作者", "原始內容", "留言");
+        var snapshot = ChatSearchUtil.Snapshot([item]);
+        item.SubItems[2].Text = "更新內容";
+        Assert.Equal([0], ChatSearchUtil.FilterIndices(snapshot, "原始", TestContext.Current.CancellationToken));
+        Assert.Empty(ChatSearchUtil.FilterIndices(snapshot, "更新", TestContext.Current.CancellationToken));
+        using CancellationTokenSource cancellation = new();
+        cancellation.Cancel();
+        Assert.Throws<OperationCanceledException>(() =>
+            ChatSearchUtil.FilterIndices(snapshot, "原始", cancellation.Token));
+    }
+    [Fact]
     public void Filter_搜尋三個欄位並保留原始參照與反向順序()
     {
         ListViewItem author = CreateItem("Alice", "內容", "一般留言");

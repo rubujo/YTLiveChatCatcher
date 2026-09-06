@@ -214,13 +214,11 @@ public partial class FMain
 
                 // 先過濾以避免加入到重複的資料：優先以訊息 ID 判斷，沒有 ID 值時才退回舊版判斷方式，
                 // 邏輯與 DoProcessMessages 一致。
+                ChatFallbackIdentity fallbackIdentity = ChatFallbackIdentity.Create(
+                    authorExternalChannelID, authorName, timestampUsec, type, messageContent, purchaseAmmount);
                 bool isDuplicate = !string.IsNullOrEmpty(id) ?
                     SharedItemsByMessageID.ContainsKey(id) :
-                    !SharedItemsWithoutMessageId.Add(ChatFallbackIdentity.Create(
-                        authorExternalChannelID,
-                        authorName,
-                        timestampUsec,
-                        type));
+                    fallbackIdentity.CanDeduplicate && !SharedItemsWithoutMessageId.Add(fallbackIdentity);
 
                 if (!isDuplicate)
                 {

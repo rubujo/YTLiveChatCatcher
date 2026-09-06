@@ -160,7 +160,11 @@ public partial class FMain
         new(StringComparer.Ordinal);
 
     /// <summary>限制同時進行的頭像磁碟讀取／網路下載數量。</summary>
-    private readonly SemaphoreSlim SharedAuthorPhotoSemaphore = new(4, 4);
+    private BoundedWorkQueue? SharedAuthorPhotoQueue;
+    private readonly List<Task> SharedRetiredPhotoQueues = [];
+    private bool SharedIsClosing;
+    private bool SharedCloseReady;
+    private readonly System.Windows.Forms.Timer SharedAutoFitTimer = new() { Interval = 500 };
 
     /// <summary>上次實際執行即時欄寬量測的時間。</summary>
     private DateTime SharedLastAutoFitUtc = DateTime.MinValue;

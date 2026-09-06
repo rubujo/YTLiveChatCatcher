@@ -6,6 +6,21 @@ namespace YTLiveChatCatcher.Tests;
 public class ChatFallbackIdentityTests
 {
     [Fact]
+    public void 不同內容與金額不互相去重且缺少時間時保留()
+    {
+        var first = ChatFallbackIdentity.Create("channel", "作者", "123", "留言", "第一則", "NT$10");
+        var second = ChatFallbackIdentity.Create("channel", "作者", "123", "留言", "第二則", "NT$10");
+        var amount = ChatFallbackIdentity.Create("channel", "作者", "123", "留言", "第一則", "NT$20");
+        HashSet<ChatFallbackIdentity> seen = [];
+        Assert.True(first.CanDeduplicate);
+        Assert.True(seen.Add(first));
+        Assert.False(seen.Add(first));
+        Assert.True(seen.Add(second));
+        Assert.True(seen.Add(amount));
+        Assert.False(ChatFallbackIdentity.Create("channel", "作者", "", "留言", "內容").CanDeduplicate);
+        Assert.False(ChatFallbackIdentity.Create("channel", "作者", "123", "留言").CanDeduplicate);
+    }
+    [Fact]
     public void Create_優先使用頻道ID避免同名作者互相去重()
     {
         ChatFallbackIdentity first = ChatFallbackIdentity.Create("channel-a", "同名", "123", "留言");

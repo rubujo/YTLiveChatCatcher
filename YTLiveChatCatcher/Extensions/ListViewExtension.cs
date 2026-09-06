@@ -45,7 +45,8 @@ public static class ListViewExtension
         this ImageList.ImageCollection imageCollection,
         HttpClient? httpClient,
         string key,
-        string imageUrl)
+        string imageUrl,
+        CancellationToken cancellationToken = default)
     {
         string errorMessage = string.Empty;
 
@@ -61,76 +62,38 @@ public static class ListViewExtension
             return string.Empty;
         }
 
-        // 以 key 為鍵值，將 Image 暫存 10 分鐘。
-        Image image = await BetterCacheManager.GetCachableData(key, async () =>
+        cancellationToken.ThrowIfCancellationRequested();
+        try
         {
-            try
+            if (httpClient == null) throw new InvalidOperationException("HttpClient 尚未初始化。");
+            byte[]? bytes = await AvatarDiskCache.TryReadAsync(imageUrl);
+            cancellationToken.ThrowIfCancellationRequested();
+            bool downloaded = bytes == null;
+            bytes ??= await httpClient.GetByteArrayAsync(imageUrl, cancellationToken);
+            using MemoryStream stream = new(bytes);
+            using Image decoded = Image.FromStream(stream);
+            if (downloaded) await AvatarDiskCache.WriteAsync(imageUrl, bytes);
+            cancellationToken.ThrowIfCancellationRequested();
+            // await 期間其他工作可能已加入圖片；容量與取消都要在寫入前再次確認。
+            if (!imageCollection.ContainsKey(key) && imageCollection.Count < MaxImageListEntries)
             {
-                if (httpClient == null)
-                {
-                    throw new Exception("變數 \"httpClient\" 是 null！");
-                }
-
-                // 2026/8 新增：先查落地快取（跨應用程式重啟／跨不同場次直播都能沿用），
-                // 沒命中才真的發送網路請求，下載完成後順手寫回落地快取供下次使用。
-                // 2026/9 修正：改用非同步版本（TryReadAsync／WriteAsync），見 AvatarDiskCache.cs
-                // 的方法註解——避免快取命中時整段磁碟 I/O 在 UI 執行緒上同步跑完。
-                byte[]? bytes = await AvatarDiskCache.TryReadAsync(imageUrl);
-                bool isFreshlyDownloaded = bytes == null;
-
-                if (bytes == null)
-                {
-                    bytes = await httpClient.GetByteArrayAsync(imageUrl);
-                }
-
-                using MemoryStream memoryStream = new(bytes);
-                using Image loadedImage = Image.FromStream(memoryStream);
-
-                // 2026/8 修正：先前在下載完成當下就立刻寫入落地快取，沒有先驗證 bytes 真的是可以
-                // 解碼的圖片——如果 CDN 一時回應了 200 但內容不是有效圖片（例如暫時性錯誤頁面），
-                // Image.FromStream 這裡會拋例外，但無效的內容早已寫進磁碟快取，之後每次都直接
-                // TryRead 命中同一份壞資料，要卡到 30 天過期或手動清除才會重新嘗試下載。
-                // 改成等 Image.FromStream 成功解碼、確認是有效圖片之後才寫入快取，
-                // 且只在這次是剛下載（不是從快取讀到）時才需要寫，避免對同一份已存在的快取檔案
-                // 做無意義的重複寫入。
-                if (isFreshlyDownloaded)
-                {
-                    await AvatarDiskCache.WriteAsync(imageUrl, bytes);
-                }
-
-                // 2026/8 修正：Image.FromStream 預設不會把像素資料複製進記憶體，而是延遲讀取來源
-                // 串流；原本直接把 loadedImage 回傳出去，上面的 using 會在這個方法返回時把
-                // memoryStream Dispose 掉，之後 ImageList 真正要繪製這張圖片（發生在更後面、
-                // 非同步完成後的畫面重繪階段）時，讀取的其實是已經釋放的串流——這是 GDI+ 層級的
-                // 靜默失敗（不會拋出可攔截的例外），實際症狀是圖片「成功」加入 ImageList、
-                // Images.Count 也正確累加，畫面上卻永遠是空白。改成 new Bitmap(loadedImage) 建立
-                // 一份不依賴來源串流的獨立複本，才能安全地在 memoryStream 釋放後繼續使用。
-                return new Bitmap(loadedImage);
+                imageCollection.Add(key, new Bitmap(decoded));
             }
-            catch (Exception ex)
-            {
-                errorMessage = $"發生錯誤：{ex.GetExceptionMessage()}{Environment.NewLine}" +
-                    $"無法下載「{key}」的頭像。{Environment.NewLine}" +
-                    $"頭像的網址：{imageUrl}";
-
-                // 建立一個 64x64 的白色 Bitmap。
-                Bitmap bitmap = new(64, 64);
-
-                using (Graphics graphics = Graphics.FromImage(bitmap))
-                {
-                    graphics.Clear(Color.FromKnownColor(KnownColor.White));
-                }
-
-                return bitmap;
-            }
-        }, 10);
-
-        // 因為多筆訊息可能各自觸發下載（download 期間會讓出執行緒給其他佇列中的呼叫），
-        // 開頭的 ContainsKey 檢查與這裡的 Add 之間並非原子操作，
-        // 所以寫入前要再檢查一次，避免對同一個 key 重複 Add 而拋出例外。
-        if (!imageCollection.ContainsKey(key))
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            imageCollection.Add(key, image);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"無法載入頭像：{ex.GetExceptionMessage()}";
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!imageCollection.ContainsKey(key) && imageCollection.Count < MaxImageListEntries)
+            {
+                Bitmap placeholder = new(32, 32);
+                using (Graphics graphics = Graphics.FromImage(placeholder)) graphics.Clear(Color.White);
+                imageCollection.Add(key, placeholder);
+            }
         }
 
         return errorMessage;

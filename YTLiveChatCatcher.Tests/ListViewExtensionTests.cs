@@ -60,7 +60,7 @@ public class ListViewExtensionTests
 
         string key = $"test-author-{Guid.NewGuid()}";
 
-        string errorMessage = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png");
+        string errorMessage = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png", TestContext.Current.CancellationToken);
 
         Assert.Equal(string.Empty, errorMessage);
         Assert.True(imageList.Images.ContainsKey(key));
@@ -84,10 +84,10 @@ public class ListViewExtensionTests
 
         string key = $"test-author-{Guid.NewGuid()}";
 
-        string firstCallError = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png");
+        string firstCallError = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png", TestContext.Current.CancellationToken);
         int countAfterFirstCall = imageList.Images.Count;
 
-        string secondCallError = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png");
+        string secondCallError = await imageList.Images.SetAuthorPhoto(httpClient, key, "https://example.com/avatar.png", TestContext.Current.CancellationToken);
 
         Assert.Equal(string.Empty, firstCallError);
         Assert.Equal(string.Empty, secondCallError);
@@ -101,7 +101,7 @@ public class ListViewExtensionTests
 
         string key = $"test-author-{Guid.NewGuid()}";
 
-        string errorMessage = await imageList.Images.SetAuthorPhoto(null, key, "https://example.com/avatar.png");
+        string errorMessage = await imageList.Images.SetAuthorPhoto(null, key, "https://example.com/avatar.png", TestContext.Current.CancellationToken);
 
         // 下載失敗時仍會加入一張白色佔位圖，讓 ListView 不會因為缺圖示而出錯，
         // 只是同時回傳非空的 errorMessage 讓呼叫端可以記錄／顯示錯誤。
