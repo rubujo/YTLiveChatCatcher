@@ -32,7 +32,7 @@
             TBKeyword = new TextBox();
             BtnSearch = new Button();
             BtnClear = new Button();
-            LVFilteredList = new ListView();
+            LVFilteredList = new AccessibleChatListView();
             LChatCount = new Label();
             PBProgress = new ProgressBar();
             BtnExport = new Button();

@@ -14,7 +14,7 @@ namespace YTLiveChatCatcher;
 /// <summary>
 /// FMain
 /// </summary>
-public partial class FMain : Form
+public partial class FMain : AppForm
 {
     public FMain(
         IHttpClientFactory httpClientFactory,

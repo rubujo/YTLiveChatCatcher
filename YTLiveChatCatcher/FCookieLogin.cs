@@ -10,7 +10,7 @@ namespace YTLiveChatCatcher;
 /// 透過應用程式專屬的 WebView2 視窗登入 YouTube／Google 帳號，取得聊天室擷取用的 Cookie
 /// <para>WebView2 使用自己專屬的 user data folder，不會讀取或碰觸使用者既有的 Edge／Chrome 瀏覽器資料。</para>
 /// </summary>
-public partial class FCookieLogin : Form
+public partial class FCookieLogin : AppForm
 {
     private readonly FMain _FMain;
 
@@ -36,7 +36,6 @@ public partial class FCookieLogin : Form
     {
         InitializeComponent();
 
-        Icon = Properties.Resources.app_icon;
         Text = $"登入 YouTube 帳號 - {fmain.Text}";
 
         _FMain = fmain;

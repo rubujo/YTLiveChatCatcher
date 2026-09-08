@@ -7,6 +7,52 @@ namespace Rubujo.YouTube.Utility.Tests;
 
 public class LiveChatStreamingTests
 {
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"continuationContents\":{}}")]
+    [InlineData("{\"continuationContents\":{\"liveChatContinuation\":null}}")]
+    public async Task StreamLiveChatDataAsync_缺少聊天室結構時_拋出例外並保留checkpoint(string response)
+    {
+        FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
+            .When(HttpMethod.Get, "/live_chat?is_popout=1", ReadFixture("live_popout_active.html"))
+            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", response);
+        using HttpClient client = new(handler);
+        using YTJsonParser parser = new(new YTJsonParserOptions { HttpClient = client });
+        List<LiveChatStreamStatus> checkpoints = [];
+        await Assert.ThrowsAsync<InvalidDataException>(async () =>
+        {
+            await foreach (var batch in parser.StreamLiveChatDataAsync("TEST_VIDEO_ID",
+                options: new LiveChatStreamOptions { ResumeContinuation = "TEST_CHECKPOINT", ForceIntervalMs = 0 },
+                streamStatusProgress: new InlineProgressForTest<LiveChatStreamStatus>(checkpoints.Add),
+                cancellationToken: TestContext.Current.CancellationToken))
+            {
+                Assert.NotEmpty(batch);
+            }
+        });
+        Assert.Equal("TEST_CHECKPOINT", Assert.Single(checkpoints).Continuation);
+    }
+
+    [Fact]
+    public async Task StreamLiveChatDataAsync_有效容器沒有後續權杖時_正常結束並清除checkpoint()
+    {
+        string response = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            continuationContents = new { liveChatContinuation = new { actions = Array.Empty<object>() } }
+        });
+        FakeHttpMessageHandler handler = new FakeHttpMessageHandler()
+            .When(HttpMethod.Get, "/live_chat?is_popout=1", ReadFixture("live_popout_active.html"))
+            .When(HttpMethod.Post, "/youtubei/v1/live_chat/get_live_chat", response);
+        using HttpClient client = new(handler);
+        using YTJsonParser parser = new(new YTJsonParserOptions { HttpClient = client });
+        List<LiveChatStreamStatus> checkpoints = [];
+        await foreach (var _ in parser.StreamLiveChatDataAsync("TEST_VIDEO_ID",
+            options: new LiveChatStreamOptions { ForceIntervalMs = 0 },
+            streamStatusProgress: new InlineProgressForTest<LiveChatStreamStatus>(checkpoints.Add),
+            cancellationToken: TestContext.Current.CancellationToken)) { }
+        Assert.Equal(2, checkpoints.Count);
+        Assert.True(string.IsNullOrEmpty(checkpoints[^1].Continuation));
+    }
+
     private static string ReadFixture(string fileName) =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName));
 

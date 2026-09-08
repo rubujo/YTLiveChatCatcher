@@ -1573,7 +1573,6 @@ public partial class FMain
         this.InvokeIfRequired(() =>
         {
             Text = StringSet.AppName;
-            Icon = Properties.Resources.app_icon;
             ActiveControl = TBVideoID;
         });
 

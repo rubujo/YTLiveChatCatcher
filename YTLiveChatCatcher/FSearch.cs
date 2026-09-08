@@ -9,7 +9,7 @@ using YTLiveChatCatcher.Extensions;
 
 namespace YTLiveChatCatcher;
 
-public partial class FSearch : Form
+public partial class FSearch : AppForm
 {
     /// <summary>
     /// LVFilteredList 是 VirtualMode，這是它唯一的真實資料來源，取代目前透過
@@ -29,7 +29,6 @@ public partial class FSearch : Form
     {
         InitializeComponent();
 
-        Icon = Properties.Resources.app_icon;
         Text = $"搜尋 - {fmain.Text}";
         AccessibleName = "聊天室搜尋視窗";
         AccessibleDescription = "依作者、訊息內容或訊息類型搜尋目前聊天室記錄";

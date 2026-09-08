@@ -7,7 +7,7 @@ using YTLiveChatCatcher.Common.Controls;
 namespace YTLiveChatCatcher;
 
 /// <summary>進階篩選、無損匯出、分析與問題回報工具。</summary>
-public sealed class FDataTools : Form
+public sealed class FDataTools : AppForm
 {
     private readonly FMain _main;
     private readonly IReadOnlyList<RendererData> _messages;

@@ -130,6 +130,13 @@ public partial class YTJsonParser : IDisposable
 
             rawResponseProgress?.Report(jsonElement.GetRawText());
 
+            // 缺少聊天室容器是結構異常，不是正常結束；不得清除最後有效的 checkpoint。
+            if (jsonElement.Get("continuationContents")?.Get("liveChatContinuation")
+                is not { ValueKind: JsonValueKind.Object })
+            {
+                throw new InvalidDataException("聊天室回應缺少有效的 liveChatContinuation，擷取資料可能不完整。");
+            }
+
             // 0：continuation、1：timeoutMs 或 timeUntilLastMessageMsec。
             string[] continuationData = ParseContinuation(jsonElement);
 

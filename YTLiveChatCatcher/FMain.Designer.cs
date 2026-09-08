@@ -39,7 +39,7 @@ namespace YTLiveChatCatcher
             LVideoID = new Label();
             TBInterval = new TextBox();
             LInterval = new Label();
-            LVLiveChatList = new ListView();
+            LVLiveChatList = new AccessibleChatListView();
             LLog = new Label();
             BtnExport = new Button();
             BtnDataTools = new Button();
