@@ -329,6 +329,7 @@ public partial class FMain : AppForm
 
         if (!isResuming)
         {
+            if (SharedRawRendererData.Count > 0) SharedHasMixedSources = true;
             SharedCaptureMessageDeduplicator.Clear();
         }
 
@@ -348,12 +349,22 @@ public partial class FMain : AppForm
                 StartedAtUtc = DateTimeOffset.UtcNow
             };
 
+        if (isResuming)
+        {
+            CaptureSessionTimeline.Interrupt(manifest, existingManifest!.EndedAtUtc ?? existingManifest.LastResponseAtUtc ?? DateTimeOffset.UtcNow,
+                "續傳前存在中斷；起點可能僅為最後已知回應時間");
+        }
         SharedCaptureSessionManifest = manifest;
         TrySaveCaptureSession(manifest);
 
         LiveChatStreamOptions streamOptions = new()
         {
-            ResumeContinuation = SharedResumeContinuation
+            ResumeContinuation = SharedResumeContinuation,
+            InterruptionProgress = new InlineProgress<string>(reason =>
+            {
+                CaptureSessionTimeline.Interrupt(manifest, DateTimeOffset.UtcNow, reason);
+                TrySaveCaptureSession(manifest);
+            })
         };
         SharedResumeContinuation = null;
 
@@ -365,6 +376,7 @@ public partial class FMain : AppForm
         });
         InlineProgress<string> rawResponseProgress = new(rawResponse =>
         {
+            CaptureSessionTimeline.ResponseReceived(manifest, DateTimeOffset.UtcNow);
             const int MaximumDiagnosticResponses = 5;
             SharedSanitizedRawResponses.Enqueue(DiagnosticBundleBuilder.Redact(rawResponse));
 
@@ -446,7 +458,11 @@ public partial class FMain : AppForm
                     cancellationToken.IsCancellationRequested ?
                         SharedUserRequestedStop ? CaptureSessionEndReason.UserStopped : CaptureSessionEndReason.Cancelled :
                         CaptureSessionEndReason.Completed;
-                manifest.IsDataComplete = completedNaturally && string.IsNullOrEmpty(manifest.LastContinuation);
+                if (!completedNaturally)
+                {
+                    CaptureSessionTimeline.Interrupt(manifest, manifest.EndedAtUtc.Value, manifest.EndReason.ToString());
+                }
+                manifest.IsDataComplete = completedNaturally && string.IsNullOrEmpty(manifest.LastContinuation) && manifest.Interruptions.Length == 0 && !manifest.HasUnsupportedContent;
                 manifest.FailureMessage = fetchFailure?.GetExceptionMessage();
                 TrySaveCaptureSession(manifest);
 
@@ -456,6 +472,7 @@ public partial class FMain : AppForm
                 // 這裡不該把新那一輪的 UI 狀態當成「已停止」還原掉。
                 if (ReferenceEquals(SharedFetchCancellationTokenSource, fetchCancellationTokenSource))
                 {
+                    SharedResumeContinuation = manifest.LastContinuation;
                     // 同上，清理／還原 UI 狀態這件事，不應該因為 cancellationToken 已取消而被跳過。
                     await TBUserAgent.InvokeAsyncIfRequired(() => BtnStop_Click(null, EventArgs.Empty));
 
@@ -773,6 +790,7 @@ public partial class FMain : AppForm
             SharedMemberInRoomAuthors.Clear();
             SharedDistinctAuthors.Clear();
             SharedCaptureSessionManifest = null;
+            SharedHasMixedSources = false;
             SharedResumeContinuation = null;
             SharedCaptureMessageDeduplicator.Clear();
             SharedRawRendererData.Clear();

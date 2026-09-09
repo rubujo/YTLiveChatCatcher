@@ -60,6 +60,7 @@ public partial class FMain
 
     /// <summary>目前擷取工作的持久化 session 狀態</summary>
     private CaptureSessionManifest? SharedCaptureSessionManifest;
+    private bool SharedHasMixedSources;
 
     /// <summary>從上次未完成 session 載入、下一次開始時要嘗試使用的 continuation</summary>
     private string? SharedResumeContinuation;

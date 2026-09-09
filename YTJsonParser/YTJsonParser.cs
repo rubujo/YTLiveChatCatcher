@@ -121,11 +121,13 @@ public partial class YTJsonParser : IDisposable
         // 持續取得即時聊天資料。
         while (!cancellationToken.IsCancellationRequested)
         {
-            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat, cancellationToken).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(ytConfigData.Continuation)) yield break;
+            JsonElement jsonElement = await GetJsonElementAsync(ytConfigData, EnumSet.DataType.LiveChat, cancellationToken, options.InterruptionProgress).ConfigureAwait(false);
 
             if (string.IsNullOrEmpty(jsonElement.ToString()))
             {
-                break;
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new InvalidDataException("聊天室輪詢未取得有效回應；保留 checkpoint，資料可能不完整。");
             }
 
             rawResponseProgress?.Report(jsonElement.GetRawText());

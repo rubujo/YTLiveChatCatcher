@@ -38,6 +38,9 @@ public sealed record YTJsonParserOptions
 /// </summary>
 public sealed record LiveChatStreamOptions
 {
+    /// <summary>回報暫時網路失敗或限流；只包含固定原因，不帶憑證及例外原文。</summary>
+    public IProgress<string>? InterruptionProgress { get; init; }
+
     /// <summary>
     /// 即時聊天類型
     /// </summary>

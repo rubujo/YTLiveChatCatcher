@@ -408,8 +408,11 @@ public partial class FMain
         ListView listView,
         List<ListViewItem> listAllData,
         SaveFileDialog saveFileDialog,
-        string videoID)
+        string videoID,
+        ChatExportMetadata? metadata = null)
     {
+        ChatExportMetadata exportMetadata = metadata ?? ChatExportMetadata.Create(GetCaptureSessionSnapshot(), listAllData.Count,
+            scope: listView.Name == LVLiveChatList.Name ? "主清單全部資料" : "搜尋結果子集（搜尋條件未保存）");
         return Task.Run(async () =>
         {
             using Stream stream = saveFileDialog.OpenFile();
@@ -1210,6 +1213,7 @@ public partial class FMain
             workbook.Properties.Keywords = $"{Rubujo.YouTube.Utility.Sets.StringSet.YouTube}, {StringSet.SheetName1}";
             workbook.Properties.Author = $"{StringSet.AppName} {version}";
 
+            exportMetadata.WriteWorksheet(workbook);
             package.SaveAs(stream);
 
             // 只有完整匯出 LVLiveChatList（不是篩選後的搜尋結果子集）才代表這場擷取的原始資料已經
@@ -1218,7 +1222,6 @@ public partial class FMain
             {
                 CaptureRecoveryStore.Clear();
                 CaptureSessionStore.Clear();
-                SharedCaptureSessionManifest = null;
                 SharedResumeContinuation = null;
             }
         });
@@ -1362,7 +1365,8 @@ public partial class FMain
 
     public IReadOnlyList<RendererData> GetRawMessagesSnapshot() => [.. SharedRawRendererData];
 
-    public CaptureSessionManifest? GetCaptureSessionSnapshot() => SharedCaptureSessionManifest;
+    public CaptureSessionManifest? GetCaptureSessionSnapshot() => !SharedHasMixedSources && SharedCaptureSessionManifest is { } session ?
+        session with { Interruptions = session.Interruptions.ToArray() } : null;
 
     public IReadOnlyList<string> GetSanitizedRawResponsesSnapshot() => [.. SharedSanitizedRawResponses];
 
@@ -1499,6 +1503,7 @@ public partial class FMain
     public async Task<int> ImportRawMessagesAsync(IReadOnlyList<RendererData> messages)
     {
         IReadOnlyList<RendererData> newMessages = SharedCaptureMessageDeduplicator.FilterNew(messages);
+        if (newMessages.Count > 0) SharedHasMixedSources = true;
 
         const int batchSize = 1_000;
 
@@ -2596,7 +2601,16 @@ public partial class FMain
             },
             new DiagnosticForwardingLogger(
                 SharedYTJsonParserLogger,
-                message => WriteLog($"⚠ 偵測到 YouTube 回應內含目前尚未支援的內容，這批資料可能沒有被完整解析（詳見 Logs/log.txt）：{message}")));
+                message =>
+                {
+                    if (SharedCaptureSessionManifest is { } session)
+                    {
+                        session.HasUnsupportedContent = true;
+                        session.IsDataComplete = false;
+                        TrySaveCaptureSession(session);
+                    }
+                    WriteLog($"⚠ 偵測到 YouTube 回應內含目前尚未支援的內容，這批資料可能沒有被完整解析（詳見 Logs/log.txt）：{DiagnosticBundleBuilder.Redact(message)}");
+                }));
 
         // 若使用者先前在登入視窗勾選「記住我」，載入以 DPAPI 加密儲存的 Cookie。
         string? rememberedCookies = SecureCookieStore.Load();
@@ -2652,6 +2666,7 @@ public partial class FMain
         // 這批資料依然留在復原記錄裡，下次啟動還是問得到。記錄檔只在成功匯出或手動清空聊天室時才清除。
         WriteLog($"已從當機復原記錄載入 {recoveredBatches.Sum(n => n.Count)} 筆資料（共 {recoveredBatches.Count} 個批次）。");
 
+        SharedCaptureSessionManifest = manifest;
         if (manifest is { IsDataComplete: false } && !string.IsNullOrEmpty(manifest.LastContinuation))
         {
             SharedCaptureSessionManifest = manifest;

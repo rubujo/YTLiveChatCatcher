@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using Xunit;
 using YTLiveChatCatcher.Common.Utils;
@@ -25,7 +25,7 @@ public class ChatDataToolsTests
     public void Filter_可組合類型作者與金額條件()
     {
         IReadOnlyList<RendererData> result = ChatDataTools.Filter(Messages,
-            new ChatFilterOptions(MessageType: "超級留言", Author: "bo", MinimumAmount: 50, MaximumAmount: 150));
+            new ChatFilterOptions(MessageType: "超級留言", Author: "bo", MinimumAmount: 50, MaximumAmount: 150, Currency: "NT$"));
 
         RendererData message = Assert.Single(result);
         Assert.Equal("2", message.ID);

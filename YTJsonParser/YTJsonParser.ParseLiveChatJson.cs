@@ -638,9 +638,9 @@ public partial class YTJsonParser
             output.Add(ParseUpdateLiveChatPollAction(pollToUpdate.Value));
         }
 
-        // 完全陌生的 action 類型（不屬於任何已知鍵值）目前會被靜默忽略，這裡補上診斷用的 Trace 記錄，
+        // 完全陌生的 action 類型（不屬於任何已知鍵值）需通過正常 Debug 門檻留下診斷，
         // 避免 YouTube 未來新增的 action 類型在毫無記錄的情況下遺失資料。
-        if (!KnownActionKeys.Any(key => singleAction.TryGetProperty(key, out _)) && _logger.IsEnabled(LogLevel.Trace))
+        if (!KnownActionKeys.Any(key => singleAction.TryGetProperty(key, out _)) && _logger.IsEnabled(LogLevel.Debug))
         {
             LogMessages.UnsupportedContentEncountered(_logger, "ParseNonMessageAction -> 尚未支援的 action 類型", singleAction.GetRawText());
         }

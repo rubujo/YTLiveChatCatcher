@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
@@ -21,6 +21,33 @@ public sealed record CaptureSessionManifest
     public CaptureSessionEndReason EndReason { get; set; } = CaptureSessionEndReason.Running;
     public bool IsDataComplete { get; set; }
     public string? FailureMessage { get; set; }
+    public DateTimeOffset? LastResponseAtUtc { get; set; }
+    public bool HasUnsupportedContent { get; set; }
+    public CaptureInterruption[] Interruptions { get; set; } = [];
+}
+
+/// <summary>觀察到的擷取中斷區間；不推算漏訊息數，也不保證續傳已補齊。</summary>
+public sealed record CaptureInterruption(DateTimeOffset? FromUtc, DateTimeOffset? ResumedAtUtc, string Reason);
+
+public static class CaptureSessionTimeline
+{
+    public static void Interrupt(CaptureSessionManifest manifest, DateTimeOffset now, string reason)
+    {
+        if (manifest.Interruptions.LastOrDefault() is { ResumedAtUtc: null }) return;
+        manifest.Interruptions = [.. manifest.Interruptions, new(manifest.LastResponseAtUtc ?? now, null, reason)];
+        manifest.IsDataComplete = false;
+    }
+
+    public static void ResponseReceived(CaptureSessionManifest manifest, DateTimeOffset now)
+    {
+        if (manifest.Interruptions.LastOrDefault() is { ResumedAtUtc: null } interruption)
+        {
+            CaptureInterruption[] updated = [.. manifest.Interruptions];
+            updated[^1] = interruption with { ResumedAtUtc = now };
+            manifest.Interruptions = updated;
+        }
+        manifest.LastResponseAtUtc = now;
+    }
 }
 
 /// <summary>

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using Rubujo.YouTube.Utility;
@@ -13,6 +13,8 @@ namespace Rubujo.YouTube.Utility.Tests;
 /// </summary>
 public class NetworkRetryTests
 {
+    private sealed class ImmediateProgress(Action<string> report) : IProgress<string>
+    { public void Report(string value) => report(value); }
     private static string ReadFixture(string fileName) =>
         File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName));
 
@@ -40,6 +42,7 @@ public class NetworkRetryTests
         using YTJsonParser ytJsonParser = new(new YTJsonParserOptions { HttpClient = httpClient });
 
         List<RendererData> allMessages = [];
+        List<string> interruptions = [];
         int batchCount = 0;
 
         using CancellationTokenSource cts = new();
@@ -49,7 +52,7 @@ public class NetworkRetryTests
 
         await foreach (IReadOnlyList<RendererData> batch in ytJsonParser.StreamLiveChatDataAsync(
             "TEST_VIDEO_ID",
-            options: new LiveChatStreamOptions { ForceIntervalMs = 0 },
+            options: new LiveChatStreamOptions { ForceIntervalMs = 0, InterruptionProgress = new ImmediateProgress(interruptions.Add) },
             cancellationToken: cts.Token))
         {
             allMessages.AddRange(batch);
@@ -64,6 +67,7 @@ public class NetworkRetryTests
         // 第一批來自初始頁面（不受輪詢重試影響），第二批是重試後的輪詢回應——
         // 代表網路例外沒有讓串流直接放棄，而是重試後成功拿到資料。
         Assert.Equal(2, batchCount);
+        Assert.Equal("NetworkFailure", Assert.Single(interruptions));
         Assert.Contains(allMessages, m => m.ID == "msg-poll-1" && m.MessageContent == "一般留言測試");
     }
 

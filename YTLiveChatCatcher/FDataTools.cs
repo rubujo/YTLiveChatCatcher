@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using Rubujo.YouTube.Utility.Models.LiveChat;
 using YTLiveChatCatcher.Common.Utils;
@@ -11,6 +11,8 @@ public sealed class FDataTools : AppForm
 {
     private readonly FMain _main;
     private readonly IReadOnlyList<RendererData> _messages;
+    private readonly CaptureSessionManifest? _session;
+    private readonly ComboBox _currency = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 110, AccessibleName = "金額篩選幣別" };
     private readonly TextBox _start = new() { PlaceholderText = "開始時間，例如 2026-09-03 12:00" };
     private readonly TextBox _end = new() { PlaceholderText = "結束時間，例如 2026-09-03 13:00" };
     private readonly ComboBox _type = new() { DropDownStyle = ComboBoxStyle.DropDownList };
@@ -27,6 +29,10 @@ public sealed class FDataTools : AppForm
     {
         _main = main;
         _messages = main.GetRawMessagesSnapshot();
+        _session = main.GetCaptureSessionSnapshot();
+        _currency.Items.Add("全部幣別");
+        _currency.Items.AddRange(ChatDataTools.Analyze(_messages).AmountsByCurrency.Keys.Order().Cast<object>().ToArray());
+        _currency.SelectedIndex = 0;
 
         Text = $"資料工具 - {main.Text}";
         StartPosition = FormStartPosition.CenterParent;
@@ -74,6 +80,8 @@ public sealed class FDataTools : AppForm
 
         FlowLayoutPanel actions = new() { Dock = DockStyle.Fill, AutoSize = true };
         actions.Controls.Add(CreateButton("套用並分析", (_, _) => RefreshAnalysis()));
+        actions.Controls.Add(new Label { Text = "幣別：", AutoSize = true });
+        actions.Controls.Add(_currency);
         actions.Controls.Add(CreateButton("匯出 JSONL", (_, _) => Export("JSON Lines|*.jsonl", ChatDataTools.ExportJsonLines)));
         actions.Controls.Add(CreateButton("匯出 CSV", (_, _) => Export("CSV|*.csv", ChatDataTools.ExportCsv)));
         actions.Controls.Add(CreateButton("匯入 JSONL/CSV", (_, _) => Import()));
@@ -119,19 +127,22 @@ public sealed class FDataTools : AppForm
         return button;
     }
 
-    private IReadOnlyList<RendererData> GetFiltered()
+    private ChatFilterOptions GetFilterOptions()
     {
         DateTimeOffset? start = ParseOptionalTime(_start.Text, "開始時間");
         DateTimeOffset? end = ParseOptionalTime(_end.Text, "結束時間");
 
-        return ChatDataTools.Filter(_messages, new ChatFilterOptions(
+        return new ChatFilterOptions(
             start,
             end,
             _type.SelectedIndex > 0 ? _type.SelectedItem?.ToString() : null,
             _author.Text,
             _useMinimum.Checked ? _minimum.Value : null,
-            _useMaximum.Checked ? _maximum.Value : null));
+            _useMaximum.Checked ? _maximum.Value : null,
+            _currency.SelectedIndex > 0 ? _currency.SelectedItem?.ToString() : null);
     }
+
+    private IReadOnlyList<RendererData> GetFiltered() => ChatDataTools.Filter(_messages, GetFilterOptions());
 
     private void RefreshAnalysis()
     {
@@ -141,6 +152,11 @@ public sealed class FDataTools : AppForm
             _chart.SetAnalytics(analytics);
             StringBuilder output = new();
             output.AppendLine($"符合條件：{analytics.MessageCount} 筆");
+            output.AppendLine(_session == null ? "來源完整性未知" : _session.IsDataComplete ? "擷取正常結束（不保證涵蓋整場直播）" : "資料可能不完整");
+            foreach (CaptureInterruption gap in _session?.Interruptions ?? [])
+            {
+                output.AppendLine($"可能缺漏（UTC）：{gap.FromUtc:O} → {gap.ResumedAtUtc?.ToString("O") ?? "尚未恢復"}；{gap.Reason}");
+            }
             output.AppendLine();
             output.AppendLine("幣別分布：");
             output.AppendLine(analytics.AmountsByCurrency.Count == 0 ? "（無付費事件）" :
@@ -165,13 +181,21 @@ public sealed class FDataTools : AppForm
 
     private void Export(string filter, Action<string, IEnumerable<RendererData>> exporter)
     {
-        IReadOnlyList<RendererData> data = GetFiltered();
-        using SaveFileDialog dialog = new() { Filter = filter, FileName = $"聊天室資料_{DateTime.Now:yyyyMMdd_HHmmss}" };
-
-        if (dialog.ShowDialog(this) == DialogResult.OK)
+        try
         {
-            exporter(dialog.FileName, data);
-            MessageBox.Show($"已匯出 {data.Count} 筆資料。", Text);
+            IReadOnlyList<RendererData> data = GetFiltered();
+            using SaveFileDialog dialog = new() { Filter = filter, FileName = $"聊天室資料_{DateTime.Now:yyyyMMdd_HHmmss}" };
+
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                exporter(dialog.FileName, data);
+                ChatExportMetadata.Create(_session, data.Count, GetFilterOptions(), "資料工具篩選快照").WriteSidecar(dialog.FileName);
+                MessageBox.Show($"已匯出 {data.Count} 筆資料及 .metadata.json 說明檔，分享時請一併提供。", Text);
+            }
+        }
+        catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show($"匯出未完整完成：{ex.Message}", Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

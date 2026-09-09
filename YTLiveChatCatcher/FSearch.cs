@@ -18,6 +18,7 @@ public partial class FSearch : AppForm
     private readonly List<ListViewItem> SharedFilteredListViewItems = [];
 
     private CancellationTokenSource? _searchCancellation;
+    private ChatExportMetadata? _resultMetadata;
 
     private void CancelSearch()
     {
@@ -121,6 +122,7 @@ public partial class FSearch : AppForm
                 // LVLiveChatList 是 VirtualMode，Items 集合禁止存取，改讀 FMain 公開的
                 // GetSharedListViewItems()（見 FMain.Methods.cs）。
                 IReadOnlyList<ListViewItem> source = _FMain.GetSharedListViewItems();
+                CaptureSessionManifest? sourceSession = _FMain.GetCaptureSessionSnapshot();
                 ImageList? sourceImages = _LVLiveChatList.SmallImageList;
                 ChatSearchUtil.SearchText[] snapshot = ChatSearchUtil.Snapshot(source);
                 using CancellationTokenSource cancellation = new();
@@ -138,6 +140,7 @@ public partial class FSearch : AppForm
                     if (ReferenceEquals(_searchCancellation, cancellation)) _searchCancellation = null;
                 }
                 List<ListViewItem> dataSet = indices.Select(index => source[index]).ToList();
+                _resultMetadata = ChatExportMetadata.Create(sourceSession, dataSet.Count, scope: $"搜尋關鍵字：{keyword}");
 
                 if (dataSet.Count <= 0)
                 {
@@ -367,7 +370,8 @@ public partial class FSearch : AppForm
                     LVFilteredList,
                     listAllData,
                     saveFileDialog,
-                    videoID);
+                    videoID,
+                    _resultMetadata);
 
                 _FMain.WriteLog($"*.xlsx 匯出作業完成。");
             }

@@ -90,6 +90,7 @@ public partial class YTJsonParser
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            liveChatOptions?.InterruptionProgress?.Report("InitialPageNetworkFailure");
             LogMessages.Error(_logger, nameof(GetYTConfigDataAsync), $"發送請求失敗：{ex.GetExceptionMessage()}");
 
             return initialData;
@@ -427,7 +428,8 @@ public partial class YTJsonParser
     private async Task<JsonElement> GetJsonElementAsync(
         YTConfigData ytConfigData,
         EnumSet.DataType dataType = EnumSet.DataType.LiveChat,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProgress<string>? interruptionProgress = null)
     {
         JsonElement jsonElement = new();
 
@@ -526,6 +528,7 @@ public partial class YTJsonParser
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
+                    interruptionProgress?.Report("NetworkFailure");
                     if (attempt >= maxAttempts)
                     {
                         LogMessages.Error(
@@ -557,6 +560,7 @@ public partial class YTJsonParser
 
                     if (httpResponseMessage.StatusCode == HttpStatusCode.TooManyRequests && attempt < maxAttempts)
                     {
+                        interruptionProgress?.Report("RateLimited");
                         TimeSpan retryAfter = TimeSpan.FromSeconds(10);
 
                         RetryConditionHeaderValue? retryAfterHeader = httpResponseMessage.Headers.RetryAfter;

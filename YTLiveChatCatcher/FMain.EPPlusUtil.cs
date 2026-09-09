@@ -62,6 +62,9 @@ public partial class FMain
                 return;
             }
 
+            // 舊版報表可能沒有來源資訊；匯入資料不能繼承目前擷取工作的完整性宣稱。
+            SharedHasMixedSources = true;
+
             // 2026/9 修正：SharedItemsWithoutMessageId 讓「沒有 ID 值」的舊格式列改用 O(1) 雜湊查找去重，
             // 取代原本對整份累積清單做 .Any(...) 的 O(n) 線性掃描——舊格式匯出檔案沒有 ID 欄位是
             // 被刻意保留支援的真實情境（見 AGENTS.md），大檔案（例如上萬列）下線性掃描會讓匯入

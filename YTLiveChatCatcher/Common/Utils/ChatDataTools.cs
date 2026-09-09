@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Rubujo.YouTube.Utility.Models.LiveChat;
@@ -11,7 +11,8 @@ public sealed record ChatFilterOptions(
     string? MessageType = null,
     string? Author = null,
     decimal? MinimumAmount = null,
-    decimal? MaximumAmount = null);
+    decimal? MaximumAmount = null,
+    string? Currency = null);
 
 public sealed record ChatAnalytics(
     int MessageCount,
@@ -32,6 +33,16 @@ public static class ChatDataTools
         IEnumerable<RendererData> messages,
         ChatFilterOptions options)
     {
+        if (options.StartTime > options.EndTime || options.MinimumAmount > options.MaximumAmount)
+        {
+            throw new FormatException("開始值不可大於結束值。");
+        }
+
+        if ((options.MinimumAmount.HasValue || options.MaximumAmount.HasValue) && string.IsNullOrWhiteSpace(options.Currency))
+        {
+            throw new FormatException("使用金額上下限時請選擇幣別，避免跨幣別比較。");
+        }
+
         return messages.Where(message =>
         {
             DateTimeOffset? timestamp = ParseTimestamp(message.TimestampUsec);
@@ -58,10 +69,11 @@ public static class ChatDataTools
                 return false;
             }
 
-            if (options.MinimumAmount.HasValue || options.MaximumAmount.HasValue)
+            if (!string.IsNullOrWhiteSpace(options.Currency))
             {
                 if (string.IsNullOrWhiteSpace(message.PurchaseAmountText) ||
-                    !ChatStatsCalculator.TryParsePurchaseAmount(message.PurchaseAmountText, out _, out decimal amount))
+                    !ChatStatsCalculator.TryParsePurchaseAmount(message.PurchaseAmountText, out string currency, out decimal amount) ||
+                    !string.Equals(currency, options.Currency, StringComparison.Ordinal))
                 {
                     return false;
                 }
