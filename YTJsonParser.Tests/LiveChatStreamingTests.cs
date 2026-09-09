@@ -101,8 +101,8 @@ public class LiveChatStreamingTests
         // removeChatItemAction：留言刪除事件應被解析成一筆帶有目標 ID 的資料。
         Assert.Contains(allMessages, m => m.ID == "msg-poll-1" && m.Type == "留言已被刪除");
 
-        // removeChatItemByAuthorAction：使用者封鎖事件。
-        Assert.Contains(allMessages, m => m.AuthorExternalChannelID == "UCbanned" && m.Type == "使用者已被封鎖");
+        // 依作者移除留言的事件不能可靠區分暫時禁言與永久隱藏，只陳述可觀察結果。
+        Assert.Contains(allMessages, m => m.AuthorExternalChannelID == "UCbanned" && m.Type == "使用者留言已被移除");
 
         // showLiveChatActionPanelAction -> pollRenderer：投票應被解析並包含問題與選項文字。
         Assert.Contains(allMessages, m => m.Type == "投票" && m.MessageContent != null &&

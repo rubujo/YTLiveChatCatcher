@@ -589,6 +589,8 @@ public partial class YTJsonParser
         "addBannerToLiveChatCommand",
         "removeChatItemAction",
         "removeChatItemByAuthorAction",
+        "markChatItemAsDeletedAction",
+        "markChatItemsByAuthorAsDeletedAction",
         "showLiveChatActionPanelAction",
         "replayChatItemAction",
         "replaceChatItemAction",
@@ -602,14 +604,16 @@ public partial class YTJsonParser
     /// <param name="singleAction">JsonElement</param>
     private void ParseNonMessageAction(List<RendererData> output, JsonElement singleAction)
     {
-        JsonElement? removeChatItemAction = singleAction.Get("removeChatItemAction");
+        JsonElement? removeChatItemAction = singleAction.Get("removeChatItemAction") ??
+            singleAction.Get("markChatItemAsDeletedAction");
 
         if (removeChatItemAction.HasValue)
         {
             output.Add(ParseRemoveChatItemAction(removeChatItemAction.Value));
         }
 
-        JsonElement? removeChatItemByAuthorAction = singleAction.Get("removeChatItemByAuthorAction");
+        JsonElement? removeChatItemByAuthorAction = singleAction.Get("removeChatItemByAuthorAction") ??
+            singleAction.Get("markChatItemsByAuthorAsDeletedAction");
 
         if (removeChatItemByAuthorAction.HasValue)
         {
@@ -702,7 +706,8 @@ public partial class YTJsonParser
     }
 
     /// <summary>
-    /// 解析 removeChatItemByAuthorAction（使用者被封鎖，其留言全數移除）
+    /// 解析依作者移除留言的 action。InnerTube 的資料不足以可靠區分暫時禁言與永久隱藏，
+    /// 因此只記錄可觀察到的「該作者留言已被移除」。
     /// </summary>
     /// <param name="jsonElement">JsonElement</param>
     /// <returns>RendererData</returns>
@@ -713,7 +718,7 @@ public partial class YTJsonParser
         return new RendererData()
         {
             ID = string.Empty,
-            Type = GetLocalizeString(KeySet.ChatUserBanned),
+            Type = GetLocalizeString(KeySet.ChatAuthorMessagesRemoved),
             AuthorName = $"[{GetLocalizeString(StringSet.YouTube)}]",
             AuthorBadges = KeySet.NoAuthorBadges,
             AuthorPhotoUrl = KeySet.NoAuthorPhotoUrl,
@@ -1609,14 +1614,18 @@ public partial class YTJsonParser
 
         if (rendererName == "liveChatMembershipItemRenderer")
         {
-            // 此處 message 為 headerSubtext，依據 message 是否帶有關鍵字來更新 type。
-            if (message.Contains(
+            // 真實里程碑樣本的事件種類位於 headerPrimaryText；headerSubtext 是會員等級名稱，
+            // message 則是使用者自由文字。只檢查事件標題，避免自由文字碰巧包含關鍵字而誤判。
+            RunsData headerPrimary = ParseRunData(jsonElement.Get("headerPrimaryText") ?? default);
+            string eventTitle = headerPrimary.Text ?? string.Empty;
+
+            if (eventTitle.Contains(
                 GetLocalizeString(KeySet.MemberUpgrade),
                 StringComparison.InvariantCultureIgnoreCase))
             {
                 type = GetLocalizeString(KeySet.ChatMemberUpgrade);
             }
-            else if (message.Contains(
+            else if (eventTitle.Contains(
                 GetLocalizeString(KeySet.MemberMilestone),
                 StringComparison.InvariantCultureIgnoreCase))
             {

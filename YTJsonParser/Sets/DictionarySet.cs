@@ -687,7 +687,10 @@ public class DictionarySet
                 { KeySet.ChatRedirect, "Redirect" },
                 { KeySet.ChatPinned, "Pinned" },
                 { KeySet.ChatMessageDeleted, "Message Deleted" },
+                { KeySet.ChatAuthorMessagesRemoved, "Author Messages Removed" },
+#pragma warning disable CS0618 // 保留舊公開鍵的本地化相容性。
                 { KeySet.ChatUserBanned, "User Banned" },
+#pragma warning restore CS0618
                 { KeySet.ChatPoll, "Poll" },
                 { KeySet.ChatGift, "Gift" },
                 { KeySet.ChatDonation, "Donation" },
@@ -714,7 +717,10 @@ public class DictionarySet
                 { KeySet.ChatRedirect, "重新導向" },
                 { KeySet.ChatPinned, "置頂留言" },
                 { KeySet.ChatMessageDeleted, "留言已被刪除" },
+                { KeySet.ChatAuthorMessagesRemoved, "使用者留言已被移除" },
+#pragma warning disable CS0618 // 保留舊公開鍵的本地化相容性。
                 { KeySet.ChatUserBanned, "使用者已被封鎖" },
+#pragma warning restore CS0618
                 { KeySet.ChatPoll, "投票" },
                 { KeySet.ChatGift, "禮物" },
                 { KeySet.ChatDonation, "捐款／購買" },
@@ -741,7 +747,10 @@ public class DictionarySet
                 { KeySet.ChatRedirect, "重新导向" },
                 { KeySet.ChatPinned, "置顶留言" },
                 { KeySet.ChatMessageDeleted, "留言已被删除" },
+                { KeySet.ChatAuthorMessagesRemoved, "用户留言已被移除" },
+#pragma warning disable CS0618 // 保留舊公開鍵的本地化相容性。
                 { KeySet.ChatUserBanned, "用户已被封锁" },
+#pragma warning restore CS0618
                 { KeySet.ChatPoll, "投票" },
                 { KeySet.ChatGift, "礼物" },
                 { KeySet.ChatDonation, "捐款／购买" },
@@ -768,7 +777,10 @@ public class DictionarySet
                 { KeySet.ChatRedirect, "リダイレクト" },
                 { KeySet.ChatPinned, "ピン留め" },
                 { KeySet.ChatMessageDeleted, "メッセージ削除" },
+                { KeySet.ChatAuthorMessagesRemoved, "ユーザーのメッセージを削除" },
+#pragma warning disable CS0618 // 保留舊公開鍵的本地化相容性。
                 { KeySet.ChatUserBanned, "ユーザーBAN" },
+#pragma warning restore CS0618
                 { KeySet.ChatPoll, "投票" },
                 { KeySet.ChatGift, "ギフト" },
                 { KeySet.ChatDonation, "寄付／購入" },
@@ -795,7 +807,10 @@ public class DictionarySet
                 { KeySet.ChatRedirect, "리디렉션" },
                 { KeySet.ChatPinned, "고정" },
                 { KeySet.ChatMessageDeleted, "메시지 삭제됨" },
+                { KeySet.ChatAuthorMessagesRemoved, "사용자 메시지 삭제됨" },
+#pragma warning disable CS0618 // 保留舊公開鍵的本地化相容性。
                 { KeySet.ChatUserBanned, "사용자 차단됨" },
+#pragma warning restore CS0618
                 { KeySet.ChatPoll, "투표" },
                 { KeySet.ChatGift, "선물" },
                 { KeySet.ChatDonation, "후원／구매" },

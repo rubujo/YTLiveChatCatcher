@@ -148,7 +148,7 @@ public partial class FMain
 
     /// <summary>
     /// 依 <see cref="RendererData.AuthorExternalChannelID"/> 索引該使用者目前所有的 ListViewItem。
-    /// <para>用於「使用者已被封鎖」事件一次找出該使用者所有留言並標記，而不是逐列線性掃描整個 ListView；
+    /// <para>用於「使用者留言已被移除」事件一次找出該使用者所有留言並標記，而不是逐列線性掃描整個 ListView；
     /// 語意與清空時機同 <see cref="SharedItemsByMessageID"/>。</para>
     /// </summary>
     private readonly Dictionary<string, List<ListViewItem>> SharedItemsByAuthorChannelID = [];

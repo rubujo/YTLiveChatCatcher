@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using Rubujo.YouTube.Utility;
 using Rubujo.YouTube.Utility.Sets;
@@ -57,7 +57,7 @@ public static partial class ChatStatsCalculator
     ];
 
     /// <summary>
-    /// 「這是關聯回既有列的事件，不是獨立訊息」要排除的訊息類型（留言已被刪除／使用者已被封鎖／
+    /// 「這是關聯回既有列的事件，不是獨立訊息」要排除的訊息類型（留言已被刪除／作者留言已被移除／
     /// 回覆數更新／投票結果更新）。
     /// <para>2026/9 集中成一份清單：聊天記錄匯出的內容分頁、時間熱點分頁原本各自手刻一份幾乎相同
     /// 的排除清單（<c>FMain.Methods.cs</c> 的 <c>DoExportTask</c>），時間熱點分頁另外還會排除
@@ -68,7 +68,7 @@ public static partial class ChatStatsCalculator
     public static readonly string[] NonMessageEventExclusionKeys =
     [
         KeySet.ChatMessageDeleted,
-        KeySet.ChatUserBanned,
+        KeySet.ChatAuthorMessagesRemoved,
         KeySet.ChatReplyCountUpdate,
         KeySet.ChatPollUpdate
     ];

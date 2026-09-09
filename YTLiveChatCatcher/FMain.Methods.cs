@@ -1753,9 +1753,9 @@ public partial class FMain
                     continue;
                 }
 
-                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatUserBanned))
+                if (type == SharedYTJsonParser.GetLocalizeString(KeySet.ChatAuthorMessagesRemoved))
                 {
-                    ApplyUserBannedMarker(rendererData.AuthorExternalChannelID);
+                    ApplyAuthorMessagesRemovedMarker(rendererData.AuthorExternalChannelID);
 
                     continue;
                 }
@@ -2209,11 +2209,11 @@ public partial class FMain
     }
 
     /// <summary>
-    /// 套用「使用者已被封鎖」事件：透過 <see cref="SharedItemsByAuthorChannelID"/> 一次找出該使用者
-    /// 目前所有留言的既有列並逐一標記。
+    /// 套用「作者留言已被移除」事件：透過 <see cref="SharedItemsByAuthorChannelID"/> 一次找出該使用者
+    /// 目前所有留言的既有列並逐一標記。InnerTube 無法可靠區分暫時禁言與永久隱藏。
     /// </summary>
-    /// <param name="externalChannelId">字串，被封鎖使用者的外部頻道 ID</param>
-    private void ApplyUserBannedMarker(string? externalChannelId)
+    /// <param name="externalChannelId">字串，留言遭移除之使用者的外部頻道 ID</param>
+    private void ApplyAuthorMessagesRemovedMarker(string? externalChannelId)
     {
         if (string.IsNullOrEmpty(externalChannelId) ||
             !SharedItemsByAuthorChannelID.TryGetValue(externalChannelId, out List<ListViewItem>? lvItems))
@@ -2223,14 +2223,14 @@ public partial class FMain
 
         foreach (ListViewItem lvItem in lvItems)
         {
-            MarkListViewItemAsRemoved(lvItem, "〔使用者已被封鎖〕");
+            MarkListViewItemAsRemoved(lvItem, "〔使用者留言已被移除〕");
 
             RedrawListViewItem(lvItem);
         }
     }
 
     /// <summary>
-    /// 幫既有列加上「已刪除／已封鎖」的視覺標記，保留原始內容（不移除該列）供封存與匯出使用。
+    /// 幫既有列加上「已刪除／作者留言已移除」的視覺標記，保留原始內容（不移除該列）供封存與匯出使用。
     /// 標記文字直接寫進訊息內容欄位本身（而不是只靠字型樣式），是因為 Excel 匯出目前只會轉存
     /// 前景／背景顏色，不會轉存刪除線字型樣式，純靠字型會讓這個資訊在匯出檔案裡遺失。
     /// </summary>

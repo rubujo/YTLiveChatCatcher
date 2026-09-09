@@ -33,7 +33,7 @@
     - 可調整的粗估收益比例；預設 70%，不代表 YouTube 實際結算。
     - 一鍵產生已遮蔽 Cookie、Authorization、Token 與 continuation 的 ZIP 診斷包，並附上最近五批原始回應的已遮蔽結構 fixture。
 12. session 記錄網路失敗、限流及停止後續傳的可能缺漏區間；收到恢復回應不代表已補齊，報表不推算漏訊息數。XLSX 另附「擷取資訊」工作表；資料工具匯出的 JSONL／CSV 附帶 `.metadata.json` 說明檔，分享時請一併提供。匯入及混合來源的完整性保守標為未知。
-13. JSONL 的「完整」指 RendererData 模型欄位，不代表保存 YouTube 原始回應的所有未知欄位。會員升級／里程碑、creatorHeart、timeout 與永久封鎖等特殊事件，必須取得能區分語意的真實遮蔽酬載後才會加入解析與回歸測試；現有的作者留言移除 action 不足以推定永久封鎖。
+13. JSONL 的「完整」指 RendererData 模型欄位，不代表保存 YouTube 原始回應的所有未知欄位。會員里程碑依 `headerPrimaryText` 分類，避免會員等級或自由留言誤判；現行留言刪除 action 亦已支援。依作者批次移除留言的 InnerTube action 無法可靠區分暫時禁言與永久隱藏，因此只標示「使用者留言已被移除」。會員升級與 creatorHeart 仍須取得能證明狀態的真實遮蔽酬載；單有 `creatorHeartViewModel` 只代表畫面提供愛心按鈕，不代表創作者已按愛心。
 
 ## 三、注意事項
 

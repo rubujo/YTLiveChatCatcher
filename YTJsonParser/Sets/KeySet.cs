@@ -63,8 +63,12 @@ public class KeySet
     public const string ChatMessageDeleted = "ChatMessageDeleted";
 
     /// <summary>
-    /// 使用者已被封鎖
+    /// 使用者的留言已被移除（InnerTube 無法可靠區分暫時禁言與永久隱藏）
     /// </summary>
+    public const string ChatAuthorMessagesRemoved = "ChatAuthorMessagesRemoved";
+
+    /// <summary>舊版將依作者移除留言一律描述為封鎖；保留供既有呼叫端相容。</summary>
+    [Obsolete($"請改用 {nameof(ChatAuthorMessagesRemoved)}；InnerTube 無法可靠區分暫時禁言與永久隱藏。")]
     public const string ChatUserBanned = "ChatUserBanned";
 
     /// <summary>
