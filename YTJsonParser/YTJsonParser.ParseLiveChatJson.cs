@@ -1614,10 +1614,18 @@ public partial class YTJsonParser
 
         if (rendererName == "liveChatMembershipItemRenderer")
         {
-            // 真實里程碑樣本的事件種類位於 headerPrimaryText；headerSubtext 是會員等級名稱，
-            // message 則是使用者自由文字。只檢查事件標題，避免自由文字碰巧包含關鍵字而誤判。
+            // 里程碑的事件種類位於 headerPrimaryText；會員升級實測會位於
+            // headerSubtext.runs。headerSubtext.simpleText 通常是會員等級名稱，message 則是
+            // 使用者自由文字，不得用它們猜測事件種類。
             RunsData headerPrimary = ParseRunData(jsonElement.Get("headerPrimaryText") ?? default);
-            string eventTitle = headerPrimary.Text ?? string.Empty;
+            JsonElement? headerSubtext = jsonElement.Get("headerSubtext");
+            RunsData? headerSubtextRuns = headerSubtext.HasValue &&
+                headerSubtext.Value.Get("runs").HasValue
+                ? ParseRunData(headerSubtext.Value)
+                : null;
+            string eventTitle = string.Join(' ',
+                new[] { headerPrimary.Text, headerSubtextRuns?.Text }
+                    .Where(text => !string.IsNullOrWhiteSpace(text)));
 
             if (eventTitle.Contains(
                 GetLocalizeString(KeySet.MemberUpgrade),

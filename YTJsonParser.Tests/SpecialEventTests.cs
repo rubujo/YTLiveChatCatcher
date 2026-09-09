@@ -30,6 +30,11 @@ public class SpecialEventTests
                             id = "new-member", headerSubtext = new { simpleText = "Welcome to Member for fans" },
                             message = new { runs = new[] { new { text = "Upgraded membership to is only user text" } } }
                         } } } },
+                        new { addChatItemAction = new { item = new { liveChatMembershipItemRenderer = new
+                        {
+                            id = "membership-upgrade", headerSubtext = new { runs = new[]
+                            { new { text = "Upgraded membership to " }, new { text = "Sample tier" }, new { text = "!" } } }
+                        } } } },
                         new { addChatItemAction = new { item = new { liveChatPaidMessageRenderer = new
                         {
                             id = "heart-control", purchaseAmountText = new { simpleText = "NT$75" },
@@ -67,6 +72,7 @@ public class SpecialEventTests
 
         Assert.Contains(messages, item => item.ID == "milestone" && item.Type == "Member Milestone");
         Assert.Contains(messages, item => item.ID == "new-member" && item.Type == "Join Member");
+        Assert.Contains(messages, item => item.ID == "membership-upgrade" && item.Type == "Member Upgrade");
         Assert.Single(messages, item => item.ID == "heart-control" && item.Type == "Super Chat");
         Assert.Contains(messages, item => item.ID == "deleted-message" && item.Type == "Message Deleted");
         Assert.Contains(messages, item => item.AuthorExternalChannelID == "restricted-author" &&
